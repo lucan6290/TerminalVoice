@@ -1,0 +1,20 @@
+[package]
+name = "terminalvoice"
+version = "0.1.0"
+description = "TerminalVoice desktop voice input tool"
+authors = ["TerminalVoice Contributors"]
+edition = "2021"
+rust-version = "1.85"
+
+[lib]
+name = "terminalvoice_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
