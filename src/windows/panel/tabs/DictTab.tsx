@@ -22,10 +22,9 @@ export function DictTab() {
   function handleAdd() {
     const w = newWord.trim();
     if (!w) return;
-    addFilterWord(w, newRepl.trim());
+    void addFilterWord(w, newRepl.trim()).then(() => showToast(`已添加过滤词「${w}」`, "success"));
     setNewWord("");
     setNewRepl("");
-    showToast(`已添加过滤词「${w}」`, "success");
   }
 
   function startEdit(id: number, word: string, repl: string) {
@@ -36,9 +35,8 @@ export function DictTab() {
 
   function saveEdit() {
     if (editingId === null) return;
-    updateFilterWord(editingId, editWord.trim(), editRepl.trim());
+    void updateFilterWord(editingId, editWord.trim(), editRepl.trim()).then(() => showToast("已更新", "success"));
     setEditingId(null);
-    showToast("已更新", "success");
   }
 
   return (
@@ -141,14 +139,13 @@ export function DictTab() {
                   </button>
                   <button
                     onClick={() => {
-                      deleteFilterWord(w.id);
-                      showToast("已删除", "info");
+                      void deleteFilterWord(w.id).then(() => showToast("已删除", "info"));
                     }}
                     className="w-6 h-6 rounded flex items-center justify-center text-neutral-500 hover:text-red-400 hover:bg-white/5"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                  <ToggleSwitch checked={w.enabled} onChange={() => toggleFilterWord(w.id)} />
+                  <ToggleSwitch checked={w.enabled} onChange={() => void toggleFilterWord(w.id)} />
                 </>
               )}
             </div>

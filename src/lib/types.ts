@@ -15,14 +15,17 @@ export type TextProcessMode = "off" | "proofread" | "polish" | "structure";
 
 export interface HistoryItem {
   id: number;
-  created_at: string;
-  source_text: string;
-  final_text: string;
-  text_mode: TextMode;
-  asr_provider: string;
+  createdAt: string;
+  sourceText: string;
+  finalText: string;
+  textMode: TextMode;
+  asrProvider: string;
 }
 
+export type PreviewMode = "recognition" | "rewrite";
+
 export interface PreviewDraft {
+  mode?: PreviewMode;
   sourceText: string;
   processedText: string;
   textMode: TextMode;
@@ -30,6 +33,7 @@ export interface PreviewDraft {
 }
 
 export interface ConfirmPreviewInput {
+  mode?: PreviewMode;
   sourceText: string;
   finalText: string;
   textMode: TextMode;
@@ -41,6 +45,8 @@ export interface FilterWord {
   word: string;
   replacement: string;
   enabled: boolean;
+  isDefault?: boolean;
+  createdAt?: string;
 }
 
 export type ASRProvider = "cloud" | "offline" | "auto";
@@ -57,11 +63,34 @@ export interface ServiceConfig {
   handsFree: boolean;
 }
 
-export interface LocalModel {
+export interface ModelInfo {
   id: string;
   name: string;
-  size: string;
-  language: string;
-  downloaded: boolean;
-  downloadProgress?: number;
+  sizeBytes: number;
+  sha256: string;
+  downloadUrl: string;
+  installed: boolean;
+}
+
+/** 翻译结果事件 payload */
+export interface TranslateResultPayload {
+  originalText: string;
+  translatedText: string;
+}
+
+/** 改写结果事件 payload */
+export interface RewriteResultPayload {
+  originalText: string;
+  rewrittenText: string;
+}
+
+/** 录音计时事件 payload */
+export interface RecordingTickPayload {
+  duration: number;
+}
+
+/** Toast 通知事件 payload */
+export interface ToastPayload {
+  level: 'info' | 'warn' | 'error' | 'success';
+  message: string;
 }

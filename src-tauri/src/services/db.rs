@@ -6,6 +6,7 @@ use std::path::Path;
 use super::preprocess::DEFAULT_FILTER_WORDS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct HistoryItem {
     pub id: i64,
     pub created_at: String,
@@ -13,6 +14,17 @@ pub struct HistoryItem {
     pub final_text: String,
     pub text_mode: String,
     pub asr_provider: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct FilterWordItem {
+    pub id: i64,
+    pub word: String,
+    pub replacement: String,
+    pub enabled: bool,
+    pub is_default: bool,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,7 +89,39 @@ impl Database {
             "#,
         )?;
 
+        self.migrate_filter_words_columns()?;
         self.seed_default_filter_words()?;
+        Ok(())
+    }
+
+    fn column_exists(&self, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
+        let pragma = format!("PRAGMA table_info({table})");
+        let mut stmt = self.conn.prepare(&pragma)?;
+        let rows = stmt.query_map([], |row| {
+            let name: String = row.get(1)?;
+            Ok(name)
+        })?;
+        for row in rows {
+            if row? == column {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    fn migrate_filter_words_columns(&self) -> Result<(), rusqlite::Error> {
+        if !self.column_exists("filter_words", "replacement")? {
+            self.conn.execute(
+                "ALTER TABLE filter_words ADD COLUMN replacement TEXT NOT NULL DEFAULT ''",
+                [],
+            )?;
+        }
+        if !self.column_exists("filter_words", "enabled")? {
+            self.conn.execute(
+                "ALTER TABLE filter_words ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1",
+                [],
+            )?;
+        }
         Ok(())
     }
 
@@ -203,6 +247,90 @@ impl Database {
             [],
             |row| row.get(0),
         )
+    }
+
+    pub fn list_filter_words(&self) -> Result<Vec<FilterWordItem>, rusqlite::Error> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT id, word, replacement, enabled, is_default, created_at
+            FROM filter_words
+            ORDER BY is_default DESC, created_at ASC, id ASC
+            "#,
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(FilterWordItem {
+                id: row.get(0)?,
+                word: row.get(1)?,
+                replacement: row.get(2)?,
+                enabled: row.get(3)?,
+                is_default: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })?;
+        rows.collect()
+    }
+
+    pub fn add_filter_word(
+        &self,
+        word: &str,
+        replacement: Option<&str>,
+    ) -> Result<i64, rusqlite::Error> {
+        let now = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+        let replacement = replacement.unwrap_or("");
+        self.conn.execute(
+            r#"
+            INSERT INTO filter_words (word, replacement, is_default, created_at)
+            VALUES (?1, ?2, 0, ?3)
+            "#,
+            params![word, replacement, now],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    pub fn delete_filter_word(&self, id: i64) -> Result<(), rusqlite::Error> {
+        self.conn.execute("DELETE FROM filter_words WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn toggle_filter_word(&self, id: i64) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "UPDATE filter_words SET enabled = CASE WHEN enabled = 1 THEN 0 ELSE 1 END WHERE id = ?1",
+            params![id],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_history(&self, id: i64) -> Result<(), rusqlite::Error> {
+        self.conn.execute("DELETE FROM history WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn clear_history(&self) -> Result<(), rusqlite::Error> {
+        self.conn.execute("DELETE FROM history", [])?;
+        Ok(())
+    }
+
+    pub fn search_history(&self, query: &str) -> Result<Vec<HistoryItem>, rusqlite::Error> {
+        let pattern = format!("%{query}%");
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT id, created_at, source_text, final_text, text_mode, asr_provider
+            FROM history
+            WHERE source_text LIKE ?1 OR final_text LIKE ?1
+            ORDER BY created_at DESC, id DESC
+            "#,
+        )?;
+        let rows = stmt.query_map(params![pattern], |row| {
+            Ok(HistoryItem {
+                id: row.get(0)?,
+                created_at: row.get(1)?,
+                source_text: row.get(2)?,
+                final_text: row.get(3)?,
+                text_mode: row.get(4)?,
+                asr_provider: row.get(5)?,
+            })
+        })?;
+        rows.collect()
     }
 }
 

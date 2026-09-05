@@ -1,0 +1,1058 @@
+# IPC_API.md — 前后端 IPC 接口契约
+
+> **最后更新**：2026-09-06
+> 本文档定义前端（React/TS）与后端（Rust/Tauri）之间所有 **Invoke Commands**（前端→Rust，请求-响应）和 **Events**（Rust→前端，推送）。修改任何 IPC 接口时必须同步更新此文档。
+
+---
+
+## 一、命名约定
+
+| 方向 | 命名风格 | 示例 |
+| :--- | :--- | :--- |
+| Rust 函数名 | `snake_case` | `fn get_app_status()` |
+| Invoke command 名 | `snake_case`（与函数名一致） | `"get_app_status"` |
+| TS 封装函数名 | `camelCase` | `getAppStatus()` |
+| Event 名 | `kebab-case` | `"runtime-state-changed"` |
+| 字段序列化 | Rust `#[serde(rename_all = "camelCase")]`，TS 端 camelCase | `sourceText` / `asrProvider` |
+
+---
+
+## 二、Invoke Commands（前端 → Rust）
+
+当前已注册 24 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
+
+### 2.1 `get_app_status`
+
+查询当前应用运行状态。
+
+**TS 封装**：`getAppStatus(): Promise<AppStatus>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn get_app_status(runtime: tauri::State<Mutex<AppRuntime>>) -> Result<AppStatus, ()>
+```
+
+**请求参数**：无
+
+**返回**：
+```ts
+type AppStatus = "Idle" | "Recording" | "Recognizing" | "Preview" | "Paused";
+```
+
+---
+
+### 2.2 `create_mock_preview`
+
+模拟完整录音→识别→预处理流程（Mock 命令，用于前端联调）。
+
+**TS 封装**：`createMockPreview(rawText: string): Promise<PreviewDraft>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn create_mock_preview(
+    raw_text: String,
+    runtime: tauri::State<Mutex<AppRuntime>>,
+    app: tauri::AppHandle,
+) -> Result<PreviewDraft, String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `rawText` | `string` | 模拟识别的原始文本 |
+
+**流程副作用**：
+1. 验证当前状态为 `Idle`，否则返回错误
+2. 依次发送状态事件：`Idle → Recording → Recognizing → Preview`
+3. 使用 `preprocess::process_normal_text()` 处理文本
+4. 返回 PreviewDraft，`asrProvider` 固定为 `"mock"`
+
+**返回**：
+```ts
+interface PreviewDraft {
+  mode?: PreviewMode;       // "recognition" | "rewrite"，默认 "recognition"
+  sourceText: string;      // 原始文本
+  processedText: string;   // 预处理后的文本
+  textMode: "Normal" | "Developer" | "Raw";
+  asrProvider: string;     // "mock"
+}
+```
+
+---
+
+### 2.3 `confirm_preview`
+
+确认预览文本，写入历史记录，回到 Idle 状态。
+
+**TS 封装**：`confirmPreview(input: ConfirmPreviewInput): Promise<HistoryItem>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn confirm_preview(
+    input: ConfirmPreviewInput,
+    runtime: tauri::State<Mutex<AppRuntime>>,
+    db: tauri::State<Mutex<Database>>,
+    app: tauri::AppHandle,
+) -> Result<HistoryItem, String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `mode?` | `PreviewMode` | 预览模式（`"recognition"` / `"rewrite"`，默认 `"recognition"`） |
+| `sourceText` | `string` | 原始识别文本 |
+| `finalText` | `string` | 用户编辑后的最终文本 |
+| `textMode` | `TextMode` | 文本模式 |
+| `asrProvider` | `string` | ASR 提供商标识 |
+
+**流程副作用**：
+1. 状态转移：`Preview → Idle`，发送 `runtime-state-changed`
+2. 写入 history 表
+3. 返回写入的 HistoryItem
+
+**返回**：
+```ts
+interface HistoryItem {
+  id: number;
+  createdAt: string;       // ISO 8601
+  sourceText: string;
+  finalText: string;
+  textMode: TextMode;
+  asrProvider: string;
+}
+```
+
+---
+
+### 2.4 `list_history`
+
+获取历史记录列表（按时间倒序）。
+
+**TS 封装**：`listHistory(): Promise<HistoryItem[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_history(db: tauri::State<Mutex<Database>>) -> Result<Vec<HistoryItem>, String>
+```
+
+**请求参数**：无
+
+**返回**：`HistoryItem[]`（按 `created_at DESC, id DESC` 排序）
+
+---
+
+### 2.5 `get_config`
+
+读取单个配置项。
+
+**TS 封装**：`getConfig(key: string): Promise<string | null>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn get_config(
+    key: String,
+    db: tauri::State<Mutex<Database>>,
+) -> Result<Option<String>, String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `key` | `string` | 配置键（如 `"ui.dark"`、`"input.pttKey"`） |
+
+**返回**：配置值字符串，key 不存在时返回 `null`
+
+---
+
+### 2.6 `set_config`
+
+写入单个配置项，广播 `config-updated` 事件。
+
+**TS 封装**：`setConfig(key: string, value: string): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn set_config(
+    key: String,
+    value: String,
+    db: tauri::State<Mutex<Database>>,
+    app: tauri::AppHandle,
+) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `key` | `string` | 配置键 |
+| `value` | `string` | 配置值（统一存为字符串，前端自行解析类型） |
+
+**流程副作用**：
+1. UPSERT 写入 config 表
+2. emit `config-updated` 事件，payload 为 `{ key, value }`
+
+**返回**：`void`
+
+---
+
+### 2.7 `list_config`
+
+列出所有配置项。
+
+**TS 封装**：`listConfig(): Promise<ConfigEntry[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_config(db: tauri::State<Mutex<Database>>) -> Result<Vec<ConfigEntry>, String>
+```
+
+**请求参数**：无
+
+**返回**：
+```ts
+interface ConfigEntry {
+  key: string;
+  value: string;
+}
+```
+
+---
+
+### 2.8 `inject_text`
+
+将文本注入到当前焦点窗口（通过 enigo 模拟键盘输入）。
+
+**TS 封装**：`injectText(text: string): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn inject_text(text: String) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `text` | `string` | 要注入的文本 |
+
+**返回**：`void`（失败时返回错误信息）
+
+---
+
+### 2.9 `test_asr_connection`
+
+测试 ASR 云端连接是否可达。
+
+**TS 封装**：`testAsrConnection(): Promise<boolean>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn test_asr_connection(db: tauri::State<Mutex<Database>>) -> Result<bool, String>
+```
+
+**请求参数**：无（从 DB 读取 `service.asrEndpoint` 和 `service.asrApiKey`）
+
+**流程**：
+1. 从 DB 读取 endpoint 和 API Key（API Key 通过 DPAPI 解密）
+2. 发送最小 HTTP POST 请求到 endpoint
+3. 成功返回 `true`；可重试错误返回 `false`；致命错误返回 `Err`
+
+**返回**：`boolean`（`true`=可达，`false`=暂时不可达）
+
+---
+
+### 2.10 `delete_history`
+
+删除单条历史记录。
+
+**TS 封装**：`deleteHistory(id: number): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn delete_history(db: tauri::State<Mutex<Database>>, id: i64) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `id` | `number` | 历史记录 ID |
+
+**返回**：`void`
+
+---
+
+### 2.11 `clear_history`
+
+清空所有历史记录。
+
+**TS 封装**：`clearHistory(): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn clear_history(db: tauri::State<Mutex<Database>>) -> Result<(), String>
+```
+
+**请求参数**：无
+
+**返回**：`void`
+
+---
+
+### 2.12 `search_history`
+
+按关键词搜索历史记录（匹配 `source_text` 或 `final_text`）。
+
+**TS 封装**：`searchHistory(query: string): Promise<HistoryItem[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn search_history(
+    db: tauri::State<Mutex<Database>>,
+    query: String,
+) -> Result<Vec<HistoryItem>, String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `query` | `string` | 搜索关键词（LIKE 模糊匹配） |
+
+**返回**：`HistoryItem[]`（匹配的记录，按时间倒序）
+
+---
+
+### 2.13 `reinject_history`
+
+重新注入历史记录中的文本到当前焦点窗口。
+
+**TS 封装**：`reinjectHistory(id: number): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn reinject_history(
+    db: tauri::State<Mutex<Database>>,
+    _runtime: tauri::State<Mutex<AppRuntime>>,
+    app: tauri::AppHandle,
+    id: i64,
+) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `id` | `number` | 历史记录 ID |
+
+**流程副作用**：
+1. 从 DB 读取历史记录的 `final_text`
+2. 调用 `inject_text` 注入文本
+3. emit `toast` 事件（`{ level: "success", message: "已重新注入文本" }`）
+
+**返回**：`void`
+
+---
+
+### 2.14 `list_filter_words`
+
+获取所有过滤词列表。
+
+**TS 封装**：`listFilterWords(): Promise<FilterWord[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_filter_words(db: tauri::State<Mutex<Database>>) -> Result<Vec<FilterWordItem>, String>
+```
+
+**请求参数**：无
+
+**返回**：`FilterWord[]`（默认词在前，按创建时间排序）
+
+---
+
+### 2.15 `add_filter_word`
+
+添加自定义过滤词。
+
+**TS 封装**：`addFilterWord(word: string, replacement?: string): Promise<number>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn add_filter_word(
+    db: tauri::State<Mutex<Database>>,
+    word: String,
+    replacement: Option<String>,
+) -> Result<i64, String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `word` | `string` | 过滤词 |
+| `replacement` | `string?` | 替换文本（可选，默认空字符串） |
+
+**返回**：`number`（新插入记录的 ID）
+
+---
+
+### 2.16 `delete_filter_word`
+
+删除过滤词。
+
+**TS 封装**：`deleteFilterWord(id: number): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn delete_filter_word(db: tauri::State<Mutex<Database>>, id: i64) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `id` | `number` | 过滤词 ID |
+
+**返回**：`void`
+
+---
+
+### 2.17 `toggle_filter_word`
+
+启用/禁用过滤词。
+
+**TS 封装**：`toggleFilterWord(id: number): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn toggle_filter_word(db: tauri::State<Mutex<Database>>, id: i64) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `id` | `number` | 过滤词 ID |
+
+**返回**：`void`
+
+---
+
+### 2.18 `cancel_preview`
+
+取消预览，回到 Idle 状态（不写入历史记录）。
+
+**TS 封装**：`cancelPreview(): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn cancel_preview(
+    runtime: tauri::State<Mutex<AppRuntime>>,
+    app: tauri::AppHandle,
+) -> Result<(), String>
+```
+
+**请求参数**：无
+
+**流程副作用**：
+1. 状态转移：`Preview → Idle`，发送 `runtime-state-changed`
+2. 不写入 history 表
+
+**返回**：`void`
+
+---
+
+### 2.19 `list_audio_input_devices`
+
+枚举系统录音设备列表。
+
+**TS 封装**：`listAudioInputDevices(): Promise<AudioInputDevice[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_audio_input_devices() -> Result<Vec<AudioInputDevice>, String>
+```
+
+**请求参数**：无
+
+**返回**：
+```ts
+interface AudioInputDevice {
+  name: string;
+}
+```
+
+---
+
+### 2.20 `list_models`
+
+列出所有可用的 ASR 离线模型。
+
+**TS 封装**：`listModels(): Promise<ModelInfo[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_models() -> Result<Vec<ModelInfo>, String>
+```
+
+**请求参数**：无
+
+**返回**：`ModelInfo[]`（含已安装/未安装标记）
+
+---
+
+### 2.21 `download_model`
+
+下载指定 ASR 离线模型。
+
+**TS 封装**：`downloadModel(modelId: string): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn download_model(model_id: String) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `modelId` | `string` | 模型 ID |
+
+**返回**：`void`
+
+---
+
+### 2.22 `delete_model`
+
+删除已下载的 ASR 离线模型。
+
+**TS 封装**：`deleteModel(modelId: string): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn delete_model(model_id: String) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `modelId` | `string` | 模型 ID |
+
+**返回**：`void`
+
+---
+
+### 2.23 `export_data`
+
+导出全部数据（配置 + 历史记录 + 过滤词）为二进制。
+
+**TS 封装**：`exportData(): Promise<number[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn export_data(db: tauri::State<Mutex<Database>>) -> Result<Vec<u8>, String>
+```
+
+**请求参数**：无
+
+**返回**：`number[]`（二进制数据的字节数组，前端可转为 Blob 下载）
+
+---
+
+### 2.24 `import_data`
+
+从二进制数据导入（覆盖现有数据）。
+
+**TS 封装**：`importData(data: number[]): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn import_data(db: tauri::State<Mutex<Database>>, data: Vec<u8>) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `data` | `number[]` | 二进制数据字节数组 |
+
+**返回**：`void`
+
+---
+
+## 三、Events（Rust → 前端）
+
+### 3.1 `runtime-state-changed`
+
+应用运行状态变更时推送。
+
+**发送时机**：任何有效状态转移后（由 `emit_runtime_state()` 函数发送）。
+
+**Payload**：
+```ts
+interface RuntimeStateChangedPayload {
+  state: AppStatus;  // 新状态
+}
+```
+
+**已触发场景**：
+- `create_mock_preview` 命令内：Idle→Recording、Recording→Recognizing、Recognizing→Preview
+- `confirm_preview` 命令内：Preview→Idle
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook
+
+---
+
+### 3.2 `config-updated`
+
+配置项变更时推送。
+
+**发送时机**：`set_config` 命令写入后。
+
+**Payload**：
+```ts
+interface ConfigUpdatedPayload {
+  key: string;
+  value: string;
+}
+```
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后调用 `applyConfigEntry(key, value)` 更新 Zustand store。
+
+---
+
+### 3.3 `toast`
+
+Toast 通知消息推送。
+
+**发送时机**：后端操作需要通知用户时（如重注入成功、配置保存等）。
+
+**Payload**：
+```ts
+interface ToastPayload {
+  level: 'info' | 'warn' | 'error' | 'success';
+  message: string;
+}
+```
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后调用 `showToast(message, level)`。
+
+---
+
+### 3.4 `preview-ready`
+
+预览文本准备就绪，前端应显示 PreviewPopup。
+
+**发送时机**：识别完成或 AI 改写完成后，后端推送预览数据。
+
+**Payload**：`PreviewDraft`（见 4.5）
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后调用 `setPreviewDraft(payload)`。
+
+---
+
+### 3.5 `preview-cleared`
+
+预览已清除，前端应关闭 PreviewPopup。
+
+**发送时机**：用户确认或取消预览后。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后调用 `clearPreviewDraft()`。
+
+---
+
+### 3.6 `recording-started`
+
+录音已开始。
+
+**发送时机**：热键按下，录音设备启动后。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后重置 `recordingDuration` 为 0 并清除 `errorMessage`。
+
+---
+
+### 3.7 `recording-tick`
+
+录音计时更新（每秒推送）。
+
+**发送时机**：录音过程中，每秒推送一次。
+
+**Payload**：
+```ts
+interface RecordingTickPayload {
+  duration: number;  // 已录秒数
+}
+```
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后更新 `recordingDuration`。
+
+---
+
+### 3.8 `recording-stopped`
+
+录音已停止，开始识别。
+
+**发送时机**：热键松开，录音设备关闭后。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后重置 `recordingDuration` 为 0。
+
+---
+
+### 3.9 `recording-cancelled`
+
+录音被取消（ESC 或误触）。
+
+**发送时机**：用户按 ESC 取消录音，或录音过短被判定为误触。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后重置 `recordingDuration` 为 0。
+
+---
+
+### 3.10 `tts-started`
+
+TTS 朗读已开始。
+
+**发送时机**：Alt+1 触发朗读，TTS 引擎开始播放后。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后设置 `ttsSpeaking` 为 `true`。
+
+---
+
+### 3.11 `tts-stopped`
+
+TTS 朗读已停止。
+
+**发送时机**：朗读完成或被手动停止后。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后设置 `ttsSpeaking` 为 `false`。
+
+---
+
+### 3.12 `translate-result`
+
+翻译结果推送。
+
+**发送时机**：Alt+2 触发翻译，翻译完成后。
+
+**Payload**：
+```ts
+interface TranslateResultPayload {
+  originalText: string;
+  translatedText: string;
+}
+```
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后调用 `setTranslateResult(payload)`，TranslatePopup 组件读取并显示。
+
+---
+
+### 3.13 `rewrite-started`
+
+AI 改写已开始。
+
+**发送时机**：用户触发 AI 整理，后端开始调用 LLM 后。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后设置 `rewriteMode` 为 `true`（小球切换到改写视觉态）。
+
+---
+
+### 3.14 `rewrite-result`
+
+AI 改写结果推送。
+
+**发送时机**：LLM 返回改写结果后。
+
+**Payload**：
+```ts
+interface RewriteResultPayload {
+  originalText: string;
+  rewrittenText: string;
+}
+```
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后：
+1. 调用 `setRewriteResult(payload)`
+2. 设置 `rewriteMode` 为 `false`
+3. 调用 `setPreviewDraft()` 构造 mode=`"rewrite"` 的预览数据
+
+---
+
+## 四、共享类型定义
+
+以下类型在前后端之间传递，两端必须保持一致。
+
+### 4.1 AppStatus
+
+```ts
+// TS
+type AppStatus = "Idle" | "Recording" | "Recognizing" | "Preview" | "Paused";
+```
+
+```rust
+// Rust
+#[derive(Serialize, Deserialize)]
+pub enum AppStatus { Idle, Recording, Recognizing, Preview, Paused }
+```
+
+### 4.2 TextMode
+
+```ts
+// TS
+type TextMode = "Normal" | "Developer" | "Raw";
+```
+
+存储到数据库时映射为字符串：`"normal"` / `"developer"` / `"raw"`。
+
+### 4.3 HistoryItem
+
+```ts
+interface HistoryItem {
+  id: number;
+  createdAt: string;       // ISO 8601（Rust chrono 序列化）
+  sourceText: string;
+  finalText: string;
+  textMode: TextMode;
+  asrProvider: string;
+}
+```
+
+### 4.4 PreviewMode
+
+```ts
+type PreviewMode = "recognition" | "rewrite";
+```
+
+- `"recognition"`：语音识别结果预览（默认）
+- `"rewrite"`：AI 改写结果预览
+
+### 4.5 PreviewDraft / ConfirmPreviewInput
+
+```ts
+interface PreviewDraft {
+  mode?: PreviewMode;       // 预览模式，默认 "recognition"
+  sourceText: string;
+  processedText: string;
+  textMode: TextMode;
+  asrProvider: string;
+}
+
+interface ConfirmPreviewInput {
+  mode?: PreviewMode;       // 预览模式
+  sourceText: string;
+  finalText: string;       // 用户编辑后（注意是 finalText 不是 processedText）
+  textMode: TextMode;
+  asrProvider: string;
+}
+```
+
+### 4.6 ConfigEntry
+
+```ts
+interface ConfigEntry {
+  key: string;
+  value: string;
+}
+```
+
+### 4.7 FilterWord
+
+```ts
+interface FilterWord {
+  id: number;
+  word: string;
+  replacement: string;
+  enabled: boolean;
+  isDefault?: boolean;
+  createdAt?: string;     // ISO 8601
+}
+```
+
+### 4.8 AudioInputDevice
+
+```ts
+interface AudioInputDevice {
+  name: string;
+}
+```
+
+### 4.9 ModelInfo
+
+```ts
+interface ModelInfo {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  sha256: string;
+  downloadUrl: string;
+  installed: boolean;
+}
+```
+
+### 4.10 TextProcessMode
+
+```ts
+type TextProcessMode = "off" | "proofread" | "polish" | "structure";
+```
+
+### 4.11 ASRProvider
+
+```ts
+type ASRProvider = "cloud" | "offline" | "auto";
+```
+
+### 4.12 ServiceConfig
+
+```ts
+interface ServiceConfig {
+  asrProvider: ASRProvider;
+  asrEndpoint: string;
+  asrApiKey: string;
+  asrModel: string;
+  llmEndpoint: string;
+  llmApiKey: string;
+  llmModel: string;
+  textMode: TextProcessMode;
+  handsFree: boolean;
+}
+```
+
+### 4.13 事件 Payload 类型
+
+```ts
+/** 翻译结果事件 payload */
+interface TranslateResultPayload {
+  originalText: string;
+  translatedText: string;
+}
+
+/** 改写结果事件 payload */
+interface RewriteResultPayload {
+  originalText: string;
+  rewrittenText: string;
+}
+
+/** 录音计时事件 payload */
+interface RecordingTickPayload {
+  duration: number;
+}
+
+/** Toast 通知事件 payload */
+interface ToastPayload {
+  level: 'info' | 'warn' | 'error' | 'success';
+  message: string;
+}
+```
+
+---
+
+## 五、当前已使用的配置键
+
+在 [appStore.ts](../src/stores/appStore.ts) 中使用：
+
+| Key | 类型 | 默认值 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `ui.dark` | `"true"/"false"` | `"false"` | 深色模式 |
+| `ui.soundOn` | `"true"/"false"` | `"true"` | 交互声音 |
+| `ui.muteSys` | `"true"/"false"` | `"false"` | 使用时静音系统声音 |
+| `ui.autoStart` | `"true"/"false"` | `"false"` | 开机自启 |
+| `input.pttKey` | string | `"Right-Alt"` | 语音触发键 |
+| `input.micDevice` | string | `""` | 麦克风设备（空=自动检测） |
+| `service.asrProvider` | `"cloud"/"offline"/"auto"` | `"auto"` | ASR 提供商 |
+| `service.asrEndpoint` | string | OpenAI 默认 | ASR 云端接口地址 |
+| `service.asrApiKey` | string | `""` | ASR API Key（DPAPI 加密存储） |
+| `service.asrModel` | string | `"whisper-1"` | ASR 模型名称 |
+| `service.llmEndpoint` | string | OpenAI 默认 | LLM 接口地址 |
+| `service.llmApiKey` | string | `""` | LLM API Key（DPAPI 加密存储） |
+| `service.llmModel` | string | `"gpt-4o-mini"` | LLM 模型名称 |
+| `service.textMode` | `"off"/"proofread"/"polish"/"structure"` | `"polish"` | AI 文本处理模式 |
+| `service.handsFree` | `"true"/"false"` | `"false"` | 免手动模式 |
+
+> **注意**：所有配置值统一存为字符串，前端解析为 boolean/其他类型。API Key 变更时后端发送 `config-updated` 事件，payload value 为 `"__terminalvoice_secret_updated__"`，前端收到后重新 `hydrateFromConfig()` 加载完整配置。
+
+---
+
+## 六、计划新增的 IPC 接口（未实现）
+
+以下接口在架构文档中规划但尚未在 Rust 端通过 IPC 实现：
+
+| Command | 方向 | 功能 | 状态 |
+| :--- | :--- | :--- | :--- |
+| `start_recording` | TS→Rust | 开始录音（热键按下触发） | 由 `services::pipeline` 热键管线内部处理，非 IPC |
+| `stop_recording` | TS→Rust | 停止录音并开始识别（热键松开） | 同上 |
+| `cancel_recording` | TS→Rust | 取消录音（ESC） | 同上 |
+| `toggle_pause` | TS→Rust | 暂停/启用 | 同上 |
+
+> **注意**：录音/暂停由 Rust 端 `services::pipeline::start_hotkey_pipeline()` 在热键管线中直接处理，无需前端 IPC 调用。`list_audio_input_devices` 已实现（见 2.19）。
+
+| Event | 方向 | 功能 | 状态 |
+| :--- | :--- | :--- | :--- |
+| `asr-result` | Rust→TS | 识别结果（成功） | 待实现，当前通过 `preview-ready` 间接传递 |
+| `asr-error` | Rust→TS | 识别失败（含错误码和消息） | 待实现 |
+| `asr-progress` | Rust→TS | 识别进度（超5s标记 slow） | 待实现 |
+| `inject-result` | Rust→TS | 注入结果（成功/失败+原因） | 待实现 |
+
+> **已实现事件**：`recording-started`/`tick`/`stopped`/`cancelled`（3.6–3.9）、`tts-started`/`stopped`（3.10–3.11）、`translate-result`（3.12）、`rewrite-started`/`result`（3.13–3.14）、`preview-ready`/`cleared`（3.4–3.5）、`toast`（3.3）。
+
+---
+
+## 七、TS 端调用方式
+
+所有 invoke 通过 [lib/commands.ts](../src/lib/commands.ts) 封装，事件名称常量集中在 [lib/events.ts](../src/lib/events.ts)：
+
+```ts
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { EVENT_RUNTIME_STATE_CHANGED } from "./lib/events";
+import type { AppStatus } from "./lib/types";
+
+// Invoke 调用
+export async function getAppStatus(): Promise<AppStatus> {
+  return invoke("get_app_status");
+}
+
+// 事件监听（使用 events.ts 常量，禁止硬编码字符串）
+const unlisten = await listen<{ state: AppStatus }>(EVENT_RUNTIME_STATE_CHANGED, (e) => {
+  usePanelStore.getState().setRuntimeStatus(e.payload.state);
+});
+```
+
+前端在 [App.tsx](../src/App.tsx) 的 `useBackendSync()` hook 中集中监听全部 14 个事件，使用 `unlisteners` 数组统一管理清理：
+
+```ts
+const unlisteners: (() => void)[] = [];
+unlisteners.push(await listen(EVENT_RUNTIME_STATE_CHANGED, (e) => { ... }));
+unlisteners.push(await listen(EVENT_RECORDING_TICK, (e) => { ... }));
+// ... 共 14 个事件监听器
+return () => unlisteners.forEach((fn) => fn());
+```
+
+**浏览器降级**：所有 invoke 和 listen 调用在非 Tauri 环境下会 throw，前端通过 try/catch 静默降级到 Mock 数据。

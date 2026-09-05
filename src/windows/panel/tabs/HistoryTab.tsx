@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Search, Trash2, Copy, Trash } from "lucide-react";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
+import { searchHistory } from "../../../lib/commands";
 
 export function HistoryTab() {
   const items = usePanelStore((s) => s.historyItems);
@@ -10,16 +11,32 @@ export function HistoryTab() {
   const reInjectHistory = usePanelStore((s) => s.reInjectHistory);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
   const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<typeof items | null>(null);
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return items;
-    const q = query.toLowerCase();
-    return items.filter(
-      (i) =>
-        i.final_text.toLowerCase().includes(q) ||
-        i.source_text.toLowerCase().includes(q)
-    );
-  }, [items, query]);
+    return searchResults ?? items;
+  }, [items, searchResults]);
+
+  async function handleSearch(q: string) {
+    setQuery(q);
+    if (!q.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    if (!("__TAURI_INTERNALS__" in window)) {
+      const lower = q.toLowerCase();
+      setSearchResults(items.filter(
+        (i) => i.finalText.toLowerCase().includes(lower) || i.sourceText.toLowerCase().includes(lower)
+      ));
+      return;
+    }
+    try {
+      const results = await searchHistory(q);
+      setSearchResults(results);
+    } catch (error) {
+      console.warn("[TerminalVoice] 搜索失败:", error);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -34,8 +51,7 @@ export function HistoryTab() {
         <h2 className="text-[15px] font-medium text-neutral-100 flex-1">历史记录</h2>
         <button
           onClick={() => {
-            clearHistory();
-            showToast("历史记录已清空", "success");
+            void clearHistory().then(() => showToast("历史记录已清空", "success"));
           }}
           className="text-[12px] text-neutral-500 hover:text-red-400 transition-colors px-2"
         >
@@ -50,7 +66,7 @@ export function HistoryTab() {
           type="text"
           placeholder="搜索历史记录..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => void handleSearch(e.target.value)}
           className="w-full bg-neutral-800 rounded-lg pl-9 pr-3 py-2 text-[13px] text-neutral-100 placeholder:text-neutral-500 outline-none border border-white/5 focus:border-green-500/40 transition-colors"
         />
       </div>
@@ -69,13 +85,12 @@ export function HistoryTab() {
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] text-neutral-500 tabular-nums">
-                  {item.created_at}
+                  {item.createdAt}
                 </span>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => {
-                      reInjectHistory(item.id);
-                      showToast("已复制到剪贴板", "success");
+                      void reInjectHistory(item.id).then(() => showToast("已重新上屏", "success"));
                     }}
                     className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-green-400 hover:bg-white/5 transition-colors"
                     data-tip="重新上屏"
@@ -84,8 +99,7 @@ export function HistoryTab() {
                   </button>
                   <button
                     onClick={() => {
-                      deleteHistory(item.id);
-                      showToast("已删除", "info");
+                      void deleteHistory(item.id).then(() => showToast("已删除", "info"));
                     }}
                     className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-400 hover:bg-white/5 transition-colors"
                     data-tip="删除"
@@ -95,15 +109,15 @@ export function HistoryTab() {
                 </div>
               </div>
               <p className="text-[13px] text-neutral-100 leading-relaxed whitespace-pre-wrap">
-                {item.final_text}
+                {item.finalText}
               </p>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/60 text-neutral-400">
-                  {item.asr_provider}
+                  {item.asrProvider}
                 </span>
-                {item.text_mode !== "Normal" && (
+                {item.textMode !== "Normal" && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">
-                    {item.text_mode === "Developer" ? "开发者模式" : "原文"}
+                    {item.textMode === "Developer" ? "开发者模式" : "原文"}
                   </span>
                 )}
               </div>

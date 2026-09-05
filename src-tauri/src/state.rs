@@ -31,6 +31,7 @@ pub enum StateError {
 pub struct AppRuntime {
     state: RuntimeState,
     paused_from: Option<RuntimeState>,
+    rewrite_mode: bool,
 }
 
 impl Default for AppRuntime {
@@ -38,6 +39,7 @@ impl Default for AppRuntime {
         Self {
             state: RuntimeState::Idle,
             paused_from: None,
+            rewrite_mode: false,
         }
     }
 }
@@ -45,6 +47,14 @@ impl Default for AppRuntime {
 impl AppRuntime {
     pub fn state(&self) -> &RuntimeState {
         &self.state
+    }
+
+    pub fn is_rewrite_mode(&self) -> bool {
+        self.rewrite_mode
+    }
+
+    pub fn set_rewrite_mode(&mut self, mode: bool) {
+        self.rewrite_mode = mode;
     }
 
     pub fn transition(&mut self, event: RuntimeEvent) -> Result<RuntimeState, StateError> {
@@ -66,8 +76,7 @@ impl AppRuntime {
                 RuntimeState::Paused
             }
             (RuntimeState::Paused, RuntimeEvent::TogglePause) => {
-                let restored = self.paused_from.take().unwrap_or(RuntimeState::Idle);
-                restored
+                self.paused_from.take().unwrap_or(RuntimeState::Idle)
             }
             _ => {
                 return Err(StateError::InvalidTransition {
@@ -220,5 +229,15 @@ mod tests {
             .expect("confirmed");
 
         assert_eq!(*runtime.state(), RuntimeState::Idle);
+    }
+
+    #[test]
+    fn rewrite_mode_flag_works() {
+        let mut runtime = AppRuntime::default();
+        assert!(!runtime.is_rewrite_mode());
+        runtime.set_rewrite_mode(true);
+        assert!(runtime.is_rewrite_mode());
+        runtime.set_rewrite_mode(false);
+        assert!(!runtime.is_rewrite_mode());
     }
 }

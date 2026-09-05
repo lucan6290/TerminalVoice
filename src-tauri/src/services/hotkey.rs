@@ -8,24 +8,58 @@ pub enum HotkeyEvent {
     Released,
     Cancelled,
     ListenerFailed(String),
+    RewritePressed,
+    RewriteReleased,
+    TtsToggle,
+    Translate,
 }
 
 #[derive(Debug, Default)]
 pub struct HotkeyEdgeState {
     pressed: bool,
+    shift_held: bool,
+    rewrite_mode: bool,
+    alt_held: bool,
 }
 
 impl HotkeyEdgeState {
     pub fn handle(&mut self, event: &EventType) -> Option<HotkeyEvent> {
         match event {
-            EventType::KeyPress(Key::AltGr) if !self.pressed => {
-                self.pressed = true;
-                Some(HotkeyEvent::Pressed)
+            EventType::KeyPress(Key::ShiftLeft) | EventType::KeyPress(Key::ShiftRight) => {
+                self.shift_held = true;
+                None
+            }
+            EventType::KeyRelease(Key::ShiftLeft) | EventType::KeyRelease(Key::ShiftRight) => {
+                self.shift_held = false;
+                None
+            }
+            EventType::KeyPress(Key::AltGr) if !self.pressed && !self.rewrite_mode => {
+                if self.shift_held {
+                    self.rewrite_mode = true;
+                    Some(HotkeyEvent::RewritePressed)
+                } else {
+                    self.pressed = true;
+                    Some(HotkeyEvent::Pressed)
+                }
             }
             EventType::KeyRelease(Key::AltGr) if self.pressed => {
                 self.pressed = false;
                 Some(HotkeyEvent::Released)
             }
+            EventType::KeyRelease(Key::AltGr) if self.rewrite_mode => {
+                self.rewrite_mode = false;
+                Some(HotkeyEvent::RewriteReleased)
+            }
+            EventType::KeyPress(Key::Alt) => {
+                self.alt_held = true;
+                None
+            }
+            EventType::KeyRelease(Key::Alt) => {
+                self.alt_held = false;
+                None
+            }
+            EventType::KeyPress(Key::Num1) if self.alt_held => Some(HotkeyEvent::TtsToggle),
+            EventType::KeyPress(Key::Num2) if self.alt_held => Some(HotkeyEvent::Translate),
             EventType::KeyPress(Key::Escape) => Some(HotkeyEvent::Cancelled),
             _ => None,
         }
@@ -70,6 +104,41 @@ mod tests {
             Some(HotkeyEvent::Released)
         );
         assert_eq!(state.handle(&EventType::KeyRelease(Key::AltGr)), None);
+    }
+
+    #[test]
+    fn shift_plus_altgr_triggers_rewrite_mode() {
+        let mut state = HotkeyEdgeState::default();
+        // Press Shift first
+        assert_eq!(
+            state.handle(&EventType::KeyPress(Key::ShiftLeft)),
+            None
+        );
+        // Then press AltGr → should emit RewritePressed
+        assert_eq!(
+            state.handle(&EventType::KeyPress(Key::AltGr)),
+            Some(HotkeyEvent::RewritePressed)
+        );
+        // Repeated AltGr press should be ignored
+        assert_eq!(state.handle(&EventType::KeyPress(Key::AltGr)), None);
+        // Release AltGr → should emit RewriteReleased
+        assert_eq!(
+            state.handle(&EventType::KeyRelease(Key::AltGr)),
+            Some(HotkeyEvent::RewriteReleased)
+        );
+    }
+
+    #[test]
+    fn altgr_without_shift_triggers_normal_mode() {
+        let mut state = HotkeyEdgeState::default();
+        assert_eq!(
+            state.handle(&EventType::KeyPress(Key::AltGr)),
+            Some(HotkeyEvent::Pressed)
+        );
+        assert_eq!(
+            state.handle(&EventType::KeyRelease(Key::AltGr)),
+            Some(HotkeyEvent::Released)
+        );
     }
 
     #[test]

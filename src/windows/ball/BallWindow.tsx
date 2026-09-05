@@ -1,30 +1,47 @@
 import { useState } from "react";
-import { Mic } from "lucide-react";
+import { Mic, AlertCircle, Loader2, Wand2, Volume2 } from "lucide-react";
 import { Window } from "@tauri-apps/api/window";
 import { cn } from "../../lib/cn";
 import { usePanelStore } from "../../stores/appStore";
+import { TranslatePopup } from "../../components/ui/TranslatePopup";
 import type { AppStatus } from "../../lib/types";
 
 /**
  * 悬浮小球
  * - 48×48 毛玻璃圆盘
- * - 状态：idle(绿点) / recording(蓝麦+呼吸) / thinking(橙点+脉冲) / disabled(灰点)
+ * - 状态：idle / recording / thinking / disabled / error / rewrite / tts
  * - 状态由后端 AppRuntime 同步，点击仅打开控制面板
  */
-type BallState = "idle" | "recording" | "thinking" | "disabled";
+type BallState = "idle" | "recording" | "thinking" | "disabled" | "error" | "rewrite" | "tts";
 
-const STATUS_TO_BALL_STATE: Record<AppStatus, BallState> = {
-  Idle: "idle",
-  Recording: "recording",
-  Recognizing: "thinking",
-  Preview: "thinking",
-  Paused: "disabled",
-};
+interface BallStateMeta {
+  core: string;
+  ring: string;
+  label: string;
+  glow?: boolean;
+  icon?: "mic" | "error" | "loader" | "wand" | "volume";
+}
 
-const STATE_META: Record<
-  BallState,
-  { core: string; ring: string; label: string; glow?: boolean; icon?: "mic" }
-> = {
+export function computeBallState(
+  appStatus: AppStatus,
+  rewriteMode: boolean,
+  ttsSpeaking: boolean,
+  errorMessage: string | null,
+): BallState {
+  if (errorMessage) return "error";
+  if (ttsSpeaking) return "tts";
+  if (rewriteMode && (appStatus === "Recording" || appStatus === "Recognizing")) return "rewrite";
+  if (rewriteMode) return "rewrite";
+  switch (appStatus) {
+    case "Recording": return "recording";
+    case "Recognizing": return "thinking";
+    case "Preview": return "thinking";
+    case "Paused": return "disabled";
+    default: return "idle";
+  }
+}
+
+const STATE_META: Record<BallState, BallStateMeta> = {
   idle: {
     core: "bg-[var(--color-accent)]",
     ring: "bg-[var(--color-accent-soft)]",
@@ -42,21 +59,54 @@ const STATE_META: Record<
     ring: "bg-amber-400/30",
     label: "识别中…",
     glow: true,
+    icon: "loader",
   },
   disabled: {
     core: "bg-[var(--color-toggle-off)]",
     ring: "bg-[var(--color-toggle-off)]/25",
     label: "已暂停",
   },
+  error: {
+    core: "bg-red-500",
+    ring: "bg-red-500/30",
+    label: "出错了 · 点击查看",
+    glow: true,
+    icon: "error",
+  },
+  rewrite: {
+    core: "bg-purple-400",
+    ring: "bg-purple-400/30",
+    label: "改写模式 · 选中文字后说话",
+    glow: true,
+    icon: "wand",
+  },
+  tts: {
+    core: "bg-teal-400",
+    ring: "bg-teal-400/30",
+    label: "朗读中 · Alt+1 停止",
+    glow: true,
+    icon: "volume",
+  },
 };
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export function BallWindow() {
   const appStatus = usePanelStore((state) => state.appStatus);
+  const rewriteMode = usePanelStore((state) => state.rewriteMode);
+  const ttsSpeaking = usePanelStore((state) => state.ttsSpeaking);
+  const errorMessage = usePanelStore((state) => state.errorMessage);
+  const recordingDuration = usePanelStore((state) => state.recordingDuration);
   const [hovered, setHovered] = useState(false);
 
-  const state = STATUS_TO_BALL_STATE[appStatus];
+  const state = computeBallState(appStatus, rewriteMode, ttsSpeaking, errorMessage);
   const meta = STATE_META[state];
-  const isActive = state === "recording" || state === "thinking";
+  const isActive = state === "recording" || state === "thinking" || state === "error" || state === "rewrite" || state === "tts";
+  const showTimer = state === "recording" && recordingDuration > 0;
 
   async function openPanel() {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -89,6 +139,9 @@ export function BallWindow() {
           }}
         >
           {meta.label} · 点击打开面板
+          {showTimer && (
+            <span className="ml-1.5 tabular-nums text-sky-300">{formatDuration(recordingDuration)}</span>
+          )}
         </div>
       )}
 
@@ -134,6 +187,41 @@ export function BallWindow() {
             strokeWidth={2.2}
             style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}
           />
+        ) : meta.icon === "error" ? (
+          <AlertCircle
+            className={cn(
+              "relative z-10 w-[18px] h-[18px] text-red-400",
+              isActive && "animate-pulse-dot"
+            )}
+            strokeWidth={2.2}
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}
+          />
+        ) : meta.icon === "loader" ? (
+          <Loader2
+            className={cn(
+              "relative z-10 w-[18px] h-[18px] text-amber-400 animate-spin"
+            )}
+            strokeWidth={2.2}
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}
+          />
+        ) : meta.icon === "wand" ? (
+          <Wand2
+            className={cn(
+              "relative z-10 w-[18px] h-[18px] text-purple-300",
+              isActive && "animate-pulse-dot"
+            )}
+            strokeWidth={2.2}
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}
+          />
+        ) : meta.icon === "volume" ? (
+          <Volume2
+            className={cn(
+              "relative z-10 w-[18px] h-[18px] text-teal-300",
+              isActive && "animate-pulse-dot"
+            )}
+            strokeWidth={2.2}
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}
+          />
         ) : (
           <span
             className={cn(
@@ -145,6 +233,8 @@ export function BallWindow() {
           />
         )}
       </button>
+
+      <TranslatePopup />
     </div>
   );
 }

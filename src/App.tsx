@@ -1,11 +1,37 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getAppStatus } from "./lib/commands";
-import type { AppStatus, ConfigEntry } from "./lib/types";
+import type {
+  AppStatus,
+  ConfigEntry,
+  PreviewDraft,
+  RecordingTickPayload,
+  ToastPayload,
+  TranslateResultPayload,
+  RewriteResultPayload,
+} from "./lib/types";
+import {
+  EVENT_RUNTIME_STATE_CHANGED,
+  EVENT_CONFIG_UPDATED,
+  EVENT_TOAST,
+  EVENT_PREVIEW_READY,
+  EVENT_PREVIEW_CLEARED,
+  EVENT_RECORDING_STARTED,
+  EVENT_RECORDING_STOPPED,
+  EVENT_RECORDING_CANCELLED,
+  EVENT_RECORDING_TICK,
+  EVENT_TTS_STARTED,
+  EVENT_TTS_STOPPED,
+  EVENT_TRANSLATE_RESULT,
+  EVENT_REWRITE_STARTED,
+  EVENT_REWRITE_RESULT,
+} from "./lib/events";
 import { usePanelStore } from "./stores/appStore";
+import { showToast, type ToastLevel } from "./stores/toastStore";
 import { BallWindow } from "./windows/ball/BallWindow";
 import { PanelWindow } from "./windows/panel/PanelWindow";
 import { ToastContainer } from "./components/ui/Toast";
+import { ErrorModal } from "./components/ui/ErrorModal";
 
 function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
@@ -15,24 +41,33 @@ function useBackendSync(): void {
   const setRuntimeStatus = usePanelStore((state) => state.setRuntimeStatus);
   const hydrateFromConfig = usePanelStore((state) => state.hydrateFromConfig);
   const applyConfigEntry = usePanelStore((state) => state.applyConfigEntry);
+  const setPreviewDraft = usePanelStore((state) => state.setPreviewDraft);
+  const clearPreviewDraft = usePanelStore((state) => state.clearPreviewDraft);
+  const loadAll = usePanelStore((state) => state.loadAll);
+  const setTtsSpeaking = usePanelStore((state) => state.setTtsSpeaking);
+  const setTranslateResult = usePanelStore((state) => state.setTranslateResult);
+  const setRewriteMode = usePanelStore((state) => state.setRewriteMode);
+  const setRewriteResult = usePanelStore((state) => state.setRewriteResult);
+  const setRecordingDuration = usePanelStore((state) => state.setRecordingDuration);
+  const setErrorMessage = usePanelStore((state) => state.setErrorMessage);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
 
     let disposed = false;
-    let stopStateListener: (() => void) | undefined;
-    let stopConfigListener: (() => void) | undefined;
+    const unlisteners: (() => void)[] = [];
 
     const setup = async () => {
       try {
-        stopStateListener = await listen<{ state: AppStatus }>(
-          "runtime-state-changed",
-          (event) => {
-            if (!disposed) setRuntimeStatus(event.payload.state);
-          },
-        );
-        stopConfigListener = await listen<ConfigEntry>(
-          "config-updated",
+        // Runtime state
+        unlisteners.push(await listen<{ state: AppStatus }>(
+          EVENT_RUNTIME_STATE_CHANGED,
+          (event) => { if (!disposed) setRuntimeStatus(event.payload.state); },
+        ));
+
+        // Config updates
+        unlisteners.push(await listen<ConfigEntry>(
+          EVENT_CONFIG_UPDATED,
           (event) => {
             if (disposed) return;
             if (event.payload.value === "__terminalvoice_secret_updated__") {
@@ -41,8 +76,77 @@ function useBackendSync(): void {
               applyConfigEntry(event.payload);
             }
           },
-        );
-        await hydrateFromConfig();
+        ));
+
+        // Preview
+        unlisteners.push(await listen<PreviewDraft>(
+          EVENT_PREVIEW_READY,
+          (event) => { if (!disposed) setPreviewDraft(event.payload); },
+        ));
+        unlisteners.push(await listen(EVENT_PREVIEW_CLEARED, () => {
+          if (!disposed) clearPreviewDraft();
+        }));
+
+        // Toast
+        unlisteners.push(await listen<ToastPayload>(
+          EVENT_TOAST,
+          (event) => {
+            if (!disposed) showToast(event.payload.message, event.payload.level);
+          },
+        ));
+
+        // Recording events
+        unlisteners.push(await listen(EVENT_RECORDING_STARTED, () => {
+          if (!disposed) { setRecordingDuration(0); setErrorMessage(null); }
+        }));
+        unlisteners.push(await listen<{ duration: number }>(
+          EVENT_RECORDING_TICK,
+          (event) => { if (!disposed) setRecordingDuration(event.payload.duration); },
+        ));
+        unlisteners.push(await listen(EVENT_RECORDING_STOPPED, () => {
+          if (!disposed) setRecordingDuration(0);
+        }));
+        unlisteners.push(await listen(EVENT_RECORDING_CANCELLED, () => {
+          if (!disposed) setRecordingDuration(0);
+        }));
+
+        // TTS events
+        unlisteners.push(await listen(EVENT_TTS_STARTED, () => {
+          if (!disposed) setTtsSpeaking(true);
+        }));
+        unlisteners.push(await listen(EVENT_TTS_STOPPED, () => {
+          if (!disposed) setTtsSpeaking(false);
+        }));
+
+        // Translate events
+        unlisteners.push(await listen<TranslateResultPayload>(
+          EVENT_TRANSLATE_RESULT,
+          (event) => { if (!disposed) setTranslateResult(event.payload); },
+        ));
+
+        // Rewrite events
+        unlisteners.push(await listen(EVENT_REWRITE_STARTED, () => {
+          if (!disposed) setRewriteMode(true);
+        }));
+        unlisteners.push(await listen<RewriteResultPayload>(
+          EVENT_REWRITE_RESULT,
+          (event) => {
+            if (!disposed) {
+              setRewriteResult(event.payload);
+              setRewriteMode(false);
+              setPreviewDraft({
+                mode: "rewrite",
+                sourceText: event.payload.originalText,
+                processedText: event.payload.rewrittenText,
+                textMode: "Normal",
+                asrProvider: "rewrite",
+              });
+            }
+          },
+        ));
+
+        // Initial load
+        await loadAll();
         const status = await getAppStatus();
         if (!disposed) setRuntimeStatus(status);
       } catch (error) {
@@ -53,10 +157,13 @@ function useBackendSync(): void {
     void setup();
     return () => {
       disposed = true;
-      stopStateListener?.();
-      stopConfigListener?.();
+      unlisteners.forEach((fn) => fn());
     };
-  }, [applyConfigEntry, hydrateFromConfig, setRuntimeStatus]);
+  }, [
+    applyConfigEntry, clearPreviewDraft, hydrateFromConfig, loadAll,
+    setPreviewDraft, setRuntimeStatus, setTtsSpeaking, setTranslateResult,
+    setRewriteMode, setRewriteResult, setRecordingDuration, setErrorMessage,
+  ]);
 }
 
 function useHashRoute(): string {
@@ -76,7 +183,6 @@ export default function App() {
   useEffect(() => {
     if (route === "#/ball" || route === "#/panel") {
       document.body.classList.add("window-transparent");
-      // 浏览器里没有真正的透明窗口，用深色背景模拟桌面环境
       document.body.classList.add("browser-preview-dark");
     } else {
       document.body.classList.remove("window-transparent");
@@ -91,6 +197,7 @@ export default function App() {
       {route === "#/main" && <MainWindowPlaceholder />}
       {!["#/ball", "#/panel", "#/main"].includes(route) && <DevPreview />}
       <ToastContainer />
+      <ErrorModal />
     </>
   );
 }

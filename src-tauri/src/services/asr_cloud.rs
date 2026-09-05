@@ -2,6 +2,7 @@ use crate::services::asr::{AsrProvider, AsrResult};
 use crate::services::audio::encode_wav;
 use crate::services::recorder::AudioBuffer;
 use serde::Deserialize;
+use std::path::Path;
 use std::thread;
 use std::time::Duration;
 use zeroize::Zeroizing;
@@ -101,14 +102,14 @@ fn append_text_part(body: &mut Vec<u8>, boundary: &str, name: &str, value: &str)
     body.extend_from_slice(b"\r\n");
 }
 
-struct HttpResponse {
-    status: u16,
-    body: Vec<u8>,
+pub(crate) struct HttpResponse {
+    pub(crate) status: u16,
+    pub(crate) body: Vec<u8>,
 }
 
-struct RequestError {
-    message: String,
-    retryable: bool,
+pub(crate) struct RequestError {
+    pub(crate) message: String,
+    pub(crate) retryable: bool,
 }
 
 impl RequestError {
@@ -155,14 +156,14 @@ fn parse_response(response: HttpResponse) -> Result<AsrResult, RequestError> {
     })
 }
 
-struct ParsedEndpoint {
-    secure: bool,
-    host: String,
-    port: u16,
-    path: String,
+pub(crate) struct ParsedEndpoint {
+    pub(crate) secure: bool,
+    pub(crate) host: String,
+    pub(crate) port: u16,
+    pub(crate) path: String,
 }
 
-fn parse_endpoint(endpoint: &str) -> Result<ParsedEndpoint, String> {
+pub(crate) fn parse_endpoint(endpoint: &str) -> Result<ParsedEndpoint, String> {
     let (secure, remainder, default_port) = if let Some(value) = endpoint.strip_prefix("https://") {
         (true, value, 443)
     } else if let Some(value) = endpoint.strip_prefix("http://") {
@@ -197,7 +198,31 @@ fn parse_endpoint(endpoint: &str) -> Result<ParsedEndpoint, String> {
 }
 
 #[cfg(windows)]
-fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse, RequestError> {
+pub(crate) fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse, RequestError> {
+    post_bytes_with_label(endpoint, headers, body, "ASR")
+}
+
+#[cfg(windows)]
+pub(crate) fn post_bytes_with_label(
+    endpoint: &str,
+    headers: &str,
+    body: &[u8],
+    service_label: &str,
+) -> Result<HttpResponse, RequestError> {
+    post_bytes_with_label_and_callback(endpoint, headers, body, service_label, |_| Ok(()))
+}
+
+#[cfg(windows)]
+pub(crate) fn post_bytes_with_label_and_callback<F>(
+    endpoint: &str,
+    headers: &str,
+    body: &[u8],
+    service_label: &str,
+    mut on_success_chunk: F,
+) -> Result<HttpResponse, RequestError>
+where
+    F: FnMut(&[u8]) -> Result<(), String>,
+{
     use std::ffi::c_void;
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::Foundation::GetLastError;
@@ -241,7 +266,7 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
         )
     });
     if session.0.is_null() {
-        return Err(last_error("初始化 WinHTTP"));
+        return Err(last_error(&format!("初始化 {service_label} HTTP")));
     }
     unsafe {
         WinHttpSetTimeouts(
@@ -257,7 +282,7 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
     let connection =
         InternetHandle(unsafe { WinHttpConnect(session.0, host.as_ptr(), parsed.port, 0) });
     if connection.0.is_null() {
-        return Err(last_error("连接 ASR 服务"));
+        return Err(last_error(&format!("连接 {service_label} 服务")));
     }
 
     let verb = wide("POST");
@@ -279,17 +304,17 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
         )
     });
     if request.0.is_null() {
-        return Err(last_error("创建 ASR 请求"));
+        return Err(last_error(&format!("创建 {service_label} 请求")));
     }
 
     let headers = wide(headers);
     let header_len = (headers.len() - 1)
         .try_into()
-        .map_err(|_| RequestError::fatal("ASR 请求头过长".to_string()))?;
+        .map_err(|_| RequestError::fatal(format!("{service_label} 请求头过长")))?;
     let body_len = body
         .len()
         .try_into()
-        .map_err(|_| RequestError::fatal("ASR 音频过大".to_string()))?;
+        .map_err(|_| RequestError::fatal(format!("{service_label} 请求体过大")))?;
     let ok = unsafe {
         WinHttpSendRequest(
             request.0,
@@ -302,10 +327,10 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
         )
     };
     if ok == 0 {
-        return Err(last_error("发送 ASR 请求"));
+        return Err(last_error(&format!("发送 {service_label} 请求")));
     }
     if unsafe { WinHttpReceiveResponse(request.0, null_mut()) } == 0 {
-        return Err(last_error("接收 ASR 响应"));
+        return Err(last_error(&format!("接收 {service_label} 响应")));
     }
 
     let mut status = 0_u32;
@@ -321,14 +346,14 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
         )
     };
     if ok == 0 {
-        return Err(last_error("读取 ASR 状态码"));
+        return Err(last_error(&format!("读取 {service_label} 状态码")));
     }
 
     let mut response_body = Vec::new();
     loop {
         let mut available = 0_u32;
         if unsafe { WinHttpQueryDataAvailable(request.0, &mut available) } == 0 {
-            return Err(last_error("读取 ASR 响应长度"));
+            return Err(last_error(&format!("读取 {service_label} 响应长度")));
         }
         if available == 0 {
             break;
@@ -345,7 +370,168 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
             )
         } == 0
         {
-            return Err(last_error("读取 ASR 响应"));
+            return Err(last_error(&format!("读取 {service_label} 响应")));
+        }
+        response_body.truncate(offset + read as usize);
+        if (200..300).contains(&(status as u16)) && read > 0 {
+            on_success_chunk(&response_body[offset..offset + read as usize])
+                .map_err(RequestError::fatal)?;
+        }
+    }
+
+    Ok(HttpResponse {
+        status: status as u16,
+        body: response_body,
+    })
+}
+
+#[cfg(windows)]
+#[allow(dead_code)]
+pub(crate) fn get_bytes(endpoint: &str, headers: &str) -> Result<HttpResponse, RequestError> {
+    use std::ffi::c_void;
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::Networking::WinHttp::{
+        WinHttpCloseHandle, WinHttpConnect, WinHttpOpen, WinHttpOpenRequest,
+        WinHttpQueryDataAvailable, WinHttpQueryHeaders, WinHttpReadData, WinHttpReceiveResponse,
+        WinHttpSendRequest, WinHttpSetTimeouts, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+        WINHTTP_FLAG_SECURE, WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_QUERY_STATUS_CODE,
+    };
+
+    struct InternetHandle(*mut c_void);
+    impl Drop for InternetHandle {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                unsafe {
+                    WinHttpCloseHandle(self.0);
+                }
+            }
+        }
+    }
+
+    fn wide(value: &str) -> Vec<u16> {
+        value.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    fn last_error(action: &str) -> RequestError {
+        RequestError::transport(format!("{action}失败，Windows 错误码 {}", unsafe {
+            GetLastError()
+        }))
+    }
+
+    let parsed = parse_endpoint(endpoint).map_err(RequestError::fatal)?;
+    let agent = wide("TerminalVoice/0.1");
+    let session = InternetHandle(unsafe {
+        WinHttpOpen(
+            agent.as_ptr(),
+            WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+            null(),
+            null(),
+            0,
+        )
+    });
+    if session.0.is_null() {
+        return Err(last_error("初始化 HTTP"));
+    }
+    unsafe {
+        WinHttpSetTimeouts(
+            session.0,
+            REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS,
+        );
+    }
+
+    let host = wide(&parsed.host);
+    let connection =
+        InternetHandle(unsafe { WinHttpConnect(session.0, host.as_ptr(), parsed.port, 0) });
+    if connection.0.is_null() {
+        return Err(last_error("连接服务"));
+    }
+
+    let verb = wide("GET");
+    let path = wide(&parsed.path);
+    let flags = if parsed.secure {
+        WINHTTP_FLAG_SECURE
+    } else {
+        0
+    };
+    let request = InternetHandle(unsafe {
+        WinHttpOpenRequest(
+            connection.0,
+            verb.as_ptr(),
+            path.as_ptr(),
+            null(),
+            null(),
+            null(),
+            flags,
+        )
+    });
+    if request.0.is_null() {
+        return Err(last_error("创建请求"));
+    }
+
+    let headers_wide = wide(headers);
+    let header_len = (headers_wide.len() - 1)
+        .try_into()
+        .map_err(|_| RequestError::fatal("请求头过长".to_string()))?;
+    let ok = unsafe {
+        WinHttpSendRequest(
+            request.0,
+            headers_wide.as_ptr(),
+            header_len,
+            null(),
+            0,
+            0,
+            0,
+        )
+    };
+    if ok == 0 {
+        return Err(last_error("发送请求"));
+    }
+    if unsafe { WinHttpReceiveResponse(request.0, null_mut()) } == 0 {
+        return Err(last_error("接收响应"));
+    }
+
+    let mut status = 0_u32;
+    let mut status_size = std::mem::size_of::<u32>() as u32;
+    let ok = unsafe {
+        WinHttpQueryHeaders(
+            request.0,
+            WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+            null(),
+            &mut status as *mut u32 as *mut c_void,
+            &mut status_size,
+            null_mut(),
+        )
+    };
+    if ok == 0 {
+        return Err(last_error("读取状态码"));
+    }
+
+    let mut response_body = Vec::new();
+    loop {
+        let mut available = 0_u32;
+        if unsafe { WinHttpQueryDataAvailable(request.0, &mut available) } == 0 {
+            return Err(last_error("读取响应长度"));
+        }
+        if available == 0 {
+            break;
+        }
+        let offset = response_body.len();
+        response_body.resize(offset + available as usize, 0);
+        let mut read = 0_u32;
+        if unsafe {
+            WinHttpReadData(
+                request.0,
+                response_body[offset..].as_mut_ptr() as *mut c_void,
+                available,
+                &mut read,
+            )
+        } == 0
+        {
+            return Err(last_error("读取响应"));
         }
         response_body.truncate(offset + read as usize);
     }
@@ -356,10 +542,229 @@ fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<HttpResponse
     })
 }
 
+#[cfg(windows)]
+pub(crate) fn download_file(
+    endpoint: &str,
+    headers: &str,
+    output_path: &Path,
+) -> Result<u64, RequestError> {
+    use std::ffi::c_void;
+    use std::io::Write;
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::Networking::WinHttp::{
+        WinHttpCloseHandle, WinHttpConnect, WinHttpOpen, WinHttpOpenRequest,
+        WinHttpQueryDataAvailable, WinHttpQueryHeaders, WinHttpReadData, WinHttpReceiveResponse,
+        WinHttpSendRequest, WinHttpSetTimeouts, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+        WINHTTP_FLAG_SECURE, WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_QUERY_STATUS_CODE,
+    };
+
+    struct InternetHandle(*mut c_void);
+    impl Drop for InternetHandle {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                unsafe {
+                    WinHttpCloseHandle(self.0);
+                }
+            }
+        }
+    }
+
+    fn wide(value: &str) -> Vec<u16> {
+        value.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    fn last_error(action: &str) -> RequestError {
+        RequestError::transport(format!("{action}失败，Windows 错误码 {}", unsafe {
+            GetLastError()
+        }))
+    }
+
+    let parsed = parse_endpoint(endpoint).map_err(RequestError::fatal)?;
+    let agent = wide("TerminalVoice/0.1");
+    let session = InternetHandle(unsafe {
+        WinHttpOpen(
+            agent.as_ptr(),
+            WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+            null(),
+            null(),
+            0,
+        )
+    });
+    if session.0.is_null() {
+        return Err(last_error("初始化 HTTP"));
+    }
+    unsafe {
+        WinHttpSetTimeouts(
+            session.0,
+            REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS,
+        );
+    }
+
+    let host = wide(&parsed.host);
+    let connection =
+        InternetHandle(unsafe { WinHttpConnect(session.0, host.as_ptr(), parsed.port, 0) });
+    if connection.0.is_null() {
+        return Err(last_error("连接服务"));
+    }
+
+    let verb = wide("GET");
+    let path = wide(&parsed.path);
+    let flags = if parsed.secure {
+        WINHTTP_FLAG_SECURE
+    } else {
+        0
+    };
+    let request = InternetHandle(unsafe {
+        WinHttpOpenRequest(
+            connection.0,
+            verb.as_ptr(),
+            path.as_ptr(),
+            null(),
+            null(),
+            null(),
+            flags,
+        )
+    });
+    if request.0.is_null() {
+        return Err(last_error("创建请求"));
+    }
+
+    let headers_wide = wide(headers);
+    let header_len = (headers_wide.len() - 1)
+        .try_into()
+        .map_err(|_| RequestError::fatal("请求头过长".to_string()))?;
+    let ok = unsafe {
+        WinHttpSendRequest(
+            request.0,
+            headers_wide.as_ptr(),
+            header_len,
+            null(),
+            0,
+            0,
+            0,
+        )
+    };
+    if ok == 0 {
+        return Err(last_error("发送请求"));
+    }
+    if unsafe { WinHttpReceiveResponse(request.0, null_mut()) } == 0 {
+        return Err(last_error("接收响应"));
+    }
+
+    let mut status = 0_u32;
+    let mut status_size = std::mem::size_of::<u32>() as u32;
+    let ok = unsafe {
+        WinHttpQueryHeaders(
+            request.0,
+            WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+            null(),
+            &mut status as *mut u32 as *mut c_void,
+            &mut status_size,
+            null_mut(),
+        )
+    };
+    if ok == 0 {
+        return Err(last_error("读取状态码"));
+    }
+
+    if !(200..300).contains(&(status as u16)) {
+        return Err(RequestError::fatal(format!(
+            "下载失败，HTTP 状态码: {status}"
+        )));
+    }
+
+    let mut file = std::fs::File::create(output_path)
+        .map_err(|e| RequestError::fatal(format!("无法创建文件: {e}")))?;
+    let mut total_written: u64 = 0;
+
+    loop {
+        let mut available = 0_u32;
+        if unsafe { WinHttpQueryDataAvailable(request.0, &mut available) } == 0 {
+            return Err(last_error("读取下载响应长度"));
+        }
+        if available == 0 {
+            break;
+        }
+        let mut buffer = vec![0u8; available as usize];
+        let mut read = 0_u32;
+        if unsafe {
+            WinHttpReadData(
+                request.0,
+                buffer.as_mut_ptr() as *mut c_void,
+                available,
+                &mut read,
+            )
+        } == 0
+        {
+            return Err(last_error("读取下载响应"));
+        }
+        buffer.truncate(read as usize);
+        file.write_all(&buffer)
+            .map_err(|e| RequestError::fatal(format!("写入文件失败: {e}")))?;
+        total_written += read as u64;
+    }
+
+    Ok(total_written)
+}
+
 #[cfg(not(windows))]
-fn post_bytes(_endpoint: &str, _headers: &str, _body: &[u8]) -> Result<HttpResponse, RequestError> {
+pub(crate) fn post_bytes(
+    _endpoint: &str,
+    _headers: &str,
+    _body: &[u8],
+) -> Result<HttpResponse, RequestError> {
     Err(RequestError::fatal(
         "云端 ASR 的 WinHTTP 客户端仅支持 Windows".to_string(),
+    ))
+}
+
+#[cfg(not(windows))]
+pub(crate) fn post_bytes_with_label(
+    _endpoint: &str,
+    _headers: &str,
+    _body: &[u8],
+    service_label: &str,
+) -> Result<HttpResponse, RequestError> {
+    Err(RequestError::fatal(format!(
+        "云端 {service_label} 的 WinHTTP 客户端仅支持 Windows"
+    )))
+}
+
+#[cfg(not(windows))]
+pub(crate) fn post_bytes_with_label_and_callback<F>(
+    _endpoint: &str,
+    _headers: &str,
+    _body: &[u8],
+    service_label: &str,
+    _on_success_chunk: F,
+) -> Result<HttpResponse, RequestError>
+where
+    F: FnMut(&[u8]) -> Result<(), String>,
+{
+    Err(RequestError::fatal(format!(
+        "云端 {service_label} 的 WinHTTP 客户端仅支持 Windows"
+    )))
+}
+
+#[cfg(not(windows))]
+pub(crate) fn get_bytes(_endpoint: &str, _headers: &str) -> Result<HttpResponse, RequestError> {
+    Err(RequestError::fatal(
+        "WinHTTP GET 客户端仅支持 Windows".to_string(),
+    ))
+}
+
+#[cfg(not(windows))]
+pub(crate) fn download_file(
+    _endpoint: &str,
+    _headers: &str,
+    _output_path: &Path,
+) -> Result<u64, RequestError> {
+    Err(RequestError::fatal(
+        "文件下载的 WinHTTP 客户端仅支持 Windows".to_string(),
     ))
 }
 

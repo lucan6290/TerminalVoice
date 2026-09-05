@@ -25,7 +25,7 @@ export function HelpTab() {
           <div className="text-[18px] font-semibold text-neutral-100 tracking-tight mb-1">
             TerminalVoice
           </div>
-          <div className="text-[11px] text-neutral-500">v0.1.0 · 语音输入 AI 助手</div>
+          <div className="text-[11px] text-neutral-500">v0.2.0 · 语音输入 AI 助手</div>
         </div>
 
         {/* 快捷键 */}
@@ -36,6 +36,8 @@ export function HelpTab() {
           <div className="bg-neutral-800 rounded-xl divide-y divide-white/5">
             <ShortcutRow keys={[pttKey]} desc="按住说话，松开上屏" />
             <ShortcutRow keys={[pttKey, "单击"]} desc="切换免提模式（按一次开始，再按一次结束）" />
+            <ShortcutRow keys={["Alt", "1"]} desc="朗读选中文本（再按一次停止）" />
+            <ShortcutRow keys={["Alt", "2"]} desc="翻译选中文本" />
             <ShortcutRow keys={["Esc"]} desc="关闭预览弹窗 / 停止录音" />
             <ShortcutRow keys={["Ctrl", "Enter"]} desc="预览中确认并换行" />
           </div>

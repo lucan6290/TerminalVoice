@@ -1,13 +1,30 @@
 import { create } from "zustand";
-import { listConfig, setConfig } from "../lib/commands";
+import {
+  listConfig,
+  setConfig,
+  listHistory,
+  deleteHistory as ipcDeleteHistory,
+  clearHistory as ipcClearHistory,
+  reinjectHistory as ipcReinjectHistory,
+  listFilterWords,
+  addFilterWord as ipcAddFilterWord,
+  deleteFilterWord as ipcDeleteFilterWord,
+  toggleFilterWord as ipcToggleFilterWord,
+  listModels,
+  downloadModel as ipcDownloadModel,
+  deleteModel as ipcDeleteModel,
+} from "../lib/commands";
 import type {
   AppStatus,
   ConfigEntry,
   FilterWord,
   HistoryItem,
-  LocalModel,
+  ModelInfo,
+  PreviewDraft,
   ServiceConfig,
   TextProcessMode,
+  TranslateResultPayload,
+  RewriteResultPayload,
 } from "../lib/types";
 
 /** 底部功能 Tab 类型 */
@@ -42,64 +59,9 @@ function persist(key: string, value: string): void {
   });
 }
 
-// ==================== Mock 数据 ====================
-const MOCK_HISTORY: HistoryItem[] = [
-  {
-    id: 1,
-    created_at: "2026-09-05 14:32",
-    source_text: "明天下午三点开个会讨论一下项目进度",
-    final_text: "明天下午3点开个会，讨论项目进度。",
-    text_mode: "Normal",
-    asr_provider: "云端ASR",
-  },
-  {
-    id: 2,
-    created_at: "2026-09-05 14:28",
-    source_text: "帮我把这段文字改成更正式的语气",
-    final_text: "请将此段文字调整为更为正式的表述风格。",
-    text_mode: "Normal",
-    asr_provider: "云端ASR",
-  },
-  {
-    id: 3,
-    created_at: "2026-09-05 11:05",
-    source_text: "const result = await fetch(url); const data = await result.json();",
-    final_text: "const result = await fetch(url);\nconst data = await result.json();",
-    text_mode: "Developer",
-    asr_provider: "云端ASR",
-  },
-  {
-    id: 4,
-    created_at: "2026-09-04 18:47",
-    source_text: "那个文件放在d盘projects目录下面",
-    final_text: "那个文件放在D盘Projects目录下面。",
-    text_mode: "Normal",
-    asr_provider: "离线Whisper",
-  },
-  {
-    id: 5,
-    created_at: "2026-09-04 09:15",
-    source_text: "今天的天气怎么样",
-    final_text: "今天的天气怎么样？",
-    text_mode: "Normal",
-    asr_provider: "云端ASR",
-  },
-];
-
-const MOCK_FILTER_WORDS: FilterWord[] = [
-  { id: 1, word: "嗯", replacement: "", enabled: true },
-  { id: 2, word: "那个", replacement: "", enabled: true },
-  { id: 3, word: "就是说", replacement: "", enabled: true },
-  { id: 4, word: "然后", replacement: "", enabled: false },
-  { id: 5, word: "啊", replacement: "", enabled: true },
-];
-
-const MOCK_LOCAL_MODELS: LocalModel[] = [
-  { id: "sensevoice-small", name: "SenseVoice Small", size: "220 MB", language: "中文/英文/日文/韩文", downloaded: true },
-  { id: "whisper-base", name: "Whisper Base", size: "140 MB", language: "多语言", downloaded: false },
-  { id: "whisper-small", name: "Whisper Small", size: "460 MB", language: "多语言", downloaded: false },
-  { id: "paraformer-zh", name: "Paraformer 中文", size: "210 MB", language: "中文", downloaded: false },
-];
+function isTauri(): boolean {
+  return "__TAURI_INTERNALS__" in window;
+}
 
 const DEFAULT_SERVICE: ServiceConfig = {
   asrProvider: "auto",
@@ -119,6 +81,7 @@ export interface PanelState {
   dark: boolean;
   activeTab: TabKey | null;
   appStatus: AppStatus;
+  previewDraft: PreviewDraft | null;
 
   // Quick settings (home view)
   pttKey: string;
@@ -133,14 +96,25 @@ export interface PanelState {
   // Data
   historyItems: HistoryItem[];
   filterWords: FilterWord[];
-  localModels: LocalModel[];
+  models: ModelInfo[];
+  downloadingModels: string[];
   serviceReady: boolean;
   quotaDisplay: string;
+
+  // Runtime feature state
+  rewriteMode: boolean;
+  ttsSpeaking: boolean;
+  translateResult: TranslateResultPayload | null;
+  rewriteResult: RewriteResultPayload | null;
+  recordingDuration: number;
+  errorMessage: string | null;
 
   // Actions
   toggleDark: () => void;
   setActiveTab: (tab: TabKey | null) => void;
   setRuntimeStatus: (status: AppStatus) => void;
+  setPreviewDraft: (draft: PreviewDraft) => void;
+  clearPreviewDraft: () => void;
   hydrateFromConfig: () => Promise<void>;
   applyConfigEntry: (entry: ConfigEntry) => void;
   setSoundOn: (v: boolean) => void;
@@ -152,38 +126,61 @@ export interface PanelState {
   // Service config actions
   setServiceConfig: (partial: Partial<ServiceConfig>) => void;
 
+  // Data loading
+  loadAll: () => Promise<void>;
+  loadHistory: () => Promise<void>;
+  loadFilterWords: () => Promise<void>;
+  loadModels: () => Promise<void>;
+
   // History actions
-  deleteHistory: (id: number) => void;
-  clearHistory: () => void;
-  reInjectHistory: (id: number) => void;
+  deleteHistory: (id: number) => Promise<void>;
+  clearHistory: () => Promise<void>;
+  reInjectHistory: (id: number) => Promise<void>;
 
   // Dictionary actions
-  addFilterWord: (word: string, replacement: string) => void;
-  toggleFilterWord: (id: number) => void;
-  deleteFilterWord: (id: number) => void;
-  updateFilterWord: (id: number, word: string, replacement: string) => void;
+  addFilterWord: (word: string, replacement: string) => Promise<void>;
+  toggleFilterWord: (id: number) => Promise<void>;
+  deleteFilterWord: (id: number) => Promise<void>;
+  updateFilterWord: (id: number, word: string, replacement: string) => Promise<void>;
 
   // Model actions
-  downloadModel: (id: string) => void;
-  deleteModel: (id: string) => void;
+  downloadModel: (id: string) => Promise<void>;
+  deleteModel: (id: string) => Promise<void>;
+
+  // Runtime feature actions
+  setRewriteMode: (v: boolean) => void;
+  setTtsSpeaking: (v: boolean) => void;
+  setTranslateResult: (payload: TranslateResultPayload | null) => void;
+  setRewriteResult: (payload: RewriteResultPayload | null) => void;
+  setRecordingDuration: (seconds: number) => void;
+  setErrorMessage: (msg: string | null) => void;
 }
 
 export const usePanelStore = create<PanelState>((set, get) => ({
   dark: true,
   activeTab: null,
   appStatus: "Idle",
+  previewDraft: null,
   pttKey: "Right-Alt",
-  micDevice: "自动检测（麦克风 USB_MIC）",
+  micDevice: "自动检测",
   soundOn: true,
   muteSys: true,
   autoStart: true,
 
   service: DEFAULT_SERVICE,
-  historyItems: MOCK_HISTORY,
-  filterWords: MOCK_FILTER_WORDS,
-  localModels: MOCK_LOCAL_MODELS,
-  serviceReady: true,
-  quotaDisplay: "780 分 39 秒",
+  historyItems: [],
+  filterWords: [],
+  models: [],
+  downloadingModels: [],
+  serviceReady: false,
+  quotaDisplay: "",
+
+  rewriteMode: false,
+  ttsSpeaking: false,
+  translateResult: null,
+  rewriteResult: null,
+  recordingDuration: 0,
+  errorMessage: null,
 
   // ---- UI actions ----
   toggleDark: () => set((state) => {
@@ -193,6 +190,8 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   setRuntimeStatus: (appStatus) => set({ appStatus }),
+  setPreviewDraft: (previewDraft) => set({ previewDraft, activeTab: null }),
+  clearPreviewDraft: () => set({ previewDraft: null }),
   hydrateFromConfig: async () => {
     try {
       const entries = await listConfig();
@@ -256,61 +255,167 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     set((state) => {
       const service = { ...state.service, ...partial };
       const cloudReady = Boolean(service.asrEndpoint.trim() && service.asrModel.trim() && service.asrApiKey.trim());
-      return {
-        service,
-        serviceReady: service.asrProvider === "offline" ? state.localModels.some((model) => model.downloaded) : cloudReady,
-      };
+      const offlineReady = state.models.some((m) => m.installed);
+      const ready = service.asrProvider === "offline" ? offlineReady : service.asrProvider === "auto" ? cloudReady || offlineReady : cloudReady;
+      return { service, serviceReady: ready };
     });
   },
 
+  // ---- Data loading ----
+  loadAll: async () => {
+    const store = usePanelStore.getState();
+    await Promise.allSettled([
+      store.loadHistory(),
+      store.loadFilterWords(),
+      store.loadModels(),
+      store.hydrateFromConfig(),
+    ]);
+  },
+  loadHistory: async () => {
+    if (!isTauri()) return;
+    try {
+      const items = await listHistory();
+      set({ historyItems: items });
+    } catch (error) {
+      console.warn("[TerminalVoice] 加载历史失败:", error);
+    }
+  },
+  loadFilterWords: async () => {
+    if (!isTauri()) return;
+    try {
+      const words = await listFilterWords();
+      set({ filterWords: words });
+    } catch (error) {
+      console.warn("[TerminalVoice] 加载过滤词失败:", error);
+    }
+  },
+  loadModels: async () => {
+    if (!isTauri()) return;
+    try {
+      const models = await listModels();
+      set({ models });
+    } catch (error) {
+      console.warn("[TerminalVoice] 加载模型列表失败:", error);
+    }
+  },
+
   // ---- History ----
-  deleteHistory: (id) => set((state) => ({ historyItems: state.historyItems.filter((h) => h.id !== id) })),
-  clearHistory: () => set({ historyItems: [] }),
-  reInjectHistory: (id) => {
-    const item = get().historyItems.find((h) => h.id === id);
-    if (item) {
-      // Mock: copy to clipboard would happen here in real impl
-      console.log("[reInject]", item.final_text);
+  deleteHistory: async (id) => {
+    set((state) => ({ historyItems: state.historyItems.filter((h) => h.id !== id) }));
+    if (!isTauri()) return;
+    try {
+      await ipcDeleteHistory(id);
+    } catch (error) {
+      console.warn("[TerminalVoice] 删除历史失败:", error);
+      await get().loadHistory();
+    }
+  },
+  clearHistory: async () => {
+    set({ historyItems: [] });
+    if (!isTauri()) return;
+    try {
+      await ipcClearHistory();
+    } catch (error) {
+      console.warn("[TerminalVoice] 清空历史失败:", error);
+      await get().loadHistory();
+    }
+  },
+  reInjectHistory: async (id) => {
+    if (!isTauri()) return;
+    try {
+      await ipcReinjectHistory(id);
+    } catch (error) {
+      console.warn("[TerminalVoice] 重新上屏失败:", error);
     }
   },
 
   // ---- Dictionary ----
-  addFilterWord: (word, replacement) => set((state) => ({
-    filterWords: [...state.filterWords, { id: Date.now(), word, replacement, enabled: true }],
-  })),
-  toggleFilterWord: (id) => set((state) => ({
-    filterWords: state.filterWords.map((w) => w.id === id ? { ...w, enabled: !w.enabled } : w),
-  })),
-  deleteFilterWord: (id) => set((state) => ({
-    filterWords: state.filterWords.filter((w) => w.id !== id),
-  })),
-  updateFilterWord: (id, word, replacement) => set((state) => ({
-    filterWords: state.filterWords.map((w) => w.id === id ? { ...w, word, replacement } : w),
-  })),
-
-  // ---- Model download (mock: simulate progress) ----
-  downloadModel: (id) => {
-    set((state) => ({
-      localModels: state.localModels.map((m) => m.id === id ? { ...m, downloadProgress: 0 } : m),
-    }));
-    const tick = () => {
-      const curr = get().localModels.find((m) => m.id === id);
-      if (!curr || curr.downloaded) return;
-      const p = (curr.downloadProgress ?? 0) + 10;
-      if (p >= 100) {
-        set((state) => ({
-          localModels: state.localModels.map((m) => m.id === id ? { ...m, downloaded: true, downloadProgress: undefined } : m),
-        }));
-      } else {
-        set((state) => ({
-          localModels: state.localModels.map((m) => m.id === id ? { ...m, downloadProgress: p } : m),
-        }));
-        setTimeout(tick, 200);
-      }
-    };
-    setTimeout(tick, 200);
+  addFilterWord: async (word, replacement) => {
+    if (!isTauri()) {
+      set((state) => ({
+        filterWords: [...state.filterWords, { id: Date.now(), word, replacement, enabled: true }],
+      }));
+      return;
+    }
+    try {
+      await ipcAddFilterWord(word, replacement || undefined);
+      await get().loadFilterWords();
+    } catch (error) {
+      console.warn("[TerminalVoice] 添加过滤词失败:", error);
+    }
   },
-  deleteModel: (id) => set((state) => ({
-    localModels: state.localModels.map((m) => m.id === id ? { ...m, downloaded: false, downloadProgress: undefined } : m),
-  })),
+  toggleFilterWord: async (id) => {
+    set((state) => ({
+      filterWords: state.filterWords.map((w) => w.id === id ? { ...w, enabled: !w.enabled } : w),
+    }));
+    if (!isTauri()) return;
+    try {
+      await ipcToggleFilterWord(id);
+    } catch (error) {
+      console.warn("[TerminalVoice] 切换过滤词失败:", error);
+      await get().loadFilterWords();
+    }
+  },
+  deleteFilterWord: async (id) => {
+    set((state) => ({
+      filterWords: state.filterWords.filter((w) => w.id !== id),
+    }));
+    if (!isTauri()) return;
+    try {
+      await ipcDeleteFilterWord(id);
+    } catch (error) {
+      console.warn("[TerminalVoice] 删除过滤词失败:", error);
+      await get().loadFilterWords();
+    }
+  },
+  updateFilterWord: async (id, word, replacement) => {
+    set((state) => ({
+      filterWords: state.filterWords.map((w) => w.id === id ? { ...w, word, replacement } : w),
+    }));
+    if (!isTauri()) return;
+    // Backend doesn't have an update command; delete + add
+    try {
+      await ipcDeleteFilterWord(id);
+      await ipcAddFilterWord(word, replacement || undefined);
+      await get().loadFilterWords();
+    } catch (error) {
+      console.warn("[TerminalVoice] 更新过滤词失败:", error);
+      await get().loadFilterWords();
+    }
+  },
+
+  // ---- Model ----
+  downloadModel: async (id) => {
+    if (!isTauri()) return;
+    set((state) => ({
+      downloadingModels: [...state.downloadingModels, id],
+    }));
+    try {
+      await ipcDownloadModel(id);
+      await get().loadModels();
+    } catch (error) {
+      console.warn("[TerminalVoice] 下载模型失败:", error);
+    } finally {
+      set((state) => ({
+        downloadingModels: state.downloadingModels.filter((m) => m !== id),
+      }));
+    }
+  },
+  deleteModel: async (id) => {
+    if (!isTauri()) return;
+    try {
+      await ipcDeleteModel(id);
+      await get().loadModels();
+    } catch (error) {
+      console.warn("[TerminalVoice] 删除模型失败:", error);
+    }
+  },
+
+  // ---- Runtime feature actions ----
+  setRewriteMode: (rewriteMode) => set({ rewriteMode }),
+  setTtsSpeaking: (ttsSpeaking) => set({ ttsSpeaking }),
+  setTranslateResult: (translateResult) => set({ translateResult }),
+  setRewriteResult: (rewriteResult) => set({ rewriteResult }),
+  setRecordingDuration: (recordingDuration) => set({ recordingDuration }),
+  setErrorMessage: (errorMessage) => set({ errorMessage }),
 }));

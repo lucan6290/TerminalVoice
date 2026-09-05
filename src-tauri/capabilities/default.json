@@ -1,11 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default permissions for TerminalVoice MVP",
+  "description": "Default permissions for TerminalVoice",
   "windows": ["main", "ball", "panel"],
   "permissions": [
     "core:default",
     "core:window:allow-show",
-    "core:window:allow-set-focus"
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-position",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
   ]
 }

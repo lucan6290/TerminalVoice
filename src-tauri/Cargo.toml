@@ -14,7 +14,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
@@ -27,4 +27,8 @@ hound = "3.5"
 serde_json = "1"
 base64 = "0.22"
 zeroize = "1.8"
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_Networking_WinHttp"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_Networking_WinHttp", "Win32_System_Com"] }
+zip = "2"
+
+[dev-dependencies]
+tempfile = "3"

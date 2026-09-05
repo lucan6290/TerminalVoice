@@ -1,3 +1,4 @@
+use crate::services::clipboard;
 use arboard::Clipboard;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
@@ -11,10 +12,11 @@ pub fn inject_text(text: &str) -> Result<(), String> {
     match enigo.text(text) {
         Ok(()) => Ok(()),
         Err(primary) => {
-            let mut clipboard = Clipboard::new().map_err(|error| {
+            let mut cb = Clipboard::new().map_err(|error| {
                 format!("文本注入失败且无法访问剪贴板: {error}; 原因: {primary}")
             })?;
-            clipboard.set_text(text).map_err(|error| {
+            let backup = clipboard::backup_clipboard();
+            cb.set_text(text).map_err(|error| {
                 format!("文本注入失败且无法写入剪贴板: {error}; 原因: {primary}")
             })?;
             enigo
@@ -26,6 +28,7 @@ pub fn inject_text(text: &str) -> Result<(), String> {
             enigo
                 .key(Key::Control, Direction::Release)
                 .map_err(|error| error.to_string())?;
+            clipboard::restore_clipboard(backup);
             Ok(())
         }
     }

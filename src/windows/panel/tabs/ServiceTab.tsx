@@ -9,12 +9,21 @@ import {
   Eye,
   EyeOff,
   Check,
+  Loader2,
+  Wifi,
 } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { usePanelStore } from "../../../stores/appStore";
-import { ToggleSwitch } from "../../../components/ui/ToggleSwitch";
 import { showToast } from "../../../stores/toastStore";
+import { testAsrConnection } from "../../../lib/commands";
 import type { ASRProvider } from "../../../lib/types";
+
+function formatSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
 
 const ASR_OPTIONS: { key: ASRProvider; label: string; desc: string; icon: typeof Cloud }[] = [
   { key: "auto",    label: "智能切换",   desc: "优先云端，失败时自动降级离线",   icon: Zap },
@@ -25,13 +34,27 @@ const ASR_OPTIONS: { key: ASRProvider; label: string; desc: string; icon: typeof
 export function ServiceTab() {
   const service = usePanelStore((s) => s.service);
   const setServiceConfig = usePanelStore((s) => s.setServiceConfig);
-  const models = usePanelStore((s) => s.localModels);
+  const models = usePanelStore((s) => s.models);
+  const downloadingModels = usePanelStore((s) => s.downloadingModels);
   const downloadModel = usePanelStore((s) => s.downloadModel);
   const deleteModel = usePanelStore((s) => s.deleteModel);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
 
   const [showAsrKey, setShowAsrKey] = useState(false);
   const [showLlmKey, setShowLlmKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  async function handleTestConnection() {
+    setTesting(true);
+    try {
+      const ok = await testAsrConnection();
+      showToast(ok ? "ASR 连接成功" : "ASR 连接失败，请检查配置", ok ? "success" : "error");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "连接测试失败", "error");
+    } finally {
+      setTesting(false);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -118,6 +141,17 @@ export function ServiceTab() {
                 </button>
               </div>
             </Field>
+            <button
+              onClick={() => void handleTestConnection()}
+              disabled={testing}
+              className="w-full mt-1 h-8 rounded-lg bg-green-500/15 text-green-400 text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-green-500/25 transition-colors disabled:opacity-50"
+            >
+              {testing ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 测试中…</>
+              ) : (
+                <><Wifi className="w-3.5 h-3.5" /> 测试 ASR 连接</>
+              )}
+            </button>
           </div>
         </section>
 
@@ -167,58 +201,50 @@ export function ServiceTab() {
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1">离线模型</p>
           <div className="space-y-2">
-            {models.map((m) => (
-              <div key={m.id} className="bg-neutral-800 rounded-xl px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] text-neutral-100 flex items-center gap-2">
-                      {m.name}
-                      {m.downloaded && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">已下载</span>
-                      )}
+            {models.length === 0 ? (
+              <div className="text-center text-neutral-500 text-[12px] py-6">暂无可用模型</div>
+            ) : models.map((m) => {
+              const isDownloading = downloadingModels.includes(m.id);
+              return (
+                <div key={m.id} className="bg-neutral-800 rounded-xl px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] text-neutral-100 flex items-center gap-2">
+                        {m.name}
+                        {m.installed && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">已安装</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                        {formatSize(m.sizeBytes)}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-neutral-500 mt-0.5">
-                      {m.size} · {m.language}
-                    </div>
+                    {m.installed ? (
+                      <button
+                        onClick={() => void deleteModel(m.id).then(() => showToast(`已删除 ${m.name}`, "info"))}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-500 hover:text-red-400 hover:bg-white/5"
+                        data-tip="删除模型"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    ) : isDownloading ? (
+                      <div className="flex items-center gap-1.5 text-green-400">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-[11px]">下载中</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => void downloadModel(m.id).then(() => showToast(`开始下载 ${m.name}`, "info"))}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-green-400 hover:bg-green-500/10"
+                        data-tip="下载模型"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  {m.downloaded ? (
-                    <button
-                      onClick={() => {
-                        deleteModel(m.id);
-                        showToast(`已删除 ${m.name}`, "info");
-                      }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-500 hover:text-red-400 hover:bg-white/5"
-                      data-tip="删除模型"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  ) : m.downloadProgress !== undefined && m.downloadProgress < 100 ? (
-                    <div className="w-16 h-1.5 bg-neutral-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 rounded-full transition-all"
-                        style={{ width: `${m.downloadProgress}%` }}
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        downloadModel(m.id);
-                        showToast(`开始下载 ${m.name}`, "info");
-                      }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-green-400 hover:bg-green-500/10"
-                      data-tip="下载模型"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
-                {m.downloadProgress !== undefined && m.downloadProgress < 100 && (
-                  <div className="text-[11px] text-neutral-500 mt-1 tabular-nums">
-                    下载中 {m.downloadProgress}%
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>

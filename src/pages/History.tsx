@@ -14,8 +14,8 @@ export default function History({ items }: HistoryProps) {
         <ul>
           {items.map((item) => (
             <li key={item.id}>
-              <strong>{item.created_at}</strong>
-              <p>{item.final_text}</p>
+              <strong>{item.createdAt}</strong>
+              <p>{item.finalText}</p>
             </li>
           ))}
         </ul>

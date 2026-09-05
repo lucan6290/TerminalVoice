@@ -11,8 +11,9 @@ import {
   Minus,
   Square,
 } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cn } from "../../lib/cn";
-import { listAudioInputDevices } from "../../lib/commands";
+import { cancelPreview, confirmPreview, listAudioInputDevices } from "../../lib/commands";
 import { SettingRow } from "../../components/ui/SettingRow";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
 import { usePanelStore } from "../../stores/appStore";
@@ -23,6 +24,7 @@ import { SkillTab } from "./tabs/SkillTab";
 import { ServiceTab } from "./tabs/ServiceTab";
 import { HelpTab } from "./tabs/HelpTab";
 import type { TabKey } from "../../stores/appStore";
+import { PreviewPopup } from "./PreviewPopup";
 
 /**
  * 极简面板 v6
@@ -43,6 +45,7 @@ export function PanelWindow() {
   const autoStart = usePanelStore((s) => s.autoStart);
   const serviceReady = usePanelStore((s) => s.serviceReady);
   const quotaDisplay = usePanelStore((s) => s.quotaDisplay);
+  const previewDraft = usePanelStore((s) => s.previewDraft);
 
   const toggleDark = usePanelStore((s) => s.toggleDark);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
@@ -50,6 +53,7 @@ export function PanelWindow() {
   const setMuteSys = usePanelStore((s) => s.setMuteSys);
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
   const setMicDevice = usePanelStore((s) => s.setMicDevice);
+  const clearPreviewDraft = usePanelStore((s) => s.clearPreviewDraft);
   const [micDevices, setMicDevices] = useState<string[]>([micDevice]);
 
   useEffect(() => {
@@ -67,16 +71,50 @@ export function PanelWindow() {
 
   const isHome = activeTab === null;
 
-  function handleMinimize() {
-    showToast("已最小化到托盘", "info");
+  async function handleMinimize() {
+    try {
+      const win = getCurrentWindow();
+      await win.hide();
+    } catch {
+      // Browser dev mode - no-op
+    }
   }
 
-  function handleClose() {
-    showToast("面板已关闭", "info");
+  async function handleClose() {
+    try {
+      const win = getCurrentWindow();
+      await win.hide();
+    } catch {
+      // Browser dev mode - no-op
+    }
   }
 
   function handleMore() {
     showToast("更多选项（开发中）", "info");
+  }
+
+  async function handleConfirmPreview(input: Parameters<typeof confirmPreview>[0]) {
+    try {
+      await confirmPreview(input);
+      clearPreviewDraft();
+      showToast("已确认并上屏", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : String(error), "error");
+      throw error;
+    }
+  }
+
+  async function handleCancelPreview() {
+    try {
+      await cancelPreview();
+    } catch (error) {
+      // Browser preview does not have the Tauri command; clearing locally is still safe.
+      if ("__TAURI_INTERNALS__" in window) {
+        showToast(error instanceof Error ? error.message : String(error), "error");
+      }
+    } finally {
+      clearPreviewDraft();
+    }
   }
 
   return (
@@ -210,6 +248,11 @@ export function PanelWindow() {
             </TabBtn>
           </div>
         </footer>
+        <PreviewPopup
+          draft={previewDraft}
+          onConfirm={handleConfirmPreview}
+          onCancel={handleCancelPreview}
+        />
       </div>
     </div>
   );

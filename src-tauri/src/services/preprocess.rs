@@ -69,7 +69,7 @@ fn remove_filter_words(text: &str, config: &PreprocessConfig) -> String {
     let mut result = text.to_string();
     let mut words: Vec<String> = DEFAULT_FILTER_WORDS.iter().map(|w| w.to_string()).collect();
     words.extend(config.custom_filter_words.iter().cloned());
-    words.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
+    words.sort_by_key(|a| std::cmp::Reverse(a.chars().count()));
 
     for word in words {
         result = result.replace(&word, "");
