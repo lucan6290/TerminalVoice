@@ -20,6 +20,15 @@ const CONFIG_KEYS = {
   autoStart: "ui.autoStart",
   pttKey: "input.pttKey",
   micDevice: "input.micDevice",
+  asrProvider: "service.asrProvider",
+  asrEndpoint: "service.asrEndpoint",
+  asrApiKey: "service.asrApiKey",
+  asrModel: "service.asrModel",
+  llmEndpoint: "service.llmEndpoint",
+  llmApiKey: "service.llmApiKey",
+  llmModel: "service.llmModel",
+  textMode: "service.textMode",
+  handsFree: "service.handsFree",
 } as const;
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -200,6 +209,24 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       case CONFIG_KEYS.autoStart: return { autoStart: parseBoolean(entry.value, state.autoStart) };
       case CONFIG_KEYS.pttKey: return { pttKey: entry.value };
       case CONFIG_KEYS.micDevice: return { micDevice: entry.value };
+      case CONFIG_KEYS.asrProvider:
+        if (["auto", "cloud", "offline"].includes(entry.value)) {
+          return { service: { ...state.service, asrProvider: entry.value as ServiceConfig["asrProvider"] } };
+        }
+        return state;
+      case CONFIG_KEYS.asrEndpoint: return { service: { ...state.service, asrEndpoint: entry.value } };
+      case CONFIG_KEYS.asrApiKey: return { service: { ...state.service, asrApiKey: entry.value } };
+      case CONFIG_KEYS.asrModel: return { service: { ...state.service, asrModel: entry.value } };
+      case CONFIG_KEYS.llmEndpoint: return { service: { ...state.service, llmEndpoint: entry.value } };
+      case CONFIG_KEYS.llmApiKey: return { service: { ...state.service, llmApiKey: entry.value } };
+      case CONFIG_KEYS.llmModel: return { service: { ...state.service, llmModel: entry.value } };
+      case CONFIG_KEYS.textMode:
+        if (["off", "proofread", "polish", "structure"].includes(entry.value)) {
+          return { service: { ...state.service, textMode: entry.value as TextProcessMode } };
+        }
+        return state;
+      case CONFIG_KEYS.handsFree:
+        return { service: { ...state.service, handsFree: parseBoolean(entry.value, state.service.handsFree) } };
       default: return state;
     }
   }),
@@ -210,7 +237,31 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   setMicDevice: (micDevice) => { persist(CONFIG_KEYS.micDevice, micDevice); set({ micDevice }); },
 
   // ---- Service config ----
-  setServiceConfig: (partial) => set((state) => ({ service: { ...state.service, ...partial } })),
+  setServiceConfig: (partial) => {
+    const mappings: [keyof ServiceConfig, string, (value: ServiceConfig[keyof ServiceConfig]) => string][] = [
+      ["asrProvider", CONFIG_KEYS.asrProvider, String],
+      ["asrEndpoint", CONFIG_KEYS.asrEndpoint, String],
+      ["asrApiKey", CONFIG_KEYS.asrApiKey, String],
+      ["asrModel", CONFIG_KEYS.asrModel, String],
+      ["llmEndpoint", CONFIG_KEYS.llmEndpoint, String],
+      ["llmApiKey", CONFIG_KEYS.llmApiKey, String],
+      ["llmModel", CONFIG_KEYS.llmModel, String],
+      ["textMode", CONFIG_KEYS.textMode, String],
+      ["handsFree", CONFIG_KEYS.handsFree, String],
+    ];
+    for (const [field, key, serialize] of mappings) {
+      const value = partial[field];
+      if (value !== undefined) persist(key, serialize(value));
+    }
+    set((state) => {
+      const service = { ...state.service, ...partial };
+      const cloudReady = Boolean(service.asrEndpoint.trim() && service.asrModel.trim() && service.asrApiKey.trim());
+      return {
+        service,
+        serviceReady: service.asrProvider === "offline" ? state.localModels.some((model) => model.downloaded) : cloudReady,
+      };
+    });
+  },
 
   // ---- History ----
   deleteHistory: (id) => set((state) => ({ historyItems: state.historyItems.filter((h) => h.id !== id) })),

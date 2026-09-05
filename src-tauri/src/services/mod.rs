@@ -1,3 +1,5 @@
+pub mod asr;
+pub mod asr_cloud;
 pub mod audio;
 pub mod db;
 pub mod events;
@@ -6,3 +8,4 @@ pub mod injector;
 pub mod pipeline;
 pub mod preprocess;
 pub mod recorder;
+pub mod secrets;

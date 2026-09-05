@@ -34,7 +34,12 @@ function useBackendSync(): void {
         stopConfigListener = await listen<ConfigEntry>(
           "config-updated",
           (event) => {
-            if (!disposed) applyConfigEntry(event.payload);
+            if (disposed) return;
+            if (event.payload.value === "__terminalvoice_secret_updated__") {
+              void hydrateFromConfig();
+            } else {
+              applyConfigEntry(event.payload);
+            }
           },
         );
         await hydrateFromConfig();

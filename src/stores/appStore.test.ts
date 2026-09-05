@@ -30,6 +30,9 @@ describe("usePanelStore", () => {
       { key: "ui.dark", value: "false" },
       { key: "ui.soundOn", value: "false" },
       { key: "input.pttKey", value: "F8" },
+      { key: "service.asrProvider", value: "cloud" },
+      { key: "service.asrApiKey", value: "secret" },
+      { key: "service.handsFree", value: "true" },
     ]);
 
     await usePanelStore.getState().hydrateFromConfig();
@@ -38,6 +41,11 @@ describe("usePanelStore", () => {
       dark: false,
       soundOn: false,
       pttKey: "F8",
+      service: expect.objectContaining({
+        asrProvider: "cloud",
+        asrApiKey: "secret",
+        handsFree: true,
+      }),
     });
   });
 
@@ -55,4 +63,18 @@ describe("usePanelStore", () => {
     usePanelStore.getState().setRuntimeStatus("Preview");
     expect(usePanelStore.getState().appStatus).toBe("Preview");
   });
+  it("persists service configuration changes", () => {
+    usePanelStore.getState().setServiceConfig({
+      asrProvider: "cloud",
+      asrEndpoint: "https://example.test/transcriptions",
+      asrApiKey: "secret",
+      handsFree: true,
+    });
+
+    expect(mockedSetConfig).toHaveBeenCalledWith("service.asrProvider", "cloud");
+    expect(mockedSetConfig).toHaveBeenCalledWith("service.asrEndpoint", "https://example.test/transcriptions");
+    expect(mockedSetConfig).toHaveBeenCalledWith("service.asrApiKey", "secret");
+    expect(mockedSetConfig).toHaveBeenCalledWith("service.handsFree", "true");
+  });
+
 });
