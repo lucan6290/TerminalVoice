@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Mic } from "lucide-react";
+import { Window } from "@tauri-apps/api/window";
 import { cn } from "../../lib/cn";
 import { usePanelStore } from "../../stores/appStore";
 import type { AppStatus } from "../../lib/types";
@@ -8,7 +9,7 @@ import type { AppStatus } from "../../lib/types";
  * 悬浮小球
  * - 48×48 毛玻璃圆盘
  * - 状态：idle(绿点) / recording(蓝麦+呼吸) / thinking(橙点+脉冲) / disabled(灰点)
- * - 点击切换状态（演示用）
+ * - 状态由后端 AppRuntime 同步，点击仅打开控制面板
  */
 type BallState = "idle" | "recording" | "thinking" | "disabled";
 
@@ -51,17 +52,26 @@ const STATE_META: Record<
 
 export function BallWindow() {
   const appStatus = usePanelStore((state) => state.appStatus);
-  const setRuntimeStatus = usePanelStore((state) => state.setRuntimeStatus);
   const [hovered, setHovered] = useState(false);
 
   const state = STATUS_TO_BALL_STATE[appStatus];
   const meta = STATE_META[state];
   const isActive = state === "recording" || state === "thinking";
 
-  function cycleStatus() {
-    const order: AppStatus[] = ["Idle", "Recording", "Recognizing", "Paused"];
-    const idx = order.indexOf(appStatus);
-    setRuntimeStatus(order[(idx + 1) % order.length]);
+  async function openPanel() {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+
+    try {
+      const panel = await Window.getByLabel("panel");
+      if (!panel) {
+        console.warn("[TerminalVoice] 未找到 panel 窗口");
+        return;
+      }
+      await panel.show();
+      await panel.setFocus();
+    } catch (error) {
+      console.warn("[TerminalVoice] 打开面板失败", error);
+    }
   }
 
   return (
@@ -83,14 +93,13 @@ export function BallWindow() {
       )}
 
       <button
-        onClick={cycleStatus}
+        onClick={() => void openPanel()}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         data-tip={meta.label}
         className="relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ease-out outline-none group"
         style={{
           transform: hovered ? "scale(1.08)" : "scale(1)",
-          WebkitAppRegion: "drag",
         }}
         title={meta.label}
       >

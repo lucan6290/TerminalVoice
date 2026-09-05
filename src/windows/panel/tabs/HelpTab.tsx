@@ -1,5 +1,6 @@
 import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github } from "lucide-react";
 import { usePanelStore } from "../../../stores/appStore";
+import { showToast } from "../../../stores/toastStore";
 
 export function HelpTab() {
   const pttKey = usePanelStore((s) => s.pttKey);

@@ -72,7 +72,7 @@ fn remove_filter_words(text: &str, config: &PreprocessConfig) -> String {
     words.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
 
     for word in words {
-        result = result.replace(&word, " ");
+        result = result.replace(&word, "");
     }
 
     result

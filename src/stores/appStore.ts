@@ -110,7 +110,6 @@ export interface PanelState {
   dark: boolean;
   activeTab: TabKey | null;
   appStatus: AppStatus;
-  recording: boolean;
 
   // Quick settings (home view)
   pttKey: string;
@@ -132,7 +131,6 @@ export interface PanelState {
   // Actions
   toggleDark: () => void;
   setActiveTab: (tab: TabKey | null) => void;
-  toggleRecording: () => void;
   setRuntimeStatus: (status: AppStatus) => void;
   hydrateFromConfig: () => Promise<void>;
   applyConfigEntry: (entry: ConfigEntry) => void;
@@ -165,7 +163,6 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   dark: true,
   activeTab: null,
   appStatus: "Idle",
-  recording: false,
   pttKey: "Right-Alt",
   micDevice: "自动检测（麦克风 USB_MIC）",
   soundOn: true,
@@ -186,8 +183,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     return { dark };
   }),
   setActiveTab: (tab) => set({ activeTab: tab }),
-  toggleRecording: () => set((state) => ({ recording: !state.recording })),
-  setRuntimeStatus: (appStatus) => set({ appStatus, recording: appStatus === "Recording" }),
+  setRuntimeStatus: (appStatus) => set({ appStatus }),
   hydrateFromConfig: async () => {
     try {
       const entries = await listConfig();

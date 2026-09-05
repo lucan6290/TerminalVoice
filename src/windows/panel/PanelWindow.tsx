@@ -44,7 +44,6 @@ export function PanelWindow() {
 
   const toggleDark = usePanelStore((s) => s.toggleDark);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
-  const toggleRecording = usePanelStore((s) => s.toggleRecording);
   const setSoundOn = usePanelStore((s) => s.setSoundOn);
   const setMuteSys = usePanelStore((s) => s.setMuteSys);
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
@@ -95,12 +94,14 @@ export function PanelWindow() {
 
           <div className="flex items-center gap-[2px]">
             <IconBtn
-              title={recording ? "停止录音" : "开始录音"}
-              data-tip={recording ? "停止录音" : "点击录音"}
+              title="通过触发键录音"
+              data-tip={`按住 ${pttKey} 录音`}
               accent={recording}
               onClick={() => {
-                toggleRecording();
-                showToast(recording ? "已停止录音" : "开始录音", "info");
+                showToast(
+                  recording ? "录音进行中，请松开触发键结束" : `请使用 ${pttKey} 触发录音`,
+                  "info",
+                );
               }}
             >
               {recording ? (
@@ -370,5 +371,3 @@ function TabBtn({
     </button>
   );
 }
-
-
