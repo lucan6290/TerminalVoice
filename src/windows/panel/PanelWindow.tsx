@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   X,
   MoreHorizontal,
@@ -11,6 +12,7 @@ import {
   Square,
 } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { listAudioInputDevices } from "../../lib/commands";
 import { SettingRow } from "../../components/ui/SettingRow";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
 import { usePanelStore } from "../../stores/appStore";
@@ -47,6 +49,21 @@ export function PanelWindow() {
   const setSoundOn = usePanelStore((s) => s.setSoundOn);
   const setMuteSys = usePanelStore((s) => s.setMuteSys);
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
+  const setMicDevice = usePanelStore((s) => s.setMicDevice);
+  const [micDevices, setMicDevices] = useState<string[]>([micDevice]);
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    void listAudioInputDevices()
+      .then((devices) => {
+        const names = devices.map((device) => device.name);
+        setMicDevices(names.length > 0 ? names : [micDevice]);
+      })
+      .catch((error) => {
+        console.warn("[TerminalVoice] 枚举麦克风失败:", error);
+        showToast("无法读取麦克风设备", "warn");
+      });
+  }, [micDevice]);
 
   const isHome = activeTab === null;
 
@@ -141,6 +158,7 @@ export function PanelWindow() {
               recording={recording}
               pttKey={pttKey}
               micDevice={micDevice}
+              micDevices={micDevices}
               soundOn={soundOn}
               muteSys={muteSys}
               autoStart={autoStart}
@@ -149,6 +167,7 @@ export function PanelWindow() {
               setSoundOn={setSoundOn}
               setMuteSys={setMuteSys}
               setAutoStart={setAutoStart}
+              setMicDevice={setMicDevice}
               onOpenService={() => setActiveTab("service")}
             />
           ) : (
@@ -200,6 +219,7 @@ export function PanelWindow() {
 function HomeView({
   pttKey,
   micDevice,
+  micDevices,
   soundOn,
   muteSys,
   autoStart,
@@ -208,11 +228,13 @@ function HomeView({
   setSoundOn,
   setMuteSys,
   setAutoStart,
+  setMicDevice,
   onOpenService,
 }: {
   recording: boolean;
   pttKey: string;
   micDevice: string;
+  micDevices: string[];
   soundOn: boolean;
   muteSys: boolean;
   autoStart: boolean;
@@ -221,6 +243,7 @@ function HomeView({
   setSoundOn: (v: boolean) => void;
   setMuteSys: (v: boolean) => void;
   setAutoStart: (v: boolean) => void;
+  setMicDevice: (value: string) => void;
   onOpenService: () => void;
 }) {
   return (
@@ -267,10 +290,15 @@ function HomeView({
         childrenLeft={
           <select
             aria-label="选择麦克风"
-            defaultValue={micDevice}
+            value={micDevice}
+            onChange={(event) => setMicDevice(event.target.value)}
             className="w-full min-w-0 appearance-none bg-neutral-900 rounded-lg px-3 py-2 text-[14px] text-neutral-100 border border-white/5 outline-none"
           >
-            <option value={micDevice}>{micDevice}</option>
+            {micDevices.map((device) => (
+              <option key={device} value={device}>
+                {device}
+              </option>
+            ))}
           </select>
         }
         childrenRight={<ChevronRight className="w-[16px] h-[16px] text-neutral-500" />}

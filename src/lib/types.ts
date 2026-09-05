@@ -5,6 +5,10 @@ export interface ConfigEntry {
   value: string;
 }
 
+export interface AudioInputDevice {
+  name: string;
+}
+
 export type TextMode = "Normal" | "Developer" | "Raw";
 
 export type TextProcessMode = "off" | "proofread" | "polish" | "structure";

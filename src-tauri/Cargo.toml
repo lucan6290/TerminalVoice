@@ -18,3 +18,9 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
+cpal = "0.16.0"
+rubato = "0.16.2"
+enigo = "0.6.1"
+rdev = { git = "https://github.com/rustdesk-org/rdev" }
+arboard = "3.6"
+hound = "3.5"

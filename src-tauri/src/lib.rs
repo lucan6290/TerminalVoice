@@ -22,6 +22,7 @@ pub fn run() {
 
             app.manage(Mutex::new(db));
             app.manage(Mutex::new(AppRuntime::default()));
+            services::pipeline::start_hotkey_pipeline(app.handle().clone())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -32,6 +33,7 @@ pub fn run() {
             commands::preview::create_mock_preview,
             commands::preview::confirm_preview,
             commands::history::list_history,
+            commands::audio::list_audio_input_devices,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run TerminalVoice");
