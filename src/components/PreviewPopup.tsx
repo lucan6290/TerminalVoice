@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ConfirmPreviewInput, PreviewDraft } from "../lib/types";
 
 interface PreviewPopupProps {
@@ -10,10 +10,18 @@ interface PreviewPopupProps {
 export default function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) {
   const [finalText, setFinalText] = useState(draft?.processedText ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     setFinalText(draft?.processedText ?? "");
   }, [draft]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   if (!draft) {
     return null;
@@ -35,7 +43,9 @@ export default function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopu
         asrProvider: currentDraft.asrProvider,
       });
     } finally {
-      setIsSaving(false);
+      if (mountedRef.current) {
+        setIsSaving(false);
+      }
     }
   }
 

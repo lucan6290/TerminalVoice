@@ -26,6 +26,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::preview::get_app_status,
+            commands::config::get_config,
+            commands::config::set_config,
+            commands::config::list_config,
             commands::preview::create_mock_preview,
             commands::preview::confirm_preview,
             commands::history::list_history,

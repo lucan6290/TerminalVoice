@@ -4,19 +4,56 @@
   "version": "0.1.0",
   "identifier": "com.terminalvoice.app",
   "build": {
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "TerminalVoice",
-        "width": 900,
-        "height": 640,
+        "width": 520,
+        "height": 600,
+        "minWidth": 400,
+        "minHeight": 500,
+        "visible": false,
+        "decorations": true,
+        "resizable": true,
+        "fullscreen": false
+      },
+      {
+        "label": "ball",
+        "title": "TerminalVoice Ball",
+        "width": 64,
+        "height": 64,
+        "x": 100,
+        "y": 100,
         "visible": true,
-        "center": true
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "url": "#/ball"
+      },
+      {
+        "label": "panel",
+        "title": "TerminalVoice Panel",
+        "width": 388,
+        "height": 620,
+        "x": 180,
+        "y": 80,
+        "visible": true,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "url": "#/panel"
       }
     ],
     "security": {
@@ -26,6 +63,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
   }
 }

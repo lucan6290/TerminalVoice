@@ -1,6 +1,13 @@
 export type AppStatus = "Idle" | "Recording" | "Recognizing" | "Preview" | "Paused";
 
+export interface ConfigEntry {
+  key: string;
+  value: string;
+}
+
 export type TextMode = "Normal" | "Developer" | "Raw";
+
+export type TextProcessMode = "off" | "proofread" | "polish" | "structure";
 
 export interface HistoryItem {
   id: number;
@@ -23,4 +30,34 @@ export interface ConfirmPreviewInput {
   finalText: string;
   textMode: TextMode;
   asrProvider: string;
+}
+
+export interface FilterWord {
+  id: number;
+  word: string;
+  replacement: string;
+  enabled: boolean;
+}
+
+export type ASRProvider = "cloud" | "offline" | "auto";
+
+export interface ServiceConfig {
+  asrProvider: ASRProvider;
+  asrEndpoint: string;
+  asrApiKey: string;
+  asrModel: string;
+  llmEndpoint: string;
+  llmApiKey: string;
+  llmModel: string;
+  textMode: TextProcessMode;
+  handsFree: boolean;
+}
+
+export interface LocalModel {
+  id: string;
+  name: string;
+  size: string;
+  language: string;
+  downloaded: boolean;
+  downloadProgress?: number;
 }

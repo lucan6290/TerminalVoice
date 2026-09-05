@@ -2,6 +2,10 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default permissions for TerminalVoice MVP",
-  "windows": ["main"],
-  "permissions": ["core:default"]
+  "windows": ["main", "ball", "panel"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-show",
+    "core:window:allow-set-focus"
+  ]
 }

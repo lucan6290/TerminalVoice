@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-const DEFAULT_FILTER_WORDS: &[&str] = &["嗯", "啊", "呃", "哦", "那个", "这个", "就是", "然后", "反正", "就是说"];
+use super::preprocess::DEFAULT_FILTER_WORDS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HistoryItem {
@@ -21,6 +21,12 @@ pub struct NewHistoryItem {
     pub final_text: String,
     pub text_mode: String,
     pub asr_provider: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ConfigEntry {
+    pub key: String,
+    pub value: String,
 }
 
 pub struct Database {
@@ -86,6 +92,44 @@ impl Database {
         }
 
         Ok(())
+    }
+
+    pub fn get_config(&self, key: &str) -> Result<Option<String>, rusqlite::Error> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT value FROM config WHERE key = ?1")?;
+        let mut rows = stmt.query(params![key])?;
+
+        match rows.next()? {
+            Some(row) => Ok(Some(row.get(0)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub fn set_config(&self, key: &str, value: &str) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            r#"
+            INSERT INTO config (key, value)
+            VALUES (?1, ?2)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            "#,
+            params![key, value],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_config(&self) -> Result<Vec<ConfigEntry>, rusqlite::Error> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT key, value FROM config ORDER BY key ASC")?;
+        let rows = stmt.query_map([], |row| {
+            Ok(ConfigEntry {
+                key: row.get(0)?,
+                value: row.get(1)?,
+            })
+        })?;
+
+        rows.collect()
     }
 
     pub fn insert_history(&self, item: NewHistoryItem) -> Result<HistoryItem, rusqlite::Error> {
@@ -215,5 +259,35 @@ mod tests {
         assert_eq!(items[0].id, second.id);
         assert_eq!(items[1].id, first.id);
         assert_eq!(items[0].final_text, "最终二");
+    }
+
+    #[test]
+    fn config_values_can_be_created_updated_and_listed() {
+        let db = Database::in_memory().expect("database opens");
+
+        assert_eq!(db.get_config("theme").expect("read succeeds"), None);
+
+        db.set_config("theme", "dark").expect("insert succeeds");
+        db.set_config("sound_on", "true")
+            .expect("second insert succeeds");
+        db.set_config("theme", "light").expect("update succeeds");
+
+        assert_eq!(
+            db.get_config("theme").expect("read succeeds"),
+            Some("light".to_string())
+        );
+        assert_eq!(
+            db.list_config().expect("list succeeds"),
+            vec![
+                ConfigEntry {
+                    key: "sound_on".to_string(),
+                    value: "true".to_string(),
+                },
+                ConfigEntry {
+                    key: "theme".to_string(),
+                    value: "light".to_string(),
+                },
+            ]
+        );
     }
 }

@@ -1,6 +1,202 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =========================================================
+   TerminalVoice Design Tokens
+   统一圆角 / 强化字重层级
+   ========================================================= */
 @theme {
-  --color-primary: oklch(0.55 0.2 260);
-  --radius-lg: 0.75rem;
+  /* ===== Light ===== */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f2f2f7;
+  --color-bg-tertiary: #e5e5ea;
+  --color-fg-primary: #1c1c1e;          /* 标题/正文：最深 */
+  --color-fg-secondary: #636366;        /* 次要：深灰 */
+  --color-fg-tertiary: #aeaeb2;         /* 辅助：浅灰 */
+  --color-accent: #34c759;
+  --color-accent-soft: #34c7591f;
+  --color-accent-glow: #34c75955;
+  --color-danger: #ff3b30;
+  --color-divider: #e5e5ea;
+  --color-ring: #d1d1d6;
+  --color-toggle-off: #d1d1d6;
+  --color-btn-hover: #0000000a;
+  --color-border-soft: #0000000d;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas,
+    "Microsoft YaHei", monospace;
+
+  /* 统一圆角体系：窗口 22 / 卡片 14 / 按钮 10 / 小 pill 8 */
+  --radius-window: 22px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-pill: 8px;
+
+  --shadow-window:
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 24px 48px -16px rgba(0, 0, 0, 0.28);
+  --shadow-ball:
+    0 0 0 0.5px rgba(0, 0, 0, 0.15),
+    0 10px 28px -6px rgba(0, 0, 0, 0.4);
+}
+
+.dark {
+  --color-bg-primary: #1c1c1e;
+  --color-bg-secondary: #2c2c2e;
+  --color-bg-tertiary: #3a3a3c;
+  --color-fg-primary: #f5f5f7;
+  --color-fg-secondary: #a1a1a6;
+  --color-fg-tertiary: #636366;
+  --color-accent: #30d158;
+  --color-accent-soft: #30d1581f;
+  --color-accent-glow: #30d1584d;
+  --color-danger: #ff453a;
+  --color-divider: #38383a;
+  --color-ring: #48484a;
+  --color-toggle-off: #636366;
+  --color-btn-hover: #ffffff12;
+  --color-border-soft: #ffffff14;
+
+  --shadow-window:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 24px 48px -16px rgba(0, 0, 0, 0.7);
+  --shadow-ball:
+    0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    0 10px 28px -6px rgba(0, 0, 0, 0.75);
+}
+
+@layer base {
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    color: var(--color-fg-primary);
+    background: transparent;
+    user-select: none;
+    letter-spacing: -0.005em;
+  }
+
+  body { background: #d1d1d6; }
+  body.window-transparent { background: transparent !important; }
+  /* 浏览器预览 panel/ball 窗口时，Tauri 是透明窗口，浏览器里用深色模拟桌面 */
+  body.browser-preview-dark { background: #0a0a0a !important; }
+
+  button {
+    font-family: inherit;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+  }
+}
+
+/* ============ 动画 ============ */
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.2); opacity: 0.7; }
+}
+@keyframes breathing-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-glow); }
+  50%      { box-shadow: 0 0 0 10px transparent; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ball-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.5px); }
+}
+.animate-pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+.animate-breathing { animation: breathing-glow 1.8s ease-out infinite; }
+.animate-fade-in   { animation: fade-in 0.2s ease-out; }
+.animate-float     { animation: ball-bounce 3.5s ease-in-out infinite; }
+
+/* ============ 滚动条 ============ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--color-ring); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ============ 文本选择允许 ============ */
+.allow-select, .allow-select * { user-select: text; }
+
+/* ============ tooltip ============ */
+[data-tip] {
+  position: relative;
+}
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.78);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 50;
+  backdrop-filter: blur(6px);
+}
+.dark [data-tip]:hover::after {
+  background: rgba(245, 245, 247, 0.92);
+  color: #1c1c1e;
+}
+
+/* kbd 样式 */
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-soft);
+  color: var(--color-fg-primary);
+  font-weight: 500;
+}
+
+/* ============ 主题：浅色面板 ============ */
+/*
+ * 当前面板和子 Tab 已使用 neutral/white Tailwind utility。为避免重写现有
+ * 组件结构，通过 theme-light 容器统一映射为浅色 token；深色主题继续使用原样式。
+ */
+.theme-light {
+  color-scheme: light;
+}
+.theme-light .bg-neutral-900 { background-color: var(--color-bg-primary); }
+.theme-light .bg-neutral-800,
+.theme-light .bg-neutral-800\/95 { background-color: var(--color-bg-secondary); }
+.theme-light .bg-neutral-800\/80:hover { background-color: var(--color-bg-tertiary); }
+.theme-light .bg-neutral-700,
+.theme-light .bg-neutral-700\/60 { background-color: var(--color-bg-tertiary); }
+.theme-light .bg-neutral-600 { background-color: var(--color-toggle-off); }
+.theme-light .bg-white\/5 { background-color: var(--color-btn-hover); }
+.theme-light .text-neutral-100 { color: var(--color-fg-primary); }
+.theme-light .text-neutral-200,
+.theme-light .text-neutral-300 { color: #48484a; }
+.theme-light .text-neutral-400 { color: var(--color-fg-secondary); }
+.theme-light .text-neutral-500 { color: var(--color-fg-tertiary); }
+.theme-light .text-neutral-600 { color: #8e8e93; }
+.theme-light .border-neutral-800,
+.theme-light .border-white\/5,
+.theme-light .border-white\/10,
+.theme-light .border-white\/20 { border-color: var(--color-border-soft); }
+.theme-light .ring-white\/10 { --tw-ring-color: var(--color-border-soft); }
+.theme-light .divide-white\/5 > :not(:last-child) { border-color: var(--color-border-soft); }
+.theme-light .placeholder\:text-neutral-500::placeholder { color: var(--color-fg-tertiary); }
+.theme-light [data-tip]:hover::after {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.78);
 }

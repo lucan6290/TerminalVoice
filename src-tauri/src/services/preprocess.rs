@@ -27,7 +27,16 @@ impl Default for PreprocessConfig {
 }
 
 pub const DEFAULT_FILTER_WORDS: &[&str] = &[
-    "嗯", "啊", "呃", "哦", "那个", "这个", "就是", "然后", "反正", "就是说",
+    "嗯",
+    "啊",
+    "呃",
+    "哦",
+    "那个",
+    "这个",
+    "就是",
+    "然后",
+    "反正",
+    "就是说",
 ];
 
 pub fn process_text(raw: &str, config: &PreprocessConfig) -> String {
@@ -58,8 +67,9 @@ pub fn process_normal_text(raw: &str) -> String {
 
 fn remove_filter_words(text: &str, config: &PreprocessConfig) -> String {
     let mut result = text.to_string();
-    let mut words: Vec<String> = DEFAULT_FILTER_WORDS.iter().map(|word| word.to_string()).collect();
+    let mut words: Vec<String> = DEFAULT_FILTER_WORDS.iter().map(|w| w.to_string()).collect();
     words.extend(config.custom_filter_words.iter().cloned());
+    words.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
 
     for word in words {
         result = result.replace(&word, " ");
