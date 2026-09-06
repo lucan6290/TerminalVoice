@@ -8,6 +8,7 @@
 ![Rust](https://img.shields.io/badge/Rust-1.85+-dea584)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
+[![Website](https://img.shields.io/badge/官网-终端语音-blue?logo=githubpages)](https://lucan6290.github.io/TerminalVoice/)
 
 ---
 
@@ -257,9 +258,22 @@ docs/                   # 项目文档（见下方）
 
 ## 链接
 
+- 🌐 官网：https://lucan6290.github.io/TerminalVoice/
 - GitHub：https://github.com/lucan6290/TerminalVoice
 - 问题反馈：[Issues](https://github.com/lucan6290/TerminalVoice/issues)
 - 安全漏洞：[Security Advisories](https://github.com/lucan6290/TerminalVoice/security/advisories/new)
+
+---
+
+## 致谢
+
+本项目在产品思路、UI 设计与交互形态上，参考并借鉴了以下优秀开源项目，在此表示感谢：
+
+- [**cc-switch**](https://github.com/farion1231/cc-switch) — 温暖奶油色营销页视觉风格的灵感来源
+- [**clash-party (mihomo-party)**](https://github.com/mihomo-party-org/clash-party) — 桌面悬浮球常驻形态与透明窗口设计参考
+- [**pometype**](https://github.com/ShiliuX-Team/pometype) — 全局语音/输入类工具的交互思路参考
+
+感谢这些项目作者的开源贡献。
 
 ---
 
@@ -270,6 +284,22 @@ docs/                   # 项目文档（见下方）
 - 默认本地提交，推送远程需明确确认
 
 详见 [CLAUDE.md](CLAUDE.md)。
+
+---
+
+## 参与贡献
+
+欢迎所有形式的贡献！无论你是想**提出一个好想法**、**反馈 Bug**、**改善 UI/交互**、**补充文档**，还是**直接提交代码**，都非常欢迎。
+
+**你可以这样参与**：
+
+- 💡 **想法/建议**：到 [Discussions](https://github.com/lucan6290/TerminalVoice/discussions) 开帖讨论，任何点子都欢迎（新功能、交互优化、体验细节……）
+- 🐛 **Bug 反馈**：在 [Issues](https://github.com/lucan6290/TerminalVoice/issues) 提交，请带上复现步骤和系统版本
+- 🧑‍💻 **提交代码**：Fork 本仓库 → 从 `main` 创建功能分支 → 提交 PR，建议先在 Issue/Discussion 中沟通大改动方向
+- 📝 **文档/翻译**：错别字、表述优化、多语言支持，同样欢迎 PR
+- 🎨 **UI/设计**：悬浮球/面板的视觉改进、动画细节、配色建议
+
+开始之前建议先读 [AGENTS.md](AGENTS.md)（项目结构与约定）和 [docs/CODE_MAP.md](docs/CODE_MAP.md)（当前模块状态），能快速熟悉代码。每一份 PR 都会被认真 review 和合并，期待你的想法！
 
 ---
 
