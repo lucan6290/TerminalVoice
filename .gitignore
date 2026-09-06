@@ -1,10 +1,36 @@
-node_modules
-/dist
-/dist-node
-/target
-/src-tauri/target
-*.tsbuildinfo
-*.log
+# 密钥与签名文件（签名私钥的硬保障，勿删）
+# 注意：仅忽略私钥（*.key），公钥（*.key.pub）可公开
+*.key
+
+
+# 环境变量与敏感配置
 .env
 .env.*
 !.env.example
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器 / IDE / AI 工具
+.idea/
+.vscode/
+.claude/
+.trae/
+
+# 临时文件
+--selector
+
+# Node / 前端
+node_modules/
+/dist
+/dist-node
+*.tsbuildinfo
+
+# Rust / Tauri
+/target
+/src-tauri/target
+
+# 日志
+*.log

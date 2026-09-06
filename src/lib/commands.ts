@@ -40,9 +40,7 @@ const COMMANDS = {
   listSkills: "list_skills",
   setSkill: "set_skill",
   getActiveSkill: "get_active_skill",
-  checkUpdate: "check_update",
   getAppVersion: "get_app_version",
-  startUpdateDownload: "start_update_download",
 } as const;
 
 export async function getAppStatus(): Promise<AppStatus> {
@@ -153,14 +151,6 @@ export async function getActiveSkill(): Promise<string | null> {
   return invoke<string | null>(COMMANDS.getActiveSkill);
 }
 
-export async function checkUpdate(): Promise<UpdateInfo> {
-  return invoke<UpdateInfo>(COMMANDS.checkUpdate);
-}
-
 export async function getAppVersion(): Promise<string> {
   return invoke<string>(COMMANDS.getAppVersion);
-}
-
-export async function startUpdateDownload(): Promise<void> {
-  await invoke<void>(COMMANDS.startUpdateDownload);
 }

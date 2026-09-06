@@ -1,14 +1,13 @@
 import { useEffect } from "react";
-import { open } from "@tauri-apps/plugin-shell";
 import { usePanelStore } from "../../stores/appStore";
 import { showToast } from "../../stores/toastStore";
 import { cn } from "../../lib/cn";
 
 /**
- * 更新弹窗
- * - 有新版本时显示：版本标题、更新日志、前往下载/取消/更新按钮
+ * 更新弹窗（接入 tauri-plugin-updater 真实更新流程）
+ * - 有新版本时显示：版本标题、更新日志、取消/下载按钮
  * - 下载中显示：进度条，更新按钮禁用带 loading
- * - 下载完成显示：立即重启
+ * - 下载完成显示：立即重启（调用 tauri-plugin-process 重启）
  * - 适配深浅主题（通过 appStore.dark 切换）
  */
 export function UpdateModal() {
@@ -35,22 +34,20 @@ export function UpdateModal() {
 
   if (!showUpdateModal || !updateInfo) return null;
 
-  const handleGoDownload = async () => {
-    try {
-      if ("__TAURI_INTERNALS__" in window) {
-        await open(updateInfo.downloadUrl);
-      } else {
-        window.open(updateInfo.downloadUrl, "_blank");
-      }
-    } catch {
-      window.open(updateInfo.downloadUrl, "_blank");
-    }
-  };
-
   const handleUpdate = async () => {
     if (updateDownloaded) {
-      showToast("更新已下载，请重启应用完成安装", "success");
-      setShowUpdateModal(false);
+      // 重启应用完成安装
+      try {
+        if ("__TAURI_INTERNALS__" in window) {
+          const { relaunch } = await import("@tauri-apps/plugin-process");
+          await relaunch();
+        } else {
+          showToast("浏览器模式：重启已模拟", "info");
+          setShowUpdateModal(false);
+        }
+      } catch {
+        showToast("重启失败，请手动重启应用", "error");
+      }
       return;
     }
     await startDownloadUpdate();
@@ -81,15 +78,9 @@ export function UpdateModal() {
           <h2 className="text-[18px] font-semibold" style={{ color: "var(--color-fg-primary)" }}>
             v{updateInfo.version} 版本就绪
           </h2>
-          <button
-            onClick={handleGoDownload}
-            className="h-8 px-4 rounded-[10px] text-[13px] font-medium text-white transition-colors"
-            style={{ background: "#0a84ff" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#0a84ffd0")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#0a84ff")}
-          >
-            前往下载
-          </button>
+          <span className="text-[12px]" style={{ color: "var(--color-fg-tertiary)" }}>
+            当前 v{updateInfo.currentVersion}
+          </span>
         </div>
 
         {/* 更新内容 */}
@@ -110,7 +101,7 @@ export function UpdateModal() {
               />
             </div>
             <p className="text-center text-[12px] mt-2 tabular-nums" style={{ color: "var(--color-fg-tertiary)" }}>
-              {updateDownloaded ? "下载完成" : `${updateProgress}%`}
+              {updateDownloaded ? "下载完成，请重启以完成安装" : `${updateProgress}%`}
             </p>
           </div>
         )}
@@ -128,7 +119,7 @@ export function UpdateModal() {
             onMouseEnter={(e) => !updateDownloading && (e.currentTarget.style.color = "var(--color-fg-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-fg-secondary)")}
           >
-            取消
+            {updateDownloaded ? "稍后重启" : "取消"}
           </button>
           <button
             onClick={handleUpdate}
@@ -141,7 +132,7 @@ export function UpdateModal() {
             {updateDownloading && (
               <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             )}
-            {updateDownloaded ? "立即重启" : updateDownloading ? "更新中" : "更新"}
+            {updateDownloaded ? "立即重启" : updateDownloading ? "下载中" : "下载更新"}
           </button>
         </div>
       </div>

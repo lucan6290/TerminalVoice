@@ -185,9 +185,6 @@ export function PanelWindow() {
                 <Circle className="w-[18px] h-[18px]" strokeWidth={1.5} />
               )}
             </IconBtn>
-            <IconBtn title="更多" data-tip="更多选项" className="tip-below" onClick={handleMore}>
-              <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={2} />
-            </IconBtn>
             <IconBtn title="最小化到托盘" data-tip="最小化到托盘" className="tip-below" onClick={handleMinimize}>
               <Minus className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
@@ -270,6 +267,16 @@ export function PanelWindow() {
               className="tip-above"
             >
               <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
+            </TabBtn>
+            <div className="w-px h-5 bg-neutral-700 mx-1 shrink-0" />
+            <TabBtn
+              active={false}
+              onClick={handleMore}
+              title="更多选项"
+              data-tip="更多选项"
+              className="tip-above"
+            >
+              <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
           </div>
         </footer>

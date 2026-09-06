@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { showToast } from "./toastStore";
 import {
   listConfig,
   setConfig,
@@ -15,8 +16,7 @@ import {
   deleteModel as ipcDeleteModel,
   listSkills as ipcListSkills,
   setSkill as ipcSetSkill,
-  checkUpdate as ipcCheckUpdate,
-  startUpdateDownload as ipcStartUpdateDownload,
+  getAppVersion as ipcGetAppVersion,
 } from "../lib/commands";
 import type {
   AppStatus,
@@ -495,25 +495,39 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       set({
         updateInfo: {
           currentVersion: "0.1.0",
-          version: "2.0.2",
-          releaseNotes: "## 修复 (Fix)\n- 修复数字小键盘的加、减、乘、除及小数点按键无法正确注册为全局快捷键的问题\n- 修复首次使用欢迎引导中的提示弹层位置配置无效、可能显示异常的问题\n- 修复 Linux ARM64 等交叉编译产物可能混入宿主机架构系统代理模块的问题，并增加原生模块架构校验\n- 修复 Linux 无法注册托盘图标的问题",
-          downloadUrl: "https://terminalvoice.app",
-          hasUpdate: true,
+          version: "0.1.1",
+          releaseNotes: "## 演示数据\n- 浏览器预览模式下显示的模拟更新信息",
+          downloadUrl: "",
+          hasUpdate: false,
         },
       });
       return;
     }
     try {
-      const info = await ipcCheckUpdate();
-      set({ updateInfo: info.hasUpdate ? info : null });
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const currentVersion = await ipcGetAppVersion();
+      const update = await check();
+      if (update?.available) {
+        set({
+          updateInfo: {
+            currentVersion,
+            version: update.version,
+            releaseNotes: update.body || "暂无更新说明",
+            downloadUrl: "",
+            hasUpdate: true,
+          },
+        });
+      } else {
+        set({ updateInfo: null });
+      }
     } catch (error) {
       console.warn("[TerminalVoice] 检查更新失败:", error);
+      set({ updateInfo: null });
     }
   },
   startDownloadUpdate: async () => {
     if (!isTauri()) {
       set({ updateDownloading: true, updateProgress: 0 });
-      // Browser mock progress
       let pct = 0;
       const timer = setInterval(() => {
         pct = Math.min(pct + 5, 100);
@@ -527,10 +541,42 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     }
     try {
       set({ updateDownloading: true, updateProgress: 0, updateDownloaded: false });
-      await ipcStartUpdateDownload();
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const update = await check();
+      if (!update?.available) {
+        set({ updateDownloading: false });
+        showToast("当前已是最新版本", "info");
+        return;
+      }
+      let downloaded = 0;
+      let contentLength = 0;
+      await update.download((event) => {
+        switch (event.event) {
+          case "Started":
+            contentLength = event.data.contentLength || 0;
+            break;
+          case "Progress":
+            downloaded += event.data.chunkLength;
+            if (contentLength > 0) {
+              const percent = Math.min(100, Math.round((downloaded / contentLength) * 100));
+              set({ updateProgress: percent });
+            }
+            break;
+          case "Finished":
+            set({ updateProgress: 100 });
+            break;
+        }
+      });
+      await update.install();
+      set({ updateDownloaded: true, updateDownloading: false });
+      showToast("更新已下载，重启应用后生效", "success");
     } catch (error) {
-      console.warn("[TerminalVoice] 开始下载更新失败:", error);
+      console.warn("[TerminalVoice] 下载更新失败:", error);
       set({ updateDownloading: false });
+      showToast(
+        error instanceof Error ? error.message : "下载更新失败",
+        "error",
+      );
     }
   },
   setUpdateProgress: (updateProgress) => set({ updateProgress }),

@@ -10,7 +10,6 @@ import type {
   TranslateResultPayload,
   RewriteResultPayload,
   LlmStreamingDeltaPayload,
-  UpdateProgressPayload,
 } from "./lib/types";
 import {
   EVENT_RUNTIME_STATE_CHANGED,
@@ -28,8 +27,6 @@ import {
   EVENT_REWRITE_STARTED,
   EVENT_REWRITE_RESULT,
   EVENT_LLM_STREAMING_DELTA,
-  EVENT_UPDATE_DOWNLOAD_PROGRESS,
-  EVENT_UPDATE_DOWNLOADED,
 } from "./lib/events";
 import { usePanelStore } from "./stores/appStore";
 import { showToast, type ToastLevel } from "./stores/toastStore";
@@ -59,8 +56,6 @@ function useBackendSync(): void {
   const setRecordingDuration = usePanelStore((state) => state.setRecordingDuration);
   const setErrorMessage = usePanelStore((state) => state.setErrorMessage);
   const setLlmStreamingText = usePanelStore((state) => state.setLlmStreamingText);
-  const setUpdateProgress = usePanelStore((state) => state.setUpdateProgress);
-  const setUpdateDownloaded = usePanelStore((state) => state.setUpdateDownloaded);
   const checkForUpdate = usePanelStore((state) => state.checkForUpdate);
 
   useEffect(() => {
@@ -167,15 +162,6 @@ function useBackendSync(): void {
           },
         ));
 
-        // Update events
-        unlisteners.push(await listen<UpdateProgressPayload>(
-          EVENT_UPDATE_DOWNLOAD_PROGRESS,
-          (event) => { if (!disposed) setUpdateProgress(event.payload.percent); },
-        ));
-        unlisteners.push(await listen(EVENT_UPDATE_DOWNLOADED, () => {
-          if (!disposed) setUpdateDownloaded();
-        }));
-
         // Initial load
         await loadAll();
         const status = await getAppStatus();
@@ -197,7 +183,7 @@ function useBackendSync(): void {
     applyConfigEntry, clearPreviewDraft, hydrateFromConfig, loadAll,
     setPreviewDraft, setRuntimeStatus, setTtsSpeaking, setTranslateResult,
     setRewriteMode, setRewriteResult, setRecordingDuration, setErrorMessage,
-    setLlmStreamingText, setUpdateProgress, setUpdateDownloaded, checkForUpdate,
+    setLlmStreamingText, checkForUpdate,
   ]);
 }
 
