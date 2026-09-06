@@ -3,6 +3,7 @@
 //! 使用 LLM 进行文本翻译，支持指定目标语言。
 
 use crate::services::llm::{LlmClient, LlmConfig};
+use tracing::{error, info};
 
 /// 默认目标语言
 const DEFAULT_TARGET_LANG: &str = "英文";
@@ -26,8 +27,28 @@ pub fn translate(text: &str, target_lang: &str, config: &LlmConfig) -> Result<St
         return Ok(String::new());
     }
     let lang = resolve_target_lang(target_lang);
-    let client = LlmClient::new(config.clone())?;
-    client.translate(text, lang)
+    info!(
+        target_lang = %lang,
+        text_len = text.chars().count(),
+        "翻译请求开始"
+    );
+    let client = LlmClient::new(config.clone()).map_err(|e| {
+        error!(error = %e, "翻译客户端初始化失败");
+        e
+    })?;
+    match client.translate(text, lang) {
+        Ok(result) => {
+            info!(
+                output_len = result.chars().count(),
+                "翻译完成"
+            );
+            Ok(result)
+        }
+        Err(e) => {
+            error!(error = %e, "翻译请求失败");
+            Err(e)
+        }
+    }
 }
 
 #[cfg(test)]

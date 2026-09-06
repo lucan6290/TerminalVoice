@@ -3,6 +3,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, Stream, StreamConfig};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 
 pub const MIN_RECORDING_DURATION: Duration = Duration::from_millis(300);
 pub const MAX_RECORDING_DURATION: Duration = Duration::from_secs(120);
@@ -36,6 +37,7 @@ impl Default for Recorder {
 
 impl Recorder {
     pub fn new() -> Self {
+        info!("录音器初始化成功，目标采样率: {} Hz", TARGET_SAMPLE_RATE);
         Self {
             stream: None,
             samples: Arc::new(Mutex::new(Vec::new())),
@@ -51,27 +53,49 @@ impl Recorder {
 
     pub fn start(&mut self, device_name: Option<&str>) -> Result<(), String> {
         if self.is_recording() {
+            error!("启动录音失败：录音已经在进行中");
             return Err("录音已经在进行中".to_string());
         }
 
         let host = cpal::default_host();
         let device = match device_name {
-            Some(name) if !name.is_empty() && name != "default" => host
-                .input_devices()
-                .map_err(|error| format!("无法枚举麦克风设备: {error}"))?
-                .find(|device| device.name().map(|value| value == name).unwrap_or(false))
-                .ok_or_else(|| format!("未找到麦克风设备: {name}"))?,
-            _ => host
-                .default_input_device()
-                .ok_or_else(|| "未检测到麦克风设备".to_string())?,
+            Some(name) if !name.is_empty() && name != "default" => {
+                debug!("尝试使用指定麦克风设备: {}", name);
+                host.input_devices()
+                    .map_err(|error| {
+                        error!("无法枚举麦克风设备: {}", error);
+                        format!("无法枚举麦克风设备: {error}")
+                    })?
+                    .find(|device| device.name().map(|value| value == name).unwrap_or(false))
+                    .ok_or_else(|| {
+                        error!("未找到指定麦克风设备: {}", name);
+                        format!("未找到麦克风设备: {name}")
+                    })?
+            }
+            _ => {
+                debug!("使用默认麦克风设备");
+                host.default_input_device()
+                    .ok_or_else(|| {
+                        error!("未检测到默认麦克风设备");
+                        "未检测到麦克风设备".to_string()
+                    })?
+            }
         };
+
+        let device_display_name = device.name().unwrap_or_else(|_| "未知设备".to_string());
+        debug!("已选择麦克风设备: {}", device_display_name);
+
         let supported = device
             .default_input_config()
-            .map_err(|error| format!("无法读取麦克风配置: {error}"))?;
+            .map_err(|error| {
+                error!("无法读取麦克风配置: {}", error);
+                format!("无法读取麦克风配置: {error}")
+            })?;
         let sample_format = supported.sample_format();
         let config: StreamConfig = supported.clone().into();
         let channels = config.channels;
         let sample_rate = config.sample_rate.0;
+        debug!("麦克风配置: 采样率={} Hz, 声道数={}, 格式={:?}", sample_rate, channels, sample_format);
         let samples = Arc::clone(&self.samples);
         let error_slot = Arc::clone(&self.error);
         if let Ok(mut values) = self.samples.lock() {
@@ -82,6 +106,7 @@ impl Recorder {
         }
 
         let err_fn = move |error: cpal::StreamError| {
+            error!("麦克风音频流错误: {}", error);
             if let Ok(mut slot) = error_slot.lock() {
                 *slot = Some(error.to_string());
             }
@@ -117,14 +142,21 @@ impl Recorder {
             SampleFormat::F64 => {
                 build_stream::<f64, _>(&device, &config, channels, samples.clone(), err_fn)?
             }
-            unsupported => return Err(format!("不支持的麦克风采样格式: {unsupported}")),
+            unsupported => {
+                error!("不支持的麦克风采样格式: {:?}", unsupported);
+                return Err(format!("不支持的麦克风采样格式: {unsupported}"));
+            }
         };
         stream
             .play()
-            .map_err(|error| format!("无法启动麦克风录音: {error}"))?;
+            .map_err(|error| {
+                error!("无法启动麦克风录音: {}", error);
+                format!("无法启动麦克风录音: {error}")
+            })?;
         self.stream = Some(stream);
         self.started_at = Some(Instant::now());
         self.sample_rate = sample_rate;
+        info!("录音已开始，设备=\"{}\", 采样率={} Hz, 声道数={}", device_display_name, sample_rate, channels);
         Ok(())
     }
 
@@ -132,23 +164,37 @@ impl Recorder {
         let started_at = self
             .started_at
             .take()
-            .ok_or_else(|| "当前没有正在进行的录音".to_string())?;
+            .ok_or_else(|| {
+                error!("停止录音失败：当前没有正在进行的录音");
+                "当前没有正在进行的录音".to_string()
+            })?;
         self.stream.take();
         let duration = started_at.elapsed().min(MAX_RECORDING_DURATION);
         if let Some(error) = self
             .error
             .lock()
-            .map_err(|error| error.to_string())?
+            .map_err(|error| {
+                error!("读取录音错误状态失败: {}", error);
+                error.to_string()
+            })?
             .clone()
         {
+            error!("麦克风录音失败: {}", error);
             return Err(format!("麦克风录音失败: {error}"));
         }
         let mono = self
             .samples
             .lock()
-            .map_err(|error| error.to_string())?
+            .map_err(|error| {
+                error!("读取录音样本失败: {}", error);
+                error.to_string()
+            })?
             .clone();
-        let samples = resample_to_16k(&mono, self.sample_rate)?;
+        let samples = resample_to_16k(&mono, self.sample_rate).map_err(|error| {
+            error!("重采样失败: {}", error);
+            error
+        })?;
+        info!("录音已停止，时长={:.2}s, 样本数={}", duration.as_secs_f64(), samples.len());
         Ok(AudioBuffer {
             samples,
             sample_rate: TARGET_SAMPLE_RATE,
@@ -157,6 +203,7 @@ impl Recorder {
     }
 
     pub fn cancel(&mut self) {
+        warn!("录音已取消，丢弃已录制数据");
         self.started_at = None;
         self.stream.take();
         if let Ok(mut samples) = self.samples.lock() {
@@ -187,7 +234,10 @@ where
             error_callback,
             None,
         )
-        .map_err(|error| format!("无法创建麦克风输入流: {error}"))
+        .map_err(|error| {
+            error!("无法创建麦克风输入流: {}", error);
+            format!("无法创建麦克风输入流: {error}")
+        })
 }
 
 trait SampleToF32 {
@@ -251,8 +301,16 @@ pub fn list_input_devices() -> Result<Vec<String>, String> {
     let host = cpal::default_host();
     let devices = host
         .input_devices()
-        .map_err(|error| format!("无法枚举麦克风设备: {error}"))?;
-    Ok(devices.filter_map(|device| device.name().ok()).collect())
+        .map_err(|error| {
+            error!("无法枚举麦克风设备: {}", error);
+            format!("无法枚举麦克风设备: {error}")
+        })?;
+    let list: Vec<String> = devices.filter_map(|device| device.name().ok()).collect();
+    debug!("枚举到 {} 个麦克风输入设备", list.len());
+    for (i, name) in list.iter().enumerate() {
+        debug!("  设备[{}]: {}", i, name);
+    }
+    Ok(list)
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@ use crate::state::{AppRuntime, RuntimeEvent, RuntimeState};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
+use tracing::{error, info};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AppStatus {
@@ -107,6 +108,7 @@ pub fn create_mock_preview(
     runtime: State<'_, Mutex<AppRuntime>>,
     app: AppHandle,
 ) -> Result<PreviewDraft, String> {
+    info!("创建 mock 预览，原始文本长度: {} 字符", raw_text.len());
     let mut runtime = runtime.lock().map_err(|error| error.to_string())?;
 
     if !matches!(runtime.state(), RuntimeState::Idle) {
@@ -159,17 +161,23 @@ pub fn confirm_preview(
     app: AppHandle,
 ) -> Result<(), String> {
     if input.final_text.trim().is_empty() {
+        error!("确认预览失败：预览文本为空");
         return Err("预览文本不能为空".to_string());
     }
     {
         let runtime = runtime.lock().map_err(|error| error.to_string())?;
         if !matches!(runtime.state(), RuntimeState::Preview) {
+            error!("确认预览失败：当前状态 {:?} 不是 Preview", runtime.state());
             return Err(format!("当前状态 {:?} 无法确认预览", runtime.state()));
         }
     }
 
+    info!("确认预览，开始注入文本，长度: {} 字符", input.final_text.len());
     crate::services::injector::inject_text(&input.final_text)
-        .map_err(|error| format!("文本注入失败: {error}"))?;
+        .map_err(|error| {
+            error!("文本注入失败: {error}");
+            format!("文本注入失败: {error}")
+        })?;
 
     let history_result: Result<HistoryItem, String> = {
         let db = db.lock().map_err(|error| error.to_string())?;
@@ -222,18 +230,27 @@ pub fn cancel_preview(
 
 #[tauri::command]
 pub fn inject_text(text: String) -> Result<(), String> {
+    info!("inject_text 命令调用，文本长度: {} 字符", text.len());
     crate::services::injector::inject_text(&text)
 }
 
 #[tauri::command]
 pub fn test_asr_connection(db: State<'_, Mutex<Database>>) -> Result<bool, String> {
+    info!("测试 ASR 连接");
     let db = db.lock().map_err(|error| error.to_string())?;
 
     let endpoint = db
         .get_config("service.asrEndpoint")
-        .map_err(|error| error.to_string())?
-        .ok_or("ASR Endpoint 未配置")?;
+        .map_err(|error| {
+            error!("获取 ASR Endpoint 配置失败: {error}");
+            error.to_string()
+        })?
+        .ok_or_else(|| {
+            error!("ASR Endpoint 未配置");
+            "ASR Endpoint 未配置".to_string()
+        })?;
     if endpoint.is_empty() {
+        error!("ASR Endpoint 为空");
         return Err("ASR Endpoint 未配置".to_string());
     }
 
@@ -242,8 +259,13 @@ pub fn test_asr_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
         .map_err(|error| error.to_string())?
         .unwrap_or_default();
     let api_key =
-        crate::services::secrets::decode_config_value("service.asrApiKey", &stored_key)?;
+        crate::services::secrets::decode_config_value("service.asrApiKey", &stored_key)
+            .map_err(|error| {
+                error!("解码 ASR API Key 失败: {error}");
+                error
+            })?;
     if api_key.is_empty() {
+        error!("ASR API Key 未配置");
         return Err("ASR API Key 未配置".to_string());
     }
 
@@ -251,8 +273,17 @@ pub fn test_asr_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
     let body = Vec::new();
 
     match crate::services::asr_cloud::post_bytes(&endpoint, &headers, &body) {
-        Ok(_) => Ok(true),
-        Err(error) if error.retryable => Ok(false),
-        Err(error) => Err(error.message),
+        Ok(_) => {
+            info!("ASR 连接测试成功，端点: {endpoint}");
+            Ok(true)
+        }
+        Err(error) if error.retryable => {
+            info!("ASR 连接测试失败（可重试），端点: {endpoint}，原因: {}", error.message);
+            Ok(false)
+        }
+        Err(error) => {
+            error!("ASR 连接测试失败（不可重试），端点: {endpoint}，原因: {}", error.message);
+            Err(error.message)
+        }
     }
 }

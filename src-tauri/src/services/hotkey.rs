@@ -1,6 +1,7 @@
 use rdev::{listen, Event, EventType, Key};
 use std::sync::mpsc::Sender;
 use std::thread::{self, JoinHandle};
+use tracing::{debug, error, info};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HotkeyEvent {
@@ -67,23 +68,39 @@ impl HotkeyEdgeState {
 }
 
 pub fn spawn_listener(sender: Sender<HotkeyEvent>) -> Result<JoinHandle<()>, String> {
-    thread::Builder::new()
+    let handle = thread::Builder::new()
         .name("terminalvoice-hotkey".to_string())
         .spawn(move || {
+            info!("全局热键监听线程已启动");
             let failure_sender = sender.clone();
             let mut edge = HotkeyEdgeState::default();
             let callback = move |event: Event| {
                 if let Some(mapped) = edge.handle(&event.event_type) {
+                    match &mapped {
+                        HotkeyEvent::Pressed => info!("热键按下：开始语音输入"),
+                        HotkeyEvent::Released => info!("热键释放：结束语音输入"),
+                        HotkeyEvent::Cancelled => info!("热键取消：Esc 按下"),
+                        HotkeyEvent::RewritePressed => debug!("热键按下（润色模式）"),
+                        HotkeyEvent::RewriteReleased => debug!("热键释放（润色模式）"),
+                        HotkeyEvent::TtsToggle => info!("热键：朗读切换 (Alt+1)"),
+                        HotkeyEvent::Translate => info!("热键：翻译 (Alt+2)"),
+                        HotkeyEvent::ListenerFailed(_) => {}
+                    }
                     let _ = sender.send(mapped);
                 }
             };
             if let Err(error) = listen(callback) {
                 let message = format!("{error:?}");
-                eprintln!("[TerminalVoice] 全局热键监听失败: {message}");
+                error!("全局热键监听失败: {}", message);
                 let _ = failure_sender.send(HotkeyEvent::ListenerFailed(message));
             }
         })
-        .map_err(|error| format!("failed to spawn hotkey listener: {error}"))
+        .map_err(|error| {
+            error!("无法启动全局热键监听线程: {}", error);
+            format!("failed to spawn hotkey listener: {error}")
+        })?;
+    info!("全局热键监听器启动成功");
+    Ok(handle)
 }
 
 #[cfg(test)]

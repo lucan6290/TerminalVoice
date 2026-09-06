@@ -4,7 +4,8 @@
 //! 通过 SpVoice COM 对象进行异步语音合成，支持取消操作。
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use tracing::{error, info, warn};
 
 /// 全局朗读状态标志
 static IS_SPEAKING: AtomicBool = AtomicBool::new(false);
@@ -32,6 +33,12 @@ pub fn speak(text: &str) -> Result<(), String> {
         return Ok(());
     }
 
+    let start = Instant::now();
+    info!(
+        text_len = text.chars().count(),
+        "TTS 开始朗读"
+    );
+
     IS_SPEAKING.store(true, Ordering::SeqCst);
     CANCEL_REQUESTED.store(false, Ordering::SeqCst);
 
@@ -40,6 +47,18 @@ pub fn speak(text: &str) -> Result<(), String> {
     IS_SPEAKING.store(false, Ordering::SeqCst);
     CANCEL_REQUESTED.store(false, Ordering::SeqCst);
 
+    let elapsed = start.elapsed();
+    match &result {
+        Ok(()) => info!(
+            elapsed_ms = elapsed.as_millis() as u64,
+            "TTS 朗读完成"
+        ),
+        Err(e) => error!(
+            elapsed_ms = elapsed.as_millis() as u64,
+            error = %e,
+            "TTS 朗读失败"
+        ),
+    }
     result
 }
 
@@ -50,6 +69,7 @@ pub fn stop_speaking() -> Result<(), String> {
     if !is_speaking() {
         return Ok(());
     }
+    info!("TTS 停止朗读请求");
     CANCEL_REQUESTED.store(true, Ordering::SeqCst);
     Ok(())
 }
@@ -58,6 +78,7 @@ pub fn stop_speaking() -> Result<(), String> {
 mod sapi {
     use std::ffi::c_void;
     use std::ptr;
+    use tracing::error;
     use windows_sys::core::GUID;
     use windows_sys::Win32::System::Com::{
         CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_APARTMENTTHREADED,
@@ -164,7 +185,9 @@ mod sapi {
         unsafe {
             let hr = CoInitializeEx(ptr::null(), COINIT_APARTMENTTHREADED as u32);
             if hr != S_OK && hr != S_FALSE {
-                return Err(format!("CoInitializeEx 失败: 0x{:08X}", hr as u32));
+                let err = format!("CoInitializeEx 失败: 0x{:08X}", hr as u32);
+                error!(error = %err, "TTS COM 初始化失败");
+                return Err(err);
             }
 
             let mut p_voice: *mut c_void = ptr::null_mut();
@@ -176,8 +199,10 @@ mod sapi {
                 &mut p_voice,
             );
             if hr != S_OK {
+                let err = format!("CoCreateInstance (SpVoice) 失败: 0x{:08X}", hr as u32);
+                error!(error = %err, "TTS SpVoice 创建失败");
                 CoUninitialize();
-                return Err(format!("CoCreateInstance (SpVoice) 失败: 0x{:08X}", hr as u32));
+                return Err(err);
             }
             Ok(p_voice as *mut ISpVoice)
         }
@@ -209,8 +234,10 @@ fn speak_internal(text: &str) -> Result<(), String> {
             &mut stream_num,
         );
         if hr != 0 {
+            let err = format!("SpVoice.Speak 失败: 0x{:08X}", hr as u32);
+            error!(error = %err, "TTS Speak 调用失败");
             sapi::release_voice(p_voice);
-            return Err(format!("SpVoice.Speak 失败: 0x{:08X}", hr as u32));
+            return Err(err);
         }
 
         // 轮询朗读状态，检查取消请求
@@ -223,6 +250,7 @@ fn speak_internal(text: &str) -> Result<(), String> {
                     SPF_PURGEBEFORESPEAK,
                     &mut stream_num,
                 );
+                info!("TTS 朗读已被取消");
                 break;
             }
 
@@ -233,6 +261,7 @@ fn speak_internal(text: &str) -> Result<(), String> {
                 std::ptr::null_mut(),
             );
             if hr != 0 {
+                warn!("TTS 获取朗读状态失败，退出轮询");
                 break;
             }
 

@@ -1,5 +1,6 @@
 use arboard::Clipboard;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use tracing::{debug, info};
 
 /// Captures the currently selected text by simulating Ctrl+C and reading the clipboard.
 /// Returns the captured text, or empty string if nothing is selected.
@@ -28,12 +29,18 @@ pub fn capture_selected_text() -> String {
 
     super::clipboard::restore_clipboard(backup);
 
+    info!("选中文本捕获完成，文本长度: {} 字符", captured.len());
     captured
 }
 
 /// Builds the LLM prompt for rewriting text based on voice instruction.
 /// Returns the prompt string to send to the LLM.
 pub fn build_rewrite_prompt(selected_text: &str, voice_instruction: &str) -> String {
+    debug!(
+        "构建改写 prompt，选中文本长度: {} 字符，语音指令长度: {} 字符",
+        selected_text.len(),
+        voice_instruction.len()
+    );
     format!(
         "请根据以下语音指令改写选中的文本。\n\n选中文本：\n{selected_text}\n\n语音指令：\n{voice_instruction}\n\n请直接输出改写后的文本，不要添加任何解释或额外标记。"
     )

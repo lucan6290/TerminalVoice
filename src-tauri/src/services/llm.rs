@@ -2,6 +2,8 @@ use crate::services::asr_cloud::{
     parse_endpoint, post_bytes_with_label, post_bytes_with_label_and_callback, HttpResponse,
 };
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
+use tracing::{debug, error, info};
 use zeroize::Zeroizing;
 
 const MAX_ERROR_BODY_CHARS: usize = 512;
@@ -100,11 +102,18 @@ impl LlmClient {
         parse_endpoint(&config.endpoint)
             .map_err(|error| error.replacen("ASR Endpoint", "LLM Endpoint", 1))?;
         if config.api_key.trim().is_empty() {
+            error!("LLM 初始化失败: API Key 为空");
             return Err("LLM API Key 不能为空".to_string());
         }
         if config.model.trim().is_empty() {
+            error!("LLM 初始化失败: Model 为空");
             return Err("LLM Model 不能为空".to_string());
         }
+        info!(
+            endpoint = %config.endpoint,
+            model = %config.model,
+            "LLM 客户端初始化成功"
+        );
         Ok(Self { config })
     }
 
@@ -116,11 +125,30 @@ impl LlmClient {
             return Ok(String::new());
         }
 
+        let start = Instant::now();
+        info!(
+            mode = ?mode,
+            input_len = input.chars().count(),
+            "LLM 整理请求开始"
+        );
         let body = build_request_body(&self.config.model, instruction, input, false)?;
         let headers = self.headers();
         let response = post_bytes_with_label(&self.config.endpoint, &headers, &body, "LLM")
-            .map_err(|error| error.message)?;
-        parse_chat_response(response)
+            .map_err(|error| {
+                error!(error = %error.message, "LLM 整理请求 HTTP 失败");
+                error.message
+            })?;
+        let result = parse_chat_response(response);
+        let elapsed = start.elapsed();
+        match &result {
+            Ok(text) => info!(
+                elapsed_ms = elapsed.as_millis() as u64,
+                output_len = text.chars().count(),
+                "LLM 整理请求成功"
+            ),
+            Err(e) => error!(elapsed_ms = elapsed.as_millis() as u64, error = %e, "LLM 整理请求解析失败"),
+        }
+        result
     }
 
     /// 将文本翻译为指定目标语言
@@ -128,6 +156,13 @@ impl LlmClient {
         if text.trim().is_empty() {
             return Ok(String::new());
         }
+
+        let start = Instant::now();
+        info!(
+            target_lang = %target_lang,
+            input_len = text.chars().count(),
+            "LLM 翻译请求开始"
+        );
 
         let system_prompt = format!(
             "你是一个翻译助手。将以下文本翻译为{target_lang}，只返回译文，不要解释。"
@@ -151,8 +186,21 @@ impl LlmClient {
 
         let headers = self.headers();
         let response = post_bytes_with_label(&self.config.endpoint, &headers, &body, "LLM")
-            .map_err(|error| error.message)?;
-        parse_chat_response(response)
+            .map_err(|error| {
+                error!(error = %error.message, "LLM 翻译请求 HTTP 失败");
+                error.message
+            })?;
+        let result = parse_chat_response(response);
+        let elapsed = start.elapsed();
+        match &result {
+            Ok(text) => info!(
+                elapsed_ms = elapsed.as_millis() as u64,
+                output_len = text.chars().count(),
+                "LLM 翻译请求成功"
+            ),
+            Err(e) => error!(elapsed_ms = elapsed.as_millis() as u64, error = %e, "LLM 翻译请求解析失败"),
+        }
+        result
     }
 
     /// Sends a custom prompt to the LLM for text rewriting.
@@ -162,6 +210,12 @@ impl LlmClient {
         if prompt.trim().is_empty() {
             return Ok(String::new());
         }
+
+        let start = Instant::now();
+        info!(
+            prompt_len = prompt.chars().count(),
+            "LLM 改写请求开始"
+        );
 
         let system_prompt = "你是一个文本改写助手。根据用户的指令改写文本，只返回改写后的正文，不要解释，不要添加引号或 Markdown 代码块。";
         let body = serde_json::to_vec(&ChatRequest {
@@ -183,8 +237,21 @@ impl LlmClient {
 
         let headers = self.headers();
         let response = post_bytes_with_label(&self.config.endpoint, &headers, &body, "LLM")
-            .map_err(|error| error.message)?;
-        parse_chat_response(response)
+            .map_err(|error| {
+                error!(error = %error.message, "LLM 改写请求 HTTP 失败");
+                error.message
+            })?;
+        let result = parse_chat_response(response);
+        let elapsed = start.elapsed();
+        match &result {
+            Ok(text) => info!(
+                elapsed_ms = elapsed.as_millis() as u64,
+                output_len = text.chars().count(),
+                "LLM 改写请求成功"
+            ),
+            Err(e) => error!(elapsed_ms = elapsed.as_millis() as u64, error = %e, "LLM 改写请求解析失败"),
+        }
+        result
     }
 
     pub fn organize_streaming<F>(
@@ -206,6 +273,11 @@ impl LlmClient {
             return Ok(String::new());
         }
 
+        info!(
+            mode = ?mode,
+            input_len = input.chars().count(),
+            "LLM 流式整理请求开始"
+        );
         let body = build_request_body(&self.config.model, instruction, input, true)?;
         self.stream_request(&body, &mut on_delta)
     }
@@ -225,6 +297,11 @@ impl LlmClient {
         if input.trim().is_empty() {
             return Ok(String::new());
         }
+
+        info!(
+            input_len = input.chars().count(),
+            "LLM 技能流式请求开始"
+        );
 
         let body = serde_json::to_vec(&ChatRequest {
             model: &self.config.model,
@@ -251,6 +328,7 @@ impl LlmClient {
     where
         F: FnMut(&str),
     {
+        let start = Instant::now();
         let headers = self.headers();
         let mut accumulator = SseAccumulator::default();
         let response = post_bytes_with_label_and_callback(
@@ -262,12 +340,28 @@ impl LlmClient {
                 accumulator.push(chunk, on_delta)
             },
         )
-        .map_err(|error| error.message)?;
-        ensure_success(&response)?;
-        accumulator.finish(on_delta)?;
+        .map_err(|error| {
+            error!(error = %error.message, "LLM 流式请求 HTTP 失败");
+            error.message
+        })?;
+        if let Err(e) = ensure_success(&response) {
+            error!(error = %e, "LLM 流式响应 HTTP 状态错误");
+            return Err(e);
+        }
+        if let Err(e) = accumulator.finish(on_delta) {
+            error!(error = %e, "LLM 流式响应解析失败");
+            return Err(e);
+        }
         if accumulator.output.trim().is_empty() {
+            error!("LLM 流式响应未返回文本");
             return Err("LLM 流式响应未返回文本".to_string());
         }
+        let elapsed = start.elapsed();
+        info!(
+            elapsed_ms = elapsed.as_millis() as u64,
+            output_len = accumulator.output.chars().count(),
+            "LLM 流式请求完成"
+        );
         Ok(accumulator.output)
     }
 
@@ -399,6 +493,7 @@ impl SseAccumulator {
             .filter_map(|choice| choice.delta.content)
             .filter(|delta| !delta.is_empty())
         {
+            debug!(delta_len = delta.chars().count(), "LLM 流式 delta 接收");
             on_delta(&delta);
             self.output.push_str(&delta);
         }

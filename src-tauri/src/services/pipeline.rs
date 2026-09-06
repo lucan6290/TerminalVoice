@@ -24,7 +24,7 @@ use std::sync::{
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
-use tracing::{info, warn};
+use tracing::{debug, error, info, warn};
 use zeroize::Zeroizing;
 
 const DEFAULT_ASR_ENDPOINT: &str = "https://api.openai.com/v1/audio/transcriptions";
@@ -77,8 +77,13 @@ pub fn start_hotkey_pipeline(app: AppHandle) -> Result<(), String> {
     spawn_listener(sender)?;
     thread::Builder::new()
         .name("terminalvoice-voice-pipeline".to_string())
-        .spawn(move || run_pipeline(app, receiver))
+        .spawn(move || {
+            info!("语音管线线程已启动");
+            run_pipeline(app, receiver);
+            info!("语音管线线程已退出");
+        })
         .map_err(|error| format!("failed to spawn voice pipeline: {error}"))?;
+    info!("热键监听 + 语音管线已启动");
     Ok(())
 }
 
@@ -88,6 +93,7 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<HotkeyEvent>) {
     let mut rewrite_selected_text: Option<String> = None;
     let mut interpreting = false;
     while let Ok(event) = receiver.recv() {
+        debug!(event = ?event, "收到热键事件");
         match event {
             HotkeyEvent::Pressed => handle_pressed(&app, &mut recorder, &mut ticker),
             HotkeyEvent::Released => handle_released(&app, &mut recorder, &mut ticker),
@@ -119,6 +125,7 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<HotkeyEvent>) {
             HotkeyEvent::TtsToggle => handle_tts_toggle(&app),
             HotkeyEvent::Translate => handle_translate(&app, &mut recorder, &mut ticker, &mut interpreting),
             HotkeyEvent::ListenerFailed(message) => {
+                error!(message = %message, "热键监听器失败");
                 emit_toast(&app, "error", format!("热键不可用: {message}"));
             }
         }
@@ -138,11 +145,14 @@ fn handle_pressed(app: &AppHandle, recorder: &mut Recorder, ticker: &mut Option<
     }
 
     let device = read_config(app, "input.micDevice");
+    info!(device = ?device.as_deref(), "开始录音 (按键说话模式)");
     if let Err(error) = recorder.start(device.as_deref()) {
+        error!(error = %error, "录音启动失败");
         let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
         emit_toast(app, "error", error);
         return;
     }
+    info!("录音已开始");
     let _ = emit_recording_started(app);
     *ticker = Some(RecordingTicker::start(app.clone()));
 
@@ -172,18 +182,29 @@ fn stop_recording_and_transcribe(
     if let Some(mut t) = ticker.take() {
         t.stop();
     }
+    info!("停止录音，等待 ASR 识别...");
     let _ = emit_recording_stopped(app);
 
     let runtime = app.state::<Mutex<AppRuntime>>();
     let audio = match recorder.stop() {
-        Ok(audio) => audio,
+        Ok(audio) => {
+            info!(
+                samples = audio.samples.len(),
+                duration_ms = audio.duration.as_millis(),
+                sample_rate = audio.sample_rate,
+                "录音停止，音频有效"
+            );
+            audio
+        }
         Err(error) => {
+            error!(error = %error, "录音停止失败");
             let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
             emit_toast(app, "error", error);
             return;
         }
     };
     if !audio.is_valid() {
+        warn!("录音时长过短，已取消");
         let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::HotkeyReleasedTooShort);
         return;
     }
@@ -199,10 +220,16 @@ fn stop_recording_and_transcribe(
 
     let mode_value = read_config(app, "service.asrProvider");
     let mode = AsrMode::parse(mode_value.as_deref());
+    info!(mode = ?mode, "开始语音识别");
     let cloud_config = cloud_asr_config(app);
     let result = match transcribe(mode, cloud_config, &audio, app) {
-        Ok(result) => result,
+        Ok(result) => {
+            info!(provider = %result.provider, text_len = result.text.len(), "语音识别完成");
+            debug!(text = %result.text, "ASR 原文");
+            result
+        }
         Err(error) => {
+            error!(error = %error, "语音识别失败");
             let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::RecognitionFailed);
             emit_toast(app, "error", format!("语音识别失败: {error}"));
             return;
@@ -306,8 +333,10 @@ fn handle_rewrite_pressed(
 ) {
     let selected = rewrite::capture_selected_text();
     *rewrite_selected_text = if selected.is_empty() {
+        debug!("改写模式未捕获选中文本");
         None
     } else {
+        info!(text_len = selected.len(), "改写模式捕获选中文本");
         Some(selected)
     };
 
@@ -320,7 +349,9 @@ fn handle_rewrite_pressed(
     }
 
     let device = read_config(app, "input.micDevice");
+    info!("改写模式开始录音");
     if let Err(error) = recorder.start(device.as_deref()) {
+        error!(error = %error, "改写模式录音启动失败");
         let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
         emit_toast(app, "error", error);
         if let Ok(mut rt) = runtime.lock() {
@@ -446,6 +477,7 @@ fn reset_rewrite_mode(runtime: &Mutex<AppRuntime>) {
 /// Alt+1: TTS 朗读切换。正在朗读时停止；未朗读时捕获选中文本并开始朗读。
 fn handle_tts_toggle(app: &AppHandle) {
     if tts::is_speaking() {
+        info!("停止 TTS 朗读");
         let _ = tts::stop_speaking();
         let _ = emit_tts_stopped(app);
         return;
@@ -453,17 +485,22 @@ fn handle_tts_toggle(app: &AppHandle) {
 
     let selected_text = rewrite::capture_selected_text();
     if selected_text.trim().is_empty() {
+        debug!("未选中文本，跳过朗读");
         emit_toast(app, "info", "未选中文本，无法朗读");
         return;
     }
 
+    info!(text_len = selected_text.trim().len(), "开始 TTS 朗读");
     let _ = emit_tts_started(app);
     let app_clone = app.clone();
     thread::Builder::new()
         .name("terminalvoice-tts".to_string())
         .spawn(move || {
             if let Err(error) = tts::speak(&selected_text) {
+                error!(error = %error, "TTS 朗读失败");
                 emit_toast(&app_clone, "error", format!("朗读失败: {error}"));
+            } else {
+                info!("TTS 朗读完成");
             }
             let _ = emit_tts_stopped(&app_clone);
         })
@@ -492,6 +529,7 @@ fn handle_translate(
     let selected_text = rewrite::capture_selected_text();
     if !selected_text.trim().is_empty() {
         // 正常翻译模式
+        info!(text_len = selected_text.trim().len(), "翻译选中文本");
         translate_selected_text(app, &selected_text);
         return;
     }
@@ -502,6 +540,7 @@ fn handle_translate(
 
     let device = read_config(app, "input.micDevice");
     if let Err(error) = recorder.start(device.as_deref()) {
+        error!(error = %error, "口译模式录音启动失败");
         *interpreting = false;
         emit_toast(app, "error", error);
         return;
@@ -621,6 +660,7 @@ fn translate_selected_text(app: &AppHandle, selected_text: &str) {
 }
 
 fn handle_cancelled(app: &AppHandle, recorder: &mut Recorder, ticker: &mut Option<RecordingTicker>) {
+    info!("录音已取消");
     if let Some(mut t) = ticker.take() {
         t.stop();
     }

@@ -4,7 +4,8 @@ use crate::services::recorder::AudioBuffer;
 use serde::Deserialize;
 use std::path::Path;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 use zeroize::Zeroizing;
 
 const REQUEST_TIMEOUT_MS: i32 = 60_000;
@@ -32,15 +33,29 @@ impl CloudAsrProvider {
     pub fn new(config: CloudAsrConfig) -> Result<Self, String> {
         parse_endpoint(&config.endpoint)?;
         if config.api_key.trim().is_empty() {
+            error!("ASR 初始化失败: API Key 为空");
             return Err("ASR API Key 不能为空".to_string());
         }
         if config.model.trim().is_empty() {
+            error!("ASR 初始化失败: Model 为空");
             return Err("ASR Model 不能为空".to_string());
         }
+        info!(
+            endpoint = %config.endpoint,
+            model = %config.model,
+            "ASR 客户端初始化成功"
+        );
         Ok(Self { config })
     }
 
     fn send_once(&self, wav: Vec<u8>) -> Result<AsrResult, RequestError> {
+        let start = Instant::now();
+        debug!(
+            endpoint = %self.config.endpoint,
+            model = %self.config.model,
+            body_len = wav.len(),
+            "ASR HTTP 请求开始"
+        );
         let boundary = "terminalvoice-asr-boundary";
         let body = build_multipart_body(
             boundary,
@@ -53,7 +68,22 @@ impl CloudAsrProvider {
             self.config.api_key.as_str(),
         );
         let response = post_bytes(&self.config.endpoint, &headers, &body)?;
-        parse_response(response)
+        let result = parse_response(response);
+        let elapsed = start.elapsed();
+        match &result {
+            Ok(asr) => info!(
+                elapsed_ms = elapsed.as_millis() as u64,
+                text_len = asr.text.chars().count(),
+                "ASR 请求成功"
+            ),
+            Err(e) => warn!(
+                elapsed_ms = elapsed.as_millis() as u64,
+                error = %e.message,
+                retryable = e.retryable,
+                "ASR 请求失败"
+            ),
+        }
+        result
     }
 }
 
@@ -63,11 +93,23 @@ impl AsrProvider for CloudAsrProvider {
         match self.send_once(wav.clone()) {
             Ok(result) => Ok(result),
             Err(first) if first.retryable => {
+                warn!(
+                    error = %first.message,
+                    "ASR 首次请求失败，准备重试"
+                );
                 thread::sleep(RETRY_DELAY);
-                self.send_once(wav)
-                    .map_err(|second| format!("云端 ASR 请求重试后仍失败: {}", second.message))
+                match self.send_once(wav) {
+                    Ok(result) => Ok(result),
+                    Err(second) => {
+                        error!(error = %second.message, "ASR 重试后仍失败");
+                        Err(format!("云端 ASR 请求重试后仍失败: {}", second.message))
+                    }
+                }
             }
-            Err(error) => Err(error.message),
+            Err(error) => {
+                error!(error = %error.message, "ASR 请求发生不可重试错误");
+                Err(error.message)
+            }
         }
     }
 }
