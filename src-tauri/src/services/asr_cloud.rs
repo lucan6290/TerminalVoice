@@ -816,7 +816,7 @@ mod tests {
     use std::io::{Read, Write};
     use std::net::TcpListener;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
+    use std::sync::{Arc, Barrier};
     use std::time::Duration;
 
     fn audio() -> AudioBuffer {
@@ -830,22 +830,41 @@ mod tests {
     fn serve(responses: Vec<(u16, &'static str)>) -> (String, Arc<AtomicUsize>) {
         let listener = TcpListener::bind("127.0.0.1:0").expect("binds test server");
         let address = listener.local_addr().expect("has address");
+        listener
+            .set_nonblocking(false)
+            .expect("listener blocking mode");
         let calls = Arc::new(AtomicUsize::new(0));
         let calls_for_thread = Arc::clone(&calls);
+        // Barrier ensures the test thread only returns after the server thread
+        // is sitting in accept() — avoids a race where WinHttpConnect fires
+        // before the server is ready (Windows error 12029).
+        let ready = Arc::new(Barrier::new(2));
+        let ready_for_thread = Arc::clone(&ready);
         thread::spawn(move || {
+            ready_for_thread.wait();
             for response in responses {
                 let (mut stream, _) = listener.accept().expect("accepts request");
+                // Read headers until double CRLF
                 let mut request = Vec::new();
                 let mut buffer = [0_u8; 4096];
-                loop {
+                let mut headers_done = false;
+                while !headers_done {
                     let count = stream.read(&mut buffer).expect("reads request");
                     if count == 0 {
                         break;
                     }
                     request.extend_from_slice(&buffer[..count]);
                     if request.windows(4).any(|window| window == b"\r\n\r\n") {
-                        break;
+                        headers_done = true;
                     }
+                }
+                // Drain the remainder of the body (multipart wav) so the
+                // client does not get a connection reset while sending.
+                if headers_done {
+                    stream
+                        .set_read_timeout(Some(Duration::from_millis(200)))
+                        .ok();
+                    while stream.read(&mut buffer).unwrap_or(0) > 0 {}
                 }
                 let request = String::from_utf8_lossy(&request);
                 assert!(request.contains("Authorization: Bearer test-key"));
@@ -864,8 +883,14 @@ mod tests {
                 stream
                     .write_all(response.as_bytes())
                     .expect("writes response");
+                stream.flush().ok();
+                // For multi-response (retry) tests, wait for the next connection
             }
         });
+        ready.wait();
+        // Small extra yield to let the spawned thread enter accept() after
+        // the barrier releases it.
+        thread::sleep(Duration::from_millis(20));
         (format!("http://{address}/transcriptions"), calls)
     }
 
