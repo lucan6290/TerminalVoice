@@ -14,6 +14,8 @@ pub enum RuntimeEvent {
     HotkeyReleasedTooShort,
     RecognitionSucceeded,
     RecognitionFailed,
+    /// 识别完成后直接注入（跳过预览窗口），Recognizing → Idle
+    DirectInjectSucceeded,
     ConfirmedPreview,
     Cancelled,
     TogglePause,
@@ -69,6 +71,7 @@ impl AppRuntime {
                 RuntimeState::Preview
             }
             (RuntimeState::Recognizing, RuntimeEvent::RecognitionFailed) => RuntimeState::Idle,
+            (RuntimeState::Recognizing, RuntimeEvent::DirectInjectSucceeded) => RuntimeState::Idle,
             (RuntimeState::Preview, RuntimeEvent::ConfirmedPreview) => RuntimeState::Idle,
             (RuntimeState::Preview, RuntimeEvent::Cancelled) => RuntimeState::Idle,
             (current, RuntimeEvent::TogglePause) if *current != RuntimeState::Paused => {

@@ -62,6 +62,7 @@ const CONFIG_KEYS = {
   llmModel: "service.llmModel",
   textMode: "service.textMode",
   handsFree: "service.handsFree",
+  skipPreview: "input.skipPreview",
   translateTargetLang: "service.translateTargetLang",
   activeSkill: "service.activeSkill",
 } as const;
@@ -93,6 +94,7 @@ const DEFAULT_SERVICE: ServiceConfig = {
   llmModel: "gpt-4o-mini",
   textMode: "polish",
   handsFree: false,
+  skipPreview: false,
   translateTargetLang: "英文",
 };
 
@@ -308,6 +310,8 @@ export const usePanelStore = create<PanelState>((set, get) => ({
         return state;
       case CONFIG_KEYS.handsFree:
         return { service: { ...state.service, handsFree: parseBoolean(entry.value, state.service.handsFree) } };
+      case CONFIG_KEYS.skipPreview:
+        return { service: { ...state.service, skipPreview: parseBoolean(entry.value, state.service.skipPreview) } };
       case CONFIG_KEYS.translateTargetLang: return { service: { ...state.service, translateTargetLang: entry.value } };
       case CONFIG_KEYS.activeSkill: return { activeSkillId: entry.value || null };
       default: return state;
@@ -352,6 +356,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       ["llmModel", CONFIG_KEYS.llmModel, String],
       ["textMode", CONFIG_KEYS.textMode, String],
       ["handsFree", CONFIG_KEYS.handsFree, String],
+      ["skipPreview", CONFIG_KEYS.skipPreview, String],
       ["translateTargetLang", CONFIG_KEYS.translateTargetLang, String],
     ];
     for (const [field, key, serialize] of mappings) {

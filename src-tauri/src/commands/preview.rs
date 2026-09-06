@@ -3,7 +3,7 @@ use crate::services::preprocess::{process_text, PreprocessConfig, TextMode as Ba
 use crate::state::{AppRuntime, RuntimeEvent, RuntimeState};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tracing::{error, info};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -199,35 +199,9 @@ pub fn confirm_preview(
         }
     }
 
-    info!("确认预览，开始注入文本，长度: {} 字符", input.final_text.len());
-
-    // 先短暂让出焦点（等待面板窗口最小化/隐藏，操作系统切回目标窗口），再注入文本
-    crate::services::app_context::yield_focus();
-    crate::services::injector::inject_text(&input.final_text)
-        .map_err(|error| {
-            error!("文本注入失败: {error}");
-            format!("文本注入失败: {error}")
-        })?;
-
-    // 注入后再等待，然后采集前台窗口信息（此时焦点已回到目标应用）
-    crate::services::app_context::yield_after_inject();
-    let app_context = crate::services::app_context::get_foreground_app_context();
-
-    let history_result: Result<HistoryItem, String> = {
-        let db = db.lock().map_err(|error| error.to_string())?;
-        db.insert_history(NewHistoryItem {
-            source_text: input.source_text,
-            final_text: input.final_text,
-            text_mode: input.text_mode.as_storage_value().to_string(),
-            asr_provider: input.asr_provider,
-            duration_ms: input.duration_ms,
-            audio_file_path: None,
-            llm_rewritten: input.llm_rewritten.unwrap_or(false),
-            skill_id: input.skill_id,
-            app_context,
-        })
-        .map_err(|error| error.to_string())
-    };
+    // 先隐藏 panel 窗口，让出焦点给目标应用，再注入文本
+    hide_panel_window(&app);
+    inject_text_and_save_history(&app, &db, &input.into())?;
 
     {
         let mut runtime = runtime.lock().map_err(|error| error.to_string())?;
@@ -238,6 +212,51 @@ pub fn confirm_preview(
     }
     app.emit("preview-cleared", ())
         .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+/// 从面板/球窗口隐藏 panel，确保焦点回到用户之前的目标窗口。
+/// 失败不阻断主流程（注入仍会继续）。
+fn hide_panel_window(app: &AppHandle) {
+    if let Some(panel) = app.get_webview_window("panel") {
+        let _ = panel.hide();
+    }
+    // 额外等待，确保焦点切换完成（panel hide → Windows 切回上一个前台窗口）
+    crate::services::app_context::yield_focus();
+}
+
+/// 注入+保存历史的共享逻辑，被 confirm_preview（预览确认）和 pipeline 直注（skipPreview）复用。
+pub(crate) fn inject_text_and_save_history(
+    app: &AppHandle,
+    db: &Mutex<Database>,
+    record: &InjectRecord,
+) -> Result<(), String> {
+    info!("开始注入文本，长度: {} 字符", record.final_text.len());
+
+    crate::services::app_context::yield_focus();
+    crate::services::injector::inject_text(&record.final_text).map_err(|error| {
+        error!("文本注入失败: {error}");
+        format!("文本注入失败: {error}")
+    })?;
+
+    crate::services::app_context::yield_after_inject();
+    let app_context = crate::services::app_context::get_foreground_app_context();
+
+    let history_result: Result<HistoryItem, String> = {
+        let db = db.lock().map_err(|error| error.to_string())?;
+        db.insert_history(NewHistoryItem {
+            source_text: record.source_text.clone(),
+            final_text: record.final_text.clone(),
+            text_mode: record.text_mode.as_storage_value().to_string(),
+            asr_provider: record.asr_provider.clone(),
+            duration_ms: record.duration_ms,
+            audio_file_path: None,
+            llm_rewritten: record.llm_rewritten.unwrap_or(false),
+            skill_id: record.skill_id.clone(),
+            app_context,
+        })
+        .map_err(|error| error.to_string())
+    };
 
     if let Err(error) = history_result {
         let _ = app.emit(
@@ -249,6 +268,45 @@ pub fn confirm_preview(
         );
     }
     Ok(())
+}
+
+/// 注入所需数据（从 ConfirmPreviewInput 或 PreviewDraft 转换）。
+pub(crate) struct InjectRecord {
+    pub source_text: String,
+    pub final_text: String,
+    pub text_mode: TextMode,
+    pub asr_provider: String,
+    pub duration_ms: Option<i64>,
+    pub llm_rewritten: Option<bool>,
+    pub skill_id: Option<String>,
+}
+
+impl From<ConfirmPreviewInput> for InjectRecord {
+    fn from(input: ConfirmPreviewInput) -> Self {
+        Self {
+            source_text: input.source_text,
+            final_text: input.final_text,
+            text_mode: input.text_mode,
+            asr_provider: input.asr_provider,
+            duration_ms: input.duration_ms,
+            llm_rewritten: input.llm_rewritten,
+            skill_id: input.skill_id,
+        }
+    }
+}
+
+impl From<&PreviewDraft> for InjectRecord {
+    fn from(draft: &PreviewDraft) -> Self {
+        Self {
+            source_text: draft.source_text.clone(),
+            final_text: draft.processed_text.clone(),
+            text_mode: draft.text_mode.clone(),
+            asr_provider: draft.asr_provider.clone(),
+            duration_ms: draft.duration_ms,
+            llm_rewritten: draft.llm_rewritten,
+            skill_id: draft.skill_id.clone(),
+        }
+    }
 }
 
 #[tauri::command]

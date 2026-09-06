@@ -50,6 +50,7 @@ pub enum RuntimeEvent {
     HotkeyReleasedTooShort,         // 热键松开，录音过短（<0.5s，误触）
     RecognitionSucceeded,           // 识别成功，进入预览
     RecognitionFailed,              // 识别失败
+    DirectInjectSucceeded,          // 识别后直接注入（跳过预览）
     ConfirmedPreview,               // 用户确认预览文本
     Cancelled,                      // 用户取消（ESC）
     TogglePause,                    // 切换暂停/启用
@@ -78,6 +79,7 @@ impl AppRuntime {
 | `Recording` | `TogglePause` | `Paused` | 暂停，记住 `paused_from = Recording` |
 | `Recognizing` | `RecognitionSucceeded` | `Preview` | 识别成功，显示预览 |
 | `Recognizing` | `RecognitionFailed` | `Idle` | 识别失败，回到空闲 |
+| `Recognizing` | `DirectInjectSucceeded` | `Idle` | 跳过预览直接上屏（`input.skipPreview=true`） |
 | `Recognizing` | `Cancelled` | `Idle` | 取消识别 |
 | `Recognizing` | `TogglePause` | `Paused` | 暂停，记住 `paused_from = Recognizing` |
 | `Preview` | `ConfirmedPreview` | `Idle` | 确认上屏，回空闲 |

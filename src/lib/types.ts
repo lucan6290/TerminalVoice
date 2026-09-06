@@ -75,6 +75,8 @@ export interface ServiceConfig {
   textMode: TextProcessMode;
   handsFree: boolean;
   translateTargetLang: string;
+  /** 识别后是否跳过预览窗口直接上屏（true=直接上屏，false=弹预览窗口手动确认） */
+  skipPreview: boolean;
 }
 
 export interface ModelInfo {

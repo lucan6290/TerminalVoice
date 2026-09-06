@@ -1,4 +1,4 @@
-use crate::commands::preview::{emit_preview_ready, PreviewDraft, PreviewMode, TextMode as PreviewTextMode};
+use crate::commands::preview::{emit_preview_ready, inject_text_and_save_history, InjectRecord, PreviewDraft, PreviewMode, TextMode as PreviewTextMode};
 use crate::services::asr::{transcribe, AsrMode};
 use crate::services::asr_cloud::CloudAsrConfig;
 use crate::services::db::Database;
@@ -531,9 +531,43 @@ fn stop_recording_and_transcribe(
         skill_id: llm_result.skill_id,
         mode: PreviewMode::Recognition,
     };
+
+    if is_skip_preview(app) {
+        // 直接注入模式：隐藏 panel，注入文本后状态回到 Idle，不弹预览窗口
+        info!("skipPreview 已开启，直接注入文本");
+        hide_panel_for_direct_inject(app);
+        let db = app.state::<Mutex<Database>>();
+        let record: InjectRecord = (&draft).into();
+        match inject_text_and_save_history(app, &db, &record) {
+            Ok(()) => {
+                let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::DirectInjectSucceeded);
+                emit_toast(app, "success", "已上屏");
+            }
+            Err(error) => {
+                // 注入失败时 fallback 到预览窗口，让用户手动重试
+                error!(error = %error, "直接注入失败，回退到预览窗口");
+                emit_toast(app, "warn", format!("直接上屏失败，已打开预览窗口: {error}"));
+                if let Err(error) = emit_preview_ready(app, &draft) {
+                    let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
+                    emit_toast(app, "error", format!("无法显示预览: {error}"));
+                }
+            }
+        }
+        return;
+    }
+
     if let Err(error) = emit_preview_ready(app, &draft) {
         let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
         emit_toast(app, "error", format!("无法显示预览: {error}"));
+    }
+}
+
+/// 直注模式下确保 panel 窗口被隐藏，焦点能回到目标应用
+fn hide_panel_for_direct_inject(app: &AppHandle) {
+    if let Some(panel) = app.get_webview_window("panel") {
+        if panel.is_visible().unwrap_or(false) {
+            let _ = panel.hide();
+        }
     }
 }
 
@@ -987,6 +1021,10 @@ fn is_hands_free(app: &AppHandle) -> bool {
     read_config(app, "input.handsFree")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false)
+}
+
+fn is_skip_preview(app: &AppHandle) -> bool {
+    read_bool_config(app, "input.skipPreview")
 }
 
 fn cloud_asr_config(app: &AppHandle) -> Option<CloudAsrConfig> {

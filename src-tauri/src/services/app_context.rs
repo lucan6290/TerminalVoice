@@ -78,13 +78,14 @@ mod imp {
     }
 
     /// 短暂让出 CPU，给操作系统时间切换焦点（注入前使用）。
+    /// panel.hide() 后需要足够时间让 Windows 将焦点切回之前的前台窗口。
     pub fn yield_focus() {
-        std::thread::sleep(std::time::Duration::from_millis(30));
+        std::thread::sleep(std::time::Duration::from_millis(80));
     }
 
     /// 注入后等待目标应用接收按键并恢复焦点，用于采集前台窗口信息。
     pub fn yield_after_inject() {
-        std::thread::sleep(std::time::Duration::from_millis(120));
+        std::thread::sleep(std::time::Duration::from_millis(150));
     }
 
     // 避免 io 未使用警告

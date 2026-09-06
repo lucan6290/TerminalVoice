@@ -55,6 +55,7 @@ export function PanelWindow() {
   const autoStart = usePanelStore((s) => s.autoStart);
   const serviceReady = usePanelStore((s) => s.serviceReady);
   const service = usePanelStore((s) => s.service);
+  const skipPreview = service.skipPreview;
   const quotaDisplay = usePanelStore((s) => s.quotaDisplay);
   const previewDraft = usePanelStore((s) => s.previewDraft);
   const llmStreamingText = usePanelStore((s) => s.llmStreamingText);
@@ -110,7 +111,7 @@ export function PanelWindow() {
     try {
       await confirmPreview(input);
       clearPreviewDraft();
-      showToast("已确认并上屏", "success");
+      showToast(t("toast.confirmed"), "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : String(error), "error");
       throw error;
@@ -149,7 +150,7 @@ export function PanelWindow() {
         >
           <div className="flex items-center gap-[10px] min-w-0">
             <span
-              data-tip={`服务运行中 · ${appStatus}`}
+              data-tip={`${t("panel.header.serviceRunning")} · ${appStatus}`}
               className="tip-below tip-left relative flex h-[10px] w-[10px] shrink-0 cursor-help"
             >
               <span
@@ -168,7 +169,7 @@ export function PanelWindow() {
               <button
                 onClick={(e) => { e.stopPropagation(); setShowUpdateModal(true); }}
                 className="shrink-0 h-[16px] px-[6px] rounded-full bg-rose-500/90 hover:bg-rose-500 text-white text-[10px] font-medium leading-none transition-colors"
-                title={`新版本 v${updateInfo.version} 可用，点击查看`}
+                title={t("tab.settings.updateAvailable", { version: updateInfo.version })}
               >
                 v{updateInfo.version}
               </button>
@@ -177,13 +178,15 @@ export function PanelWindow() {
 
           <div className="flex items-center gap-[2px]">
             <IconBtn
-              title="通过触发键录音"
-              data-tip={`按住 ${formatKeyLabel(pttKey)} 录音`}
+              title={t("panel.header.btn.record.tooltip")}
+              data-tip={t("panel.header.btn.record.holdTip", { key: formatKeyLabel(pttKey) })}
               accent={recording}
               className="tip-below"
               onClick={() => {
                 showToast(
-                  recording ? "录音进行中，请松开触发键结束" : `请使用 ${formatKeyLabel(pttKey)} 触发录音`,
+                  recording
+                    ? t("panel.header.btn.recording")
+                    : t("panel.header.btn.recordInactive", { key: formatKeyLabel(pttKey) }),
                   "info",
                 );
               }}
@@ -194,10 +197,10 @@ export function PanelWindow() {
                 <Circle className="w-[18px] h-[18px]" strokeWidth={1.5} />
               )}
             </IconBtn>
-            <IconBtn title="最小化到托盘" data-tip="最小化到托盘" className="tip-below" onClick={handleMinimize}>
+            <IconBtn title={t("panel.header.btn.minimize")} data-tip={t("panel.header.btn.minimize")} className="tip-below" onClick={handleMinimize}>
               <Minus className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
-            <IconBtn title="关闭面板" data-tip="关闭面板" className="tip-below" onClick={handleClose}>
+            <IconBtn title={t("panel.header.btn.close")} data-tip={t("panel.header.btn.close")} className="tip-below" onClick={handleClose}>
               <X className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
           </div>
@@ -220,12 +223,14 @@ export function PanelWindow() {
               soundOn={soundOn}
               muteSys={muteSys}
               autoStart={autoStart}
+              skipPreview={skipPreview}
               serviceReady={serviceReady}
               quotaDisplay={quotaDisplay}
               setSoundOn={setSoundOn}
               setMuteSys={setMuteSys}
               setAutoStart={setAutoStart}
               setMicDevice={setMicDevice}
+              setSkipPreview={(v) => setServiceConfig({ skipPreview: v })}
               onSaveHotkey={saveHotkeyConfig}
               onOpenService={() => setActiveTab("service")}
             />
@@ -246,7 +251,7 @@ export function PanelWindow() {
                 setUiLang(next);
                 showToast(t("toast.langSwitched", { lang: t(`panel.footer.langLabel.${next === "zh-CN" ? "cn" : "en"}`) }), "info");
               }}
-              title={uiLang === "zh-CN" ? t("panel.footer.uiLang.title") : "UI language: English (click to switch)"}
+              title={t("panel.footer.uiLang.title")}
             >
               <span className="text-[11px] font-semibold leading-none tracking-wide">
                 {uiLang === "zh-CN" ? "CN" : "EN"}
@@ -338,12 +343,14 @@ function HomeView({
   soundOn,
   muteSys,
   autoStart,
+  skipPreview,
   serviceReady,
   quotaDisplay,
   setSoundOn,
   setMuteSys,
   setAutoStart,
   setMicDevice,
+  setSkipPreview,
   onSaveHotkey,
   onOpenService,
 }: {
@@ -356,15 +363,18 @@ function HomeView({
   soundOn: boolean;
   muteSys: boolean;
   autoStart: boolean;
+  skipPreview: boolean;
   serviceReady: boolean;
   quotaDisplay: string;
   setSoundOn: (v: boolean) => void;
   setMuteSys: (v: boolean) => void;
   setAutoStart: (v: boolean) => void;
   setMicDevice: (value: string) => void;
+  setSkipPreview: (v: boolean) => void;
   onSaveHotkey: (config: { pttKey: string; ttsKey: string; translateKey: string }) => Promise<void>;
   onOpenService: () => void;
 }) {
+  const t = useT();
   return (
     <>
       {/* 服务配置：可点击进入配置页 */}
@@ -373,7 +383,7 @@ function HomeView({
         className="w-full bg-neutral-800 rounded-xl px-4 py-3 mb-3 flex items-center gap-3 hover:bg-neutral-800/80 transition-colors text-left cursor-pointer"
       >
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[14px] text-neutral-100 leading-none">服务配置</span>
+          <span className="text-[14px] text-neutral-100 leading-none">{t("panel.header.serviceConfig")}</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="h-[6px] rounded-full overflow-hidden bg-neutral-700">
@@ -388,9 +398,9 @@ function HomeView({
 
       {/* 快捷键设置 */}
       <div className="bg-neutral-800 rounded-xl p-3 mb-3 space-y-2">
-        <div className="text-[12px] text-neutral-500 px-1 pb-1">快捷键 · 点击按键可重新录制</div>
+        <div className="text-[12px] text-neutral-500 px-1 pb-1">{t("panel.home.hotkeySectionTitle")}</div>
         <div className="flex items-center justify-between gap-3 px-1">
-          <span className="text-[13px] text-neutral-200 shrink-0">按住说话</span>
+          <span className="text-[13px] text-neutral-200 shrink-0">{t("panel.home.hotkey.ptt")}</span>
           <HotkeyRecorder
             value={pttKey}
             onChange={(v) => onSaveHotkey({ pttKey: v, ttsKey, translateKey })}
@@ -399,7 +409,7 @@ function HomeView({
         </div>
         <div className="flex items-center justify-between gap-3 px-1">
           <span className="text-[13px] text-neutral-200 shrink-0">
-            朗读 <span className="text-neutral-500">(Alt+)</span>
+            {t("panel.home.hotkey.tts")} <span className="text-neutral-500">(Alt+)</span>
           </span>
           <HotkeyRecorder
             value={ttsKey}
@@ -409,7 +419,7 @@ function HomeView({
         </div>
         <div className="flex items-center justify-between gap-3 px-1">
           <span className="text-[13px] text-neutral-200 shrink-0">
-            翻译 <span className="text-neutral-500">(Alt+)</span>
+            {t("panel.home.hotkey.translate")} <span className="text-neutral-500">(Alt+)</span>
           </span>
           <HotkeyRecorder
             value={translateKey}
@@ -421,11 +431,11 @@ function HomeView({
 
       {/* 麦克风 */}
       <SettingRow
-        label="选择麦克风"
-        helpTip="选择录音输入设备"
+        label={t("panel.home.mic.label")}
+        helpTip={t("panel.home.mic.helpTip")}
         childrenLeft={
           <select
-            aria-label="选择麦克风"
+            aria-label={t("panel.home.mic.label")}
             value={micDevice}
             onChange={(event) => setMicDevice(event.target.value)}
             className="w-full min-w-0 appearance-none bg-neutral-900 rounded-lg px-3 py-2 text-[14px] text-neutral-100 border border-white/5 outline-none"
@@ -442,21 +452,28 @@ function HomeView({
 
       {/* 开关项 */}
       <div className="flex items-center justify-between px-1 py-3 mb-1">
-        <span className="text-[14px] text-neutral-100 leading-none">交互声音</span>
+        <span className="text-[14px] text-neutral-100 leading-none">{t("panel.home.toggle.sound")}</span>
         <ToggleSwitch checked={soundOn} onChange={setSoundOn} />
       </div>
       <div className="flex items-center justify-between px-1 py-3 mb-1">
-        <span className="text-[14px] text-neutral-100 leading-none">使用时静音系统声音</span>
+        <span className="text-[14px] text-neutral-100 leading-none">{t("panel.home.toggle.muteSys")}</span>
         <ToggleSwitch checked={muteSys} onChange={setMuteSys} />
       </div>
       <div className="flex items-center justify-between px-1 py-3 mb-1">
-        <span className="text-[14px] text-neutral-100 leading-none">开机启动并隐藏面板</span>
+        <span className="text-[14px] text-neutral-100 leading-none">{t("panel.home.toggle.autoStart")}</span>
         <ToggleSwitch checked={autoStart} onChange={setAutoStart} />
+      </div>
+      <div className="flex items-center justify-between px-1 py-3 mb-1">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[14px] text-neutral-100 leading-none">识别后预览确认</span>
+          <span className="text-[11px] text-neutral-500">关闭则识别完成后直接上屏</span>
+        </div>
+        <ToggleSwitch checked={!skipPreview} onChange={(v) => setSkipPreview(!v)} />
       </div>
 
       {/* 底部提示 */}
       <p className="text-[12px] text-center text-neutral-500 my-4">
-        按住 {formatKeyLabel(pttKey)} 说话 · 松开上屏
+        {t("panel.home.footerHint", { key: formatKeyLabel(pttKey) })}
       </p>
     </>
   );

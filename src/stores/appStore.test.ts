@@ -58,6 +58,7 @@ beforeEach(() => {
       llmModel: "gpt-4o-mini",
       textMode: "polish",
       handsFree: false,
+      skipPreview: false,
       translateTargetLang: "英文",
     },
     historyItems: [],

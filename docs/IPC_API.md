@@ -1144,6 +1144,7 @@ Rust 端对应 `services/hotkey.rs::HotkeyConfig`（字段为 `rdev::Key` 枚举
 | `input.ttsKey` | string | `"1"` | 朗读键（Alt+此键触发） |
 | `input.translateKey` | string | `"2"` | 翻译键（Alt+此键触发） |
 | `input.micDevice` | string | `""` | 麦克风设备（空=自动检测） |
+| `input.skipPreview` | `"true"/"false"` | `"false"` | 识别后跳过预览直接上屏 |
 | `service.asrProvider` | `"cloud"/"offline"/"auto"` | `"auto"` | ASR 提供商 |
 | `service.asrEndpoint` | string | OpenAI 默认 | ASR 云端接口地址 |
 | `service.asrApiKey` | string | `""` | ASR API Key（DPAPI 加密存储） |
