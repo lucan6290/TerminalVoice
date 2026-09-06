@@ -18,6 +18,7 @@ pub fn run() {
                 let _ = w.set_focus();
             });
         }))
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -83,6 +84,9 @@ pub fn run() {
             commands::skills::list_skills,
             commands::skills::set_skill,
             commands::skills::get_active_skill,
+            commands::updater::check_update,
+            commands::updater::get_app_version,
+            commands::updater::start_update_download,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run TerminalVoice");

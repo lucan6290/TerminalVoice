@@ -48,6 +48,7 @@ export function PanelWindow() {
   const quotaDisplay = usePanelStore((s) => s.quotaDisplay);
   const previewDraft = usePanelStore((s) => s.previewDraft);
   const llmStreamingText = usePanelStore((s) => s.llmStreamingText);
+  const updateInfo = usePanelStore((s) => s.updateInfo);
 
   const toggleDark = usePanelStore((s) => s.toggleDark);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
@@ -56,6 +57,7 @@ export function PanelWindow() {
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
   const setMicDevice = usePanelStore((s) => s.setMicDevice);
   const clearPreviewDraft = usePanelStore((s) => s.clearPreviewDraft);
+  const setShowUpdateModal = usePanelStore((s) => s.setShowUpdateModal);
   const [micDevices, setMicDevices] = useState<string[]>([micDevice]);
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export function PanelWindow() {
           className="flex items-center justify-between px-5 pt-[18px] pb-[12px] shrink-0"
           data-tauri-drag-region
         >
-          <div className="flex items-center gap-[10px]">
+          <div className="flex items-center gap-[10px] min-w-0">
             <span
               data-tip={`服务运行中 · ${appStatus}`}
               className="tip-below relative flex h-[10px] w-[10px] shrink-0 cursor-help"
@@ -150,9 +152,18 @@ export function PanelWindow() {
                 )}
               />
             </span>
-            <span className="text-[20px] font-[500] leading-none tracking-tight">
+            <span className="text-[20px] font-[500] leading-none tracking-tight truncate">
               TerminalVoice
             </span>
+            {updateInfo && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowUpdateModal(true); }}
+                className="shrink-0 h-[16px] px-[6px] rounded-full bg-rose-500/90 hover:bg-rose-500 text-white text-[10px] font-medium leading-none transition-colors"
+                title={`新版本 v${updateInfo.version} 可用，点击查看`}
+              >
+                v{updateInfo.version}
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-[2px]">
@@ -401,6 +412,7 @@ function IconBtn({
   title,
   onClick,
   accent,
+  className,
   ...rest
 }: {
   children: React.ReactNode;
@@ -413,7 +425,7 @@ function IconBtn({
       title={title}
       onClick={onClick}
       {...rest}
-      className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+      className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-colors", className)}
       style={{ color: accent ? "#22c55e" : "#a3a3a3" }}
       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
@@ -428,6 +440,7 @@ function TabBtn({
   active,
   onClick,
   title,
+  className,
   ...rest
 }: {
   children: React.ReactNode;
@@ -440,7 +453,7 @@ function TabBtn({
       onClick={onClick}
       title={title}
       {...rest}
-      className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+      className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-colors", className)}
       style={{
         color: active ? "#22c55e" : "#a3a3a3",
         background: active ? "rgba(34,197,94,0.12)" : "transparent",

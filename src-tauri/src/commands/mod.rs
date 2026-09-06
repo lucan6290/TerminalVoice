@@ -6,3 +6,4 @@ pub mod history;
 pub mod model;
 pub mod preview;
 pub mod skills;
+pub mod updater;

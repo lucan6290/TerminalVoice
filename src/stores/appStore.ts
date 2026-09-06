@@ -15,6 +15,8 @@ import {
   deleteModel as ipcDeleteModel,
   listSkills as ipcListSkills,
   setSkill as ipcSetSkill,
+  checkUpdate as ipcCheckUpdate,
+  startUpdateDownload as ipcStartUpdateDownload,
 } from "../lib/commands";
 import type {
   AppStatus,
@@ -27,6 +29,7 @@ import type {
   TextProcessMode,
   TranslateResultPayload,
   RewriteResultPayload,
+  UpdateInfo,
   VoiceSkill,
   LlmStreamingDeltaPayload,
 } from "../lib/types";
@@ -122,6 +125,13 @@ export interface PanelState {
   // LLM streaming
   llmStreamingText: string | null;
 
+  // Update
+  updateInfo: UpdateInfo | null;
+  updateDownloading: boolean;
+  updateProgress: number;
+  updateDownloaded: boolean;
+  showUpdateModal: boolean;
+
   // Actions
   toggleDark: () => void;
   setActiveTab: (tab: TabKey | null) => void;
@@ -172,6 +182,14 @@ export interface PanelState {
   loadSkills: () => Promise<void>;
   setActiveSkillId: (id: string | null) => void;
   setLlmStreamingText: (text: string | null) => void;
+
+  // Update actions
+  checkForUpdate: () => Promise<void>;
+  startDownloadUpdate: () => Promise<void>;
+  setUpdateProgress: (percent: number) => void;
+  setUpdateDownloaded: () => void;
+  setShowUpdateModal: (show: boolean) => void;
+  setUpdateInfo: (info: UpdateInfo | null) => void;
 }
 
 export const usePanelStore = create<PanelState>((set, get) => ({
@@ -203,6 +221,12 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   skills: [],
   activeSkillId: null,
   llmStreamingText: null,
+
+  updateInfo: null,
+  updateDownloading: false,
+  updateProgress: 0,
+  updateDownloaded: false,
+  showUpdateModal: false,
 
   // ---- UI actions ----
   toggleDark: () => set((state) => {
@@ -463,4 +487,54 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     set({ activeSkillId: id });
   },
   setLlmStreamingText: (llmStreamingText) => set({ llmStreamingText }),
+
+  // ---- Update actions ----
+  checkForUpdate: async () => {
+    if (!isTauri()) {
+      // Browser dev mock
+      set({
+        updateInfo: {
+          currentVersion: "0.1.0",
+          version: "2.0.2",
+          releaseNotes: "## 修复 (Fix)\n- 修复数字小键盘的加、减、乘、除及小数点按键无法正确注册为全局快捷键的问题\n- 修复首次使用欢迎引导中的提示弹层位置配置无效、可能显示异常的问题\n- 修复 Linux ARM64 等交叉编译产物可能混入宿主机架构系统代理模块的问题，并增加原生模块架构校验\n- 修复 Linux 无法注册托盘图标的问题",
+          downloadUrl: "https://terminalvoice.app",
+          hasUpdate: true,
+        },
+      });
+      return;
+    }
+    try {
+      const info = await ipcCheckUpdate();
+      set({ updateInfo: info.hasUpdate ? info : null });
+    } catch (error) {
+      console.warn("[TerminalVoice] 检查更新失败:", error);
+    }
+  },
+  startDownloadUpdate: async () => {
+    if (!isTauri()) {
+      set({ updateDownloading: true, updateProgress: 0 });
+      // Browser mock progress
+      let pct = 0;
+      const timer = setInterval(() => {
+        pct = Math.min(pct + 5, 100);
+        set({ updateProgress: pct });
+        if (pct >= 100) {
+          clearInterval(timer);
+          set({ updateDownloaded: true, updateDownloading: false });
+        }
+      }, 150);
+      return;
+    }
+    try {
+      set({ updateDownloading: true, updateProgress: 0, updateDownloaded: false });
+      await ipcStartUpdateDownload();
+    } catch (error) {
+      console.warn("[TerminalVoice] 开始下载更新失败:", error);
+      set({ updateDownloading: false });
+    }
+  },
+  setUpdateProgress: (updateProgress) => set({ updateProgress }),
+  setUpdateDownloaded: () => set({ updateDownloaded: true, updateDownloading: false, updateProgress: 100 }),
+  setShowUpdateModal: (showUpdateModal) => set({ showUpdateModal }),
+  setUpdateInfo: (updateInfo) => set({ updateInfo }),
 }));

@@ -109,3 +109,17 @@ export interface LlmStreamingDeltaPayload {
   delta: string;
   accumulated: string;
 }
+
+/** 更新信息 */
+export interface UpdateInfo {
+  currentVersion: string;
+  version: string;
+  releaseNotes: string;
+  downloadUrl: string;
+  hasUpdate: boolean;
+}
+
+/** 更新下载进度事件 payload */
+export interface UpdateProgressPayload {
+  percent: number;
+}

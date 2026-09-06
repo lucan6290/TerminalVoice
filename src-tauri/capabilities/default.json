@@ -11,6 +11,7 @@
     "core:window:allow-set-position",
     "core:window:allow-close",
     "core:window:allow-start-dragging",
-    "autostart:default"
+    "autostart:default",
+    "shell:allow-open"
   ]
 }

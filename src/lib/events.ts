@@ -32,6 +32,10 @@ export const EVENT_REWRITE_RESULT = 'rewrite-result';
 // ── LLM 流式输出事件 ──
 export const EVENT_LLM_STREAMING_DELTA = 'llm-streaming-delta';
 
+// ── 更新事件 ──
+export const EVENT_UPDATE_DOWNLOAD_PROGRESS = 'update-download-progress';
+export const EVENT_UPDATE_DOWNLOADED = 'update-downloaded';
+
 /**
  * 所有 Tauri 事件名称的联合类型
  */
@@ -50,4 +54,6 @@ export type TauriEventName =
   | typeof EVENT_TRANSLATE_RESULT
   | typeof EVENT_REWRITE_STARTED
   | typeof EVENT_REWRITE_RESULT
-  | typeof EVENT_LLM_STREAMING_DELTA;
+  | typeof EVENT_LLM_STREAMING_DELTA
+  | typeof EVENT_UPDATE_DOWNLOAD_PROGRESS
+  | typeof EVENT_UPDATE_DOWNLOADED;

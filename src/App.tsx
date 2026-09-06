@@ -10,6 +10,7 @@ import type {
   TranslateResultPayload,
   RewriteResultPayload,
   LlmStreamingDeltaPayload,
+  UpdateProgressPayload,
 } from "./lib/types";
 import {
   EVENT_RUNTIME_STATE_CHANGED,
@@ -27,6 +28,8 @@ import {
   EVENT_REWRITE_STARTED,
   EVENT_REWRITE_RESULT,
   EVENT_LLM_STREAMING_DELTA,
+  EVENT_UPDATE_DOWNLOAD_PROGRESS,
+  EVENT_UPDATE_DOWNLOADED,
 } from "./lib/events";
 import { usePanelStore } from "./stores/appStore";
 import { showToast, type ToastLevel } from "./stores/toastStore";
@@ -35,6 +38,7 @@ import { BallWindow } from "./windows/ball/BallWindow";
 import { PanelWindow } from "./windows/panel/PanelWindow";
 import { ToastContainer } from "./components/ui/Toast";
 import { ErrorModal } from "./components/ui/ErrorModal";
+import { UpdateModal } from "./components/ui/UpdateModal";
 import { ToggleSwitch } from "./components/ui/ToggleSwitch";
 
 function isTauriRuntime(): boolean {
@@ -55,6 +59,9 @@ function useBackendSync(): void {
   const setRecordingDuration = usePanelStore((state) => state.setRecordingDuration);
   const setErrorMessage = usePanelStore((state) => state.setErrorMessage);
   const setLlmStreamingText = usePanelStore((state) => state.setLlmStreamingText);
+  const setUpdateProgress = usePanelStore((state) => state.setUpdateProgress);
+  const setUpdateDownloaded = usePanelStore((state) => state.setUpdateDownloaded);
+  const checkForUpdate = usePanelStore((state) => state.checkForUpdate);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -160,10 +167,22 @@ function useBackendSync(): void {
           },
         ));
 
+        // Update events
+        unlisteners.push(await listen<UpdateProgressPayload>(
+          EVENT_UPDATE_DOWNLOAD_PROGRESS,
+          (event) => { if (!disposed) setUpdateProgress(event.payload.percent); },
+        ));
+        unlisteners.push(await listen(EVENT_UPDATE_DOWNLOADED, () => {
+          if (!disposed) setUpdateDownloaded();
+        }));
+
         // Initial load
         await loadAll();
         const status = await getAppStatus();
         if (!disposed) setRuntimeStatus(status);
+
+        // 延迟检查更新（避免阻塞初始化）
+        setTimeout(() => { void checkForUpdate(); }, 2000);
       } catch (error) {
         console.warn("[TerminalVoice] 后端状态同步不可用", error);
       }
@@ -178,7 +197,7 @@ function useBackendSync(): void {
     applyConfigEntry, clearPreviewDraft, hydrateFromConfig, loadAll,
     setPreviewDraft, setRuntimeStatus, setTtsSpeaking, setTranslateResult,
     setRewriteMode, setRewriteResult, setRecordingDuration, setErrorMessage,
-    setLlmStreamingText,
+    setLlmStreamingText, setUpdateProgress, setUpdateDownloaded, checkForUpdate,
   ]);
 }
 
@@ -212,6 +231,7 @@ export default function App() {
       {!["#/ball", "#/panel", "#/main"].includes(route) && <DevPreview />}
       <ToastContainer />
       <ErrorModal />
+      <UpdateModal />
     </>
   );
 }
