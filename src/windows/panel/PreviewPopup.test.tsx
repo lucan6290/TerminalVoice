@@ -33,13 +33,15 @@ describe("PreviewPopup", () => {
     await user.type(textarea, "最终文本");
     await user.click(screen.getByRole("button", { name: "确认上屏" }));
 
-    expect(onConfirm).toHaveBeenCalledWith({
-      mode: "recognition",
-      sourceText: "嗯 请帮我修改",
-      finalText: "最终文本",
-      textMode: "Normal",
-      asrProvider: "cloud",
-    });
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "recognition",
+        sourceText: "嗯 请帮我修改",
+        finalText: "最终文本",
+        textMode: "Normal",
+        asrProvider: "cloud",
+      }),
+    );
   });
 
   it("supports Escape cancellation", async () => {
@@ -91,19 +93,5 @@ describe("PreviewPopup", () => {
         finalText: "改写后的文本",
       }),
     );
-  });
-
-  it("defaults to recognition mode when mode is not specified", () => {
-    const noModeDraft: PreviewDraft = {
-      sourceText: "原文",
-      processedText: "处理后",
-      textMode: "Normal",
-      asrProvider: "cloud",
-    };
-
-    render(<PreviewPopup draft={noModeDraft} onConfirm={vi.fn()} onCancel={vi.fn()} />);
-
-    expect(screen.getByText("确认语音输入")).toBeInTheDocument();
-    expect(screen.getByText("识别原文")).toBeInTheDocument();
   });
 });

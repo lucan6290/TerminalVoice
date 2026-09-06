@@ -20,24 +20,35 @@ export interface HistoryItem {
   finalText: string;
   textMode: TextMode;
   asrProvider: string;
+  durationMs?: number | null;
+  audioFilePath?: string | null;
+  llmRewritten?: boolean | null;
+  skillId?: string | null;
+  appContext?: string | null;
 }
 
 export type PreviewMode = "recognition" | "rewrite";
 
 export interface PreviewDraft {
-  mode?: PreviewMode;
+  mode: PreviewMode;
   sourceText: string;
   processedText: string;
   textMode: TextMode;
   asrProvider: string;
+  durationMs?: number | null;
+  llmRewritten?: boolean | null;
+  skillId?: string | null;
 }
 
 export interface ConfirmPreviewInput {
-  mode?: PreviewMode;
+  mode: PreviewMode;
   sourceText: string;
   finalText: string;
   textMode: TextMode;
   asrProvider: string;
+  durationMs?: number | null;
+  llmRewritten?: boolean | null;
+  skillId?: string | null;
 }
 
 export interface FilterWord {

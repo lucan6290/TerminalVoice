@@ -39,6 +39,9 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
         finalText,
         textMode: currentDraft.textMode,
         asrProvider: currentDraft.asrProvider,
+        durationMs: currentDraft.durationMs ?? null,
+        llmRewritten: currentDraft.llmRewritten ?? null,
+        skillId: currentDraft.skillId ?? null,
       });
     } finally {
       setAction(null);

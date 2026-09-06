@@ -111,13 +111,28 @@ export function HistoryTab() {
               <p className="text-[13px] text-neutral-100 leading-relaxed whitespace-pre-wrap">
                 {item.finalText}
               </p>
-              <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/60 text-neutral-400">
                   {item.asrProvider}
                 </span>
                 {item.textMode !== "Normal" && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">
                     {item.textMode === "Developer" ? "开发者模式" : "原文"}
+                  </span>
+                )}
+                {item.llmRewritten && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400">
+                    {item.skillId ? `技能:${item.skillId}` : "AI整理"}
+                  </span>
+                )}
+                {typeof item.durationMs === "number" && item.durationMs > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/60 text-neutral-500 tabular-nums">
+                    {(item.durationMs / 1000).toFixed(1)}s
+                  </span>
+                )}
+                {item.appContext && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 truncate max-w-[160px]" title={item.appContext}>
+                    {item.appContext}
                   </span>
                 )}
               </div>

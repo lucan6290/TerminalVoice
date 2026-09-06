@@ -3,13 +3,13 @@ import { cn } from "../../lib/cn";
 export interface ToggleSwitchProps {
   checked: boolean;
   onChange?: (checked: boolean) => void;
-  /** 尺寸："md" 默认 50×30，"sm" 紧凑 40×22 */
+  /** 尺寸："md" 默认 40×22，"sm" 紧凑 34×18 */
   size?: "sm" | "md";
 }
 
 /**
  * Toggle 开关
- * md: 50×30, knob 26px；sm: 40×22, knob 18px
+ * md: 40×22, knob 18px；sm: 34×18, knob 14px
  * 绿色开启 / 灰色关闭
  */
 export function ToggleSwitch({ checked, onChange, size = "md" }: ToggleSwitchProps) {
@@ -26,7 +26,7 @@ export function ToggleSwitch({ checked, onChange, size = "md" }: ToggleSwitchPro
       className={cn(
         "relative shrink-0 inline-flex items-center rounded-full transition-colors duration-200 ease-out cursor-pointer",
         "focus:outline-none",
-        isSm ? "h-[22px] w-[40px]" : "h-[30px] w-[50px]",
+        isSm ? "h-[18px] w-[34px]" : "h-[22px] w-[40px]",
         checked ? "bg-green-500" : "bg-neutral-500"
       )}
     >
@@ -34,9 +34,9 @@ export function ToggleSwitch({ checked, onChange, size = "md" }: ToggleSwitchPro
         className={cn(
           "pointer-events-none absolute rounded-full bg-white shadow-sm transition-transform duration-200 ease-out",
           isSm
-            ? "top-[2px] left-[2px] h-[18px] w-[18px]"
-            : "top-[2px] left-[2px] h-[26px] w-[26px]",
-          checked ? (isSm ? "translate-x-[18px]" : "translate-x-[20px]") : "translate-x-0"
+            ? "top-[2px] left-[2px] h-[14px] w-[14px]"
+            : "top-[2px] left-[2px] h-[18px] w-[18px]",
+          checked ? (isSm ? "translate-x-[16px]" : "translate-x-[18px]") : "translate-x-0"
         )}
       />
     </button>

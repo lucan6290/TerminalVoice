@@ -14,9 +14,15 @@ import {
   Upload,
   RefreshCw,
   LogOut,
+  Globe,
+  Moon,
+  Sun,
+  Github,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-shell";
 import { cn } from "../../lib/cn";
+import { useT } from "../../lib/i18n";
 import { cancelPreview, confirmPreview, exportData, importData, listAudioInputDevices } from "../../lib/commands";
 import { SettingRow } from "../../components/ui/SettingRow";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
@@ -40,7 +46,9 @@ import { StateView } from "./StateView";
  * - Zustand 管理全部状态 + Toast 反馈
  */
 export function PanelWindow() {
+  const t = useT();
   const dark = usePanelStore((s) => s.dark);
+  const uiLang = usePanelStore((s) => s.uiLang);
   const activeTab = usePanelStore((s) => s.activeTab);
   const appStatus = usePanelStore((s) => s.appStatus);
   const recording = appStatus === "Recording";
@@ -52,12 +60,15 @@ export function PanelWindow() {
   const muteSys = usePanelStore((s) => s.muteSys);
   const autoStart = usePanelStore((s) => s.autoStart);
   const serviceReady = usePanelStore((s) => s.serviceReady);
+  const service = usePanelStore((s) => s.service);
   const quotaDisplay = usePanelStore((s) => s.quotaDisplay);
   const previewDraft = usePanelStore((s) => s.previewDraft);
   const llmStreamingText = usePanelStore((s) => s.llmStreamingText);
   const updateInfo = usePanelStore((s) => s.updateInfo);
 
   const toggleDark = usePanelStore((s) => s.toggleDark);
+  const setUiLang = usePanelStore((s) => s.setUiLang);
+  const setServiceConfig = usePanelStore((s) => s.setServiceConfig);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
   const setSoundOn = usePanelStore((s) => s.setSoundOn);
   const setMuteSys = usePanelStore((s) => s.setMuteSys);
@@ -290,15 +301,6 @@ export function PanelWindow() {
             <IconBtn title="关闭面板" data-tip="关闭面板" className="tip-below" onClick={handleClose}>
               <X className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
-            <button
-              onClick={toggleDark}
-              aria-label={dark ? "切换为浅色主题" : "切换为深色主题"}
-              aria-pressed={dark}
-              data-tip={dark ? "切换为浅色主题" : "切换为深色主题"}
-              className="tip-below ml-[6px] w-7 h-7 rounded-full text-[11px] flex items-center justify-center transition-colors border border-white/10 text-neutral-400 hover:text-neutral-200 hover:border-white/20"
-            >
-              {dark ? "☀️" : "🌙"}
-            </button>
           </div>
         </header>
 
@@ -335,8 +337,47 @@ export function PanelWindow() {
 
         {/* ========== 底部 Tab 栏 ========== */}
         <footer
-          className="flex items-center justify-center px-[12px] py-[8px] border-t border-neutral-800 shrink-0 relative"
+          className="flex items-center justify-between px-[12px] py-[8px] border-t border-neutral-800 shrink-0 relative gap-2"
         >
+          {/* 左侧：快捷按钮 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <QuickPill
+              onClick={() => {
+                const next = service.translateTargetLang === "中文" ? "英文" : "中文";
+                setServiceConfig({ translateTargetLang: next });
+                showToast(`翻译目标语言已切换为${next}`, "info");
+              }}
+              title={`翻译目标语言：${service.translateTargetLang}（点击切换）`}
+              wide
+            >
+              <Globe className="w-[14px] h-[14px] shrink-0" />
+              <span className="text-[12px] font-medium leading-none">
+                {service.translateTargetLang === "中文" ? "CN" : service.translateTargetLang === "英文" ? "EN" : service.translateTargetLang.slice(0, 2).toUpperCase()}
+              </span>
+            </QuickPill>
+            <QuickPill
+              onClick={toggleDark}
+              title={dark ? "切换为浅色主题" : "切换为深色主题"}
+            >
+              {dark ? <Sun className="w-[14px] h-[14px] shrink-0" /> : <Moon className="w-[14px] h-[14px] shrink-0" />}
+            </QuickPill>
+            <QuickPill
+              onClick={() => {
+                open("https://github.com").catch(() => {
+                  if ("__TAURI_INTERNALS__" in window) {
+                    showToast("无法打开浏览器", "error");
+                  } else {
+                    window.open("https://github.com", "_blank");
+                  }
+                });
+              }}
+              title="访问 GitHub"
+            >
+              <Github className="w-[14px] h-[14px] shrink-0" />
+            </QuickPill>
+          </div>
+
+          {/* 右侧：Tab 按钮组 */}
           <div className="flex items-center gap-[2px]">
             <TabBtn
               active={activeTab === "skill"}
@@ -394,14 +435,14 @@ export function PanelWindow() {
               )}
             </div>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".db,.bin,application/octet-stream"
-            className="hidden"
-            onChange={handleImportFile}
-          />
         </footer>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".db,.bin,application/octet-stream"
+          className="hidden"
+          onChange={handleImportFile}
+        />
         <PreviewPopup
           draft={displayDraft}
           onConfirm={handleConfirmPreview}
@@ -616,6 +657,32 @@ function TabBtn({
       onMouseLeave={(e) => {
         e.currentTarget.style.background = active ? "rgba(34,197,94,0.12)" : "transparent";
       }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* 底部快捷药丸按钮 */
+function QuickPill({
+  children,
+  onClick,
+  title,
+  wide,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  title?: string;
+  wide?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "flex items-center justify-center gap-1 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-neutral-100 transition-colors",
+        wide ? "px-3 min-w-[64px]" : "w-8",
+      )}
     >
       {children}
     </button>

@@ -14,6 +14,29 @@ pub struct HistoryItem {
     pub final_text: String,
     pub text_mode: String,
     pub asr_provider: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audio_file_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub llm_rewritten: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skill_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_context: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewHistoryItem {
+    pub source_text: String,
+    pub final_text: String,
+    pub text_mode: String,
+    pub asr_provider: String,
+    pub duration_ms: Option<i64>,
+    pub audio_file_path: Option<String>,
+    pub llm_rewritten: bool,
+    pub skill_id: Option<String>,
+    pub app_context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -25,14 +48,6 @@ pub struct FilterWordItem {
     pub enabled: bool,
     pub is_default: bool,
     pub created_at: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NewHistoryItem {
-    pub source_text: String,
-    pub final_text: String,
-    pub text_mode: String,
-    pub asr_provider: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -77,7 +92,12 @@ impl Database {
                 source_text TEXT NOT NULL,
                 final_text TEXT NOT NULL,
                 text_mode TEXT NOT NULL,
-                asr_provider TEXT NOT NULL
+                asr_provider TEXT NOT NULL,
+                duration_ms INTEGER,
+                audio_file_path TEXT,
+                llm_rewritten INTEGER NOT NULL DEFAULT 0,
+                skill_id TEXT,
+                app_context TEXT
             );
 
             CREATE TABLE IF NOT EXISTS filter_words (
@@ -90,6 +110,7 @@ impl Database {
         )?;
 
         self.migrate_filter_words_columns()?;
+        self.migrate_history_columns()?;
         self.seed_default_filter_words()?;
         Ok(())
     }
@@ -121,6 +142,25 @@ impl Database {
                 "ALTER TABLE filter_words ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1",
                 [],
             )?;
+        }
+        Ok(())
+    }
+
+    fn migrate_history_columns(&self) -> Result<(), rusqlite::Error> {
+        let columns = [
+            ("duration_ms", "INTEGER"),
+            ("audio_file_path", "TEXT"),
+            ("llm_rewritten", "INTEGER NOT NULL DEFAULT 0"),
+            ("skill_id", "TEXT"),
+            ("app_context", "TEXT"),
+        ];
+        for (name, ddl) in columns {
+            if !self.column_exists("history", name)? {
+                self.conn.execute(
+                    &format!("ALTER TABLE history ADD COLUMN {name} {ddl}"),
+                    [],
+                )?;
+            }
         }
         Ok(())
     }
@@ -181,8 +221,9 @@ impl Database {
 
         self.conn.execute(
             r#"
-            INSERT INTO history (created_at, source_text, final_text, text_mode, asr_provider)
-            VALUES (?1, ?2, ?3, ?4, ?5)
+            INSERT INTO history (created_at, source_text, final_text, text_mode, asr_provider,
+                                 duration_ms, audio_file_path, llm_rewritten, skill_id, app_context)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
             "#,
             params![
                 created_at,
@@ -190,6 +231,11 @@ impl Database {
                 item.final_text,
                 item.text_mode,
                 item.asr_provider,
+                item.duration_ms,
+                item.audio_file_path,
+                item.llm_rewritten as i32,
+                item.skill_id,
+                item.app_context,
             ],
         )?;
 
@@ -200,22 +246,14 @@ impl Database {
     pub fn list_history(&self) -> Result<Vec<HistoryItem>, rusqlite::Error> {
         let mut stmt = self.conn.prepare(
             r#"
-            SELECT id, created_at, source_text, final_text, text_mode, asr_provider
+            SELECT id, created_at, source_text, final_text, text_mode, asr_provider,
+                   duration_ms, audio_file_path, llm_rewritten, skill_id, app_context
             FROM history
             ORDER BY created_at DESC, id DESC
             "#,
         )?;
 
-        let rows = stmt.query_map([], |row| {
-            Ok(HistoryItem {
-                id: row.get(0)?,
-                created_at: row.get(1)?,
-                source_text: row.get(2)?,
-                final_text: row.get(3)?,
-                text_mode: row.get(4)?,
-                asr_provider: row.get(5)?,
-            })
-        })?;
+        let rows = stmt.query_map([], history_row_mapper)?;
 
         rows.collect()
     }
@@ -223,21 +261,13 @@ impl Database {
     pub fn get_history_by_id(&self, id: i64) -> Result<HistoryItem, rusqlite::Error> {
         self.conn.query_row(
             r#"
-            SELECT id, created_at, source_text, final_text, text_mode, asr_provider
+            SELECT id, created_at, source_text, final_text, text_mode, asr_provider,
+                   duration_ms, audio_file_path, llm_rewritten, skill_id, app_context
             FROM history
             WHERE id = ?1
             "#,
             params![id],
-            |row| {
-                Ok(HistoryItem {
-                    id: row.get(0)?,
-                    created_at: row.get(1)?,
-                    source_text: row.get(2)?,
-                    final_text: row.get(3)?,
-                    text_mode: row.get(4)?,
-                    asr_provider: row.get(5)?,
-                })
-            },
+            history_row_mapper,
         )
     }
 
@@ -314,24 +344,34 @@ impl Database {
         let pattern = format!("%{query}%");
         let mut stmt = self.conn.prepare(
             r#"
-            SELECT id, created_at, source_text, final_text, text_mode, asr_provider
+            SELECT id, created_at, source_text, final_text, text_mode, asr_provider,
+                   duration_ms, audio_file_path, llm_rewritten, skill_id, app_context
             FROM history
             WHERE source_text LIKE ?1 OR final_text LIKE ?1
             ORDER BY created_at DESC, id DESC
             "#,
         )?;
-        let rows = stmt.query_map(params![pattern], |row| {
-            Ok(HistoryItem {
-                id: row.get(0)?,
-                created_at: row.get(1)?,
-                source_text: row.get(2)?,
-                final_text: row.get(3)?,
-                text_mode: row.get(4)?,
-                asr_provider: row.get(5)?,
-            })
-        })?;
+        let rows = stmt.query_map(params![pattern], history_row_mapper)?;
         rows.collect()
     }
+}
+
+/// 将 rusqlite 行映射为 HistoryItem（供 list/get/search 三处复用）。
+fn history_row_mapper(row: &rusqlite::Row<'_>) -> rusqlite::Result<HistoryItem> {
+    let llm_flag: Option<i32> = row.get(8)?;
+    Ok(HistoryItem {
+        id: row.get(0)?,
+        created_at: row.get(1)?,
+        source_text: row.get(2)?,
+        final_text: row.get(3)?,
+        text_mode: row.get(4)?,
+        asr_provider: row.get(5)?,
+        duration_ms: row.get(6)?,
+        audio_file_path: row.get(7)?,
+        llm_rewritten: llm_flag.map(|v| v != 0),
+        skill_id: row.get(9)?,
+        app_context: row.get(10)?,
+    })
 }
 
 impl HistoryItem {
@@ -343,6 +383,11 @@ impl HistoryItem {
             final_text,
             text_mode: "Normal".to_string(),
             asr_provider: "mock".to_string(),
+            duration_ms: None,
+            audio_file_path: None,
+            llm_rewritten: None,
+            skill_id: None,
+            app_context: None,
         }
     }
 }
@@ -370,6 +415,11 @@ mod tests {
                 final_text: "最终一".to_string(),
                 text_mode: "Normal".to_string(),
                 asr_provider: "mock".to_string(),
+                duration_ms: Some(1234),
+                audio_file_path: None,
+                llm_rewritten: false,
+                skill_id: None,
+                app_context: None,
             })
             .expect("first insert succeeds");
         let second = db
@@ -378,6 +428,11 @@ mod tests {
                 final_text: "最终二".to_string(),
                 text_mode: "Developer".to_string(),
                 asr_provider: "mock".to_string(),
+                duration_ms: None,
+                audio_file_path: None,
+                llm_rewritten: true,
+                skill_id: Some("english".to_string()),
+                app_context: Some("Code — main.rs".to_string()),
             })
             .expect("second insert succeeds");
 

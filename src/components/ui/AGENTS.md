@@ -17,7 +17,7 @@
 
 ### ToggleSwitch
 
-- 固定尺寸 50×30，knob 26px
+- 默认尺寸 md: 40×22（knob 18px），紧凑 sm: 34×18（knob 14px）
 - 绿色开启 / `bg-neutral-600` 关闭
 - 用 `role="switch"` + `aria-checked`，保持无障碍
 - `onClick` 内部 `e.stopPropagation()`，防止触发外层行点击

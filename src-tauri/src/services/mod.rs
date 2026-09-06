@@ -1,3 +1,4 @@
+pub mod app_context;
 pub mod asr;
 pub mod asr_cloud;
 pub mod asr_offline;

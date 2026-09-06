@@ -1,4 +1,4 @@
-use crate::commands::preview::{emit_preview_ready, PreviewDraft, TextMode as PreviewTextMode};
+use crate::commands::preview::{emit_preview_ready, PreviewDraft, PreviewMode, TextMode as PreviewTextMode};
 use crate::services::asr::{transcribe, AsrMode};
 use crate::services::asr_cloud::CloudAsrConfig;
 use crate::services::db::Database;
@@ -455,15 +455,16 @@ fn stop_recording_and_transcribe(
     let _ = emit_recording_stopped(app);
 
     let runtime = app.state::<Mutex<AppRuntime>>();
-    let audio = match recorder.stop() {
+    let (audio, duration_ms) = match recorder.stop() {
         Ok(audio) => {
+            let ms = audio.duration.as_millis() as i64;
             info!(
                 samples = audio.samples.len(),
-                duration_ms = audio.duration.as_millis(),
+                duration_ms = ms,
                 sample_rate = audio.sample_rate,
                 "录音停止，音频有效"
             );
-            audio
+            (audio, Some(ms))
         }
         Err(error) => {
             error!(error = %error, "录音停止失败");
@@ -515,16 +516,20 @@ fn stop_recording_and_transcribe(
             custom_filter_words: Vec::new(),
         },
     );
-    let processed_text = apply_llm(app, &rule_processed_text);
+    let llm_result = apply_llm(app, &rule_processed_text);
 
     if transition_runtime(app, runtime.inner(), RuntimeEvent::RecognitionSucceeded).is_err() {
         return;
     }
     let draft = PreviewDraft {
         source_text,
-        processed_text,
+        processed_text: llm_result.text,
         text_mode: PreviewTextMode::Normal,
         asr_provider: result.provider,
+        duration_ms,
+        llm_rewritten: Some(llm_result.llm_used),
+        skill_id: llm_result.skill_id,
+        mode: PreviewMode::Recognition,
     };
     if let Err(error) = emit_preview_ready(app, &draft) {
         let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
@@ -532,7 +537,14 @@ fn stop_recording_and_transcribe(
     }
 }
 
-fn apply_llm(app: &AppHandle, input: &str) -> String {
+/// LLM 处理结果：包含最终文本与元数据（是否使用 LLM、使用的技能 ID）。
+struct LlmProcessResult {
+    text: String,
+    llm_used: bool,
+    skill_id: Option<String>,
+}
+
+fn apply_llm(app: &AppHandle, input: &str) -> LlmProcessResult {
     let active_skill = read_config(app, "service.activeSkill")
         .filter(|v| !v.trim().is_empty())
         .and_then(|id| skills::find_skill(&id));
@@ -551,11 +563,19 @@ fn apply_llm(app: &AppHandle, input: &str) -> String {
                 })
             });
         return match result {
-            Ok(text) => text,
+            Ok(text) => LlmProcessResult {
+                text,
+                llm_used: true,
+                skill_id: Some(skill.id.clone()),
+            },
             Err(error) => {
                 warn!(error = %error, "技能处理不可用");
                 emit_toast(app, "warn", format!("技能处理不可用，已使用原始文本: {error}"));
-                input.to_string()
+                LlmProcessResult {
+                    text: input.to_string(),
+                    llm_used: false,
+                    skill_id: None,
+                }
             }
         };
     }
@@ -563,7 +583,11 @@ fn apply_llm(app: &AppHandle, input: &str) -> String {
     let mode_value = read_config(app, "service.textMode");
     let mode = TextProcessMode::parse(mode_value.as_deref());
     if mode == TextProcessMode::Off {
-        return input.to_string();
+        return LlmProcessResult {
+            text: input.to_string(),
+            llm_used: false,
+            skill_id: None,
+        };
     }
 
     let result = cloud_llm_config(app)
@@ -578,7 +602,11 @@ fn apply_llm(app: &AppHandle, input: &str) -> String {
             })
         });
     match result {
-        Ok(text) => text,
+        Ok(text) => LlmProcessResult {
+            text,
+            llm_used: true,
+            skill_id: None,
+        },
         Err(error) => {
             warn!(error = %error, "AI 整理不可用");
             emit_toast(
@@ -586,7 +614,11 @@ fn apply_llm(app: &AppHandle, input: &str) -> String {
                 "warn",
                 format!("AI 整理不可用，已使用规则处理文本: {error}"),
             );
-            input.to_string()
+            LlmProcessResult {
+                text: input.to_string(),
+                llm_used: false,
+                skill_id: None,
+            }
         }
     }
 }
@@ -646,8 +678,11 @@ fn handle_rewrite_released(
     let _ = emit_recording_stopped(app);
 
     let runtime = app.state::<Mutex<AppRuntime>>();
-    let audio = match recorder.stop() {
-        Ok(audio) => audio,
+    let (audio, duration_ms) = match recorder.stop() {
+        Ok(audio) => {
+            let ms = audio.duration.as_millis() as i64;
+            (audio, Some(ms))
+        }
         Err(error) => {
             let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);
             emit_toast(app, "error", error);
@@ -683,7 +718,7 @@ fn handle_rewrite_released(
     let voice_instruction = result.text;
     let selected_text = rewrite_selected_text.take().unwrap_or_default();
 
-    let (source_text, processed_text) = if selected_text.is_empty() {
+    let (source_text, processed_text, llm_used, skill_id) = if selected_text.is_empty() {
         let rule_processed = process_text(
             &voice_instruction,
             &PreprocessConfig {
@@ -694,12 +729,13 @@ fn handle_rewrite_released(
                 custom_filter_words: Vec::new(),
             },
         );
-        let processed = apply_llm(app, &rule_processed);
-        (voice_instruction, processed)
+        let llm_result = apply_llm(app, &rule_processed);
+        (voice_instruction, llm_result.text, llm_result.llm_used, llm_result.skill_id)
     } else {
         let rewritten = apply_rewrite_llm(app, &selected_text, &voice_instruction);
+        let llm_ok = rewritten != selected_text;
         let _ = emit_rewrite_result(app, &selected_text, &rewritten);
-        (selected_text.clone(), rewritten)
+        (selected_text.clone(), rewritten, llm_ok, None)
     };
 
     if transition_runtime(app, runtime.inner(), RuntimeEvent::RecognitionSucceeded).is_err() {
@@ -712,6 +748,10 @@ fn handle_rewrite_released(
         processed_text,
         text_mode: PreviewTextMode::Normal,
         asr_provider: result.provider,
+        duration_ms,
+        llm_rewritten: Some(llm_used),
+        skill_id,
+        mode: PreviewMode::Rewrite,
     };
     if let Err(error) = emit_preview_ready(app, &draft) {
         let _ = transition_runtime(app, runtime.inner(), RuntimeEvent::Cancelled);

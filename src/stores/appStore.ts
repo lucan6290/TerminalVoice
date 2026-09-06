@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { showToast } from "./toastStore";
+import { getLang, setLang as i18nSetLang, syncLangFromBackend } from "../lib/i18n";
 import {
   listConfig,
   setConfig,
@@ -45,6 +46,7 @@ const CONFIG_KEYS = {
   soundOn: "ui.soundOn",
   muteSys: "ui.muteSys",
   autoStart: "ui.autoStart",
+  uiLang: "ui.lang",
   pttKey: "input.pttKey",
   ttsKey: "input.ttsKey",
   translateKey: "input.translateKey",
@@ -98,6 +100,7 @@ const DEFAULT_SERVICE: ServiceConfig = {
 export interface PanelState {
   // UI state
   dark: boolean;
+  uiLang: "zh-CN" | "en";
   activeTab: TabKey | null;
   appStatus: AppStatus;
   previewDraft: PreviewDraft | null;
@@ -145,6 +148,7 @@ export interface PanelState {
 
   // Actions
   toggleDark: () => void;
+  setUiLang: (lang: "zh-CN" | "en") => void;
   setActiveTab: (tab: TabKey | null) => void;
   setRuntimeStatus: (status: AppStatus) => void;
   setPreviewDraft: (draft: PreviewDraft) => void;
@@ -208,6 +212,7 @@ export interface PanelState {
 
 export const usePanelStore = create<PanelState>((set, get) => ({
   dark: true,
+  uiLang: getLang(),
   activeTab: null,
   appStatus: "Idle",
   previewDraft: null,
@@ -250,6 +255,11 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     persist(CONFIG_KEYS.dark, String(dark));
     return { dark };
   }),
+  setUiLang: (lang) => {
+    i18nSetLang(lang);
+    persist(CONFIG_KEYS.uiLang, lang);
+    set({ uiLang: lang });
+  },
   setActiveTab: (tab) => set({ activeTab: tab }),
   setRuntimeStatus: (appStatus) => set({ appStatus }),
   setPreviewDraft: (previewDraft) => set({ previewDraft, activeTab: null }),
@@ -265,6 +275,12 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   applyConfigEntry: (entry) => set((state) => {
     switch (entry.key) {
       case CONFIG_KEYS.dark: return { dark: parseBoolean(entry.value, state.dark) };
+      case CONFIG_KEYS.uiLang:
+        if (entry.value === "zh-CN" || entry.value === "en") {
+          syncLangFromBackend(entry.value);
+          return { uiLang: entry.value };
+        }
+        return state;
       case CONFIG_KEYS.soundOn: return { soundOn: parseBoolean(entry.value, state.soundOn) };
       case CONFIG_KEYS.muteSys: return { muteSys: parseBoolean(entry.value, state.muteSys) };
       case CONFIG_KEYS.autoStart: return { autoStart: parseBoolean(entry.value, state.autoStart) };

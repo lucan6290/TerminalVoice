@@ -152,6 +152,9 @@ function useBackendSync(): void {
                 processedText: event.payload.rewrittenText,
                 textMode: "Normal",
                 asrProvider: "rewrite",
+                durationMs: null,
+                llmRewritten: true,
+                skillId: null,
               });
             }
           },

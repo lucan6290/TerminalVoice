@@ -174,6 +174,7 @@ describe("usePanelStore", () => {
   it("sets preview draft and switches to home tab", () => {
     usePanelStore.getState().setActiveTab("history");
     usePanelStore.getState().setPreviewDraft({
+      mode: "recognition",
       sourceText: "原文",
       processedText: "处理后",
       textMode: "Normal",
@@ -187,6 +188,7 @@ describe("usePanelStore", () => {
 
   it("clears preview draft", () => {
     usePanelStore.getState().setPreviewDraft({
+      mode: "recognition",
       sourceText: "原文",
       processedText: "处理后",
       textMode: "Normal",

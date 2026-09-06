@@ -67,6 +67,14 @@ impl TextMode {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum PreviewMode {
+    #[default]
+    Recognition,
+    Rewrite,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PreviewDraft {
     #[serde(rename = "sourceText")]
@@ -77,6 +85,13 @@ pub struct PreviewDraft {
     pub text_mode: TextMode,
     #[serde(rename = "asrProvider")]
     pub asr_provider: String,
+    #[serde(rename = "durationMs", skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<i64>,
+    #[serde(rename = "llmRewritten", skip_serializing_if = "Option::is_none")]
+    pub llm_rewritten: Option<bool>,
+    #[serde(rename = "skillId", skip_serializing_if = "Option::is_none")]
+    pub skill_id: Option<String>,
+    pub mode: PreviewMode,
 }
 
 pub(crate) fn emit_preview_ready(app: &AppHandle, draft: &PreviewDraft) -> Result<(), String> {
@@ -94,6 +109,14 @@ pub struct ConfirmPreviewInput {
     pub text_mode: TextMode,
     #[serde(rename = "asrProvider")]
     pub asr_provider: String,
+    #[serde(rename = "durationMs", default)]
+    pub duration_ms: Option<i64>,
+    #[serde(rename = "llmRewritten", default)]
+    pub llm_rewritten: Option<bool>,
+    #[serde(rename = "skillId", default)]
+    pub skill_id: Option<String>,
+    #[serde(default)]
+    pub mode: PreviewMode,
 }
 
 #[tauri::command]
@@ -148,6 +171,10 @@ pub fn create_mock_preview(
         processed_text,
         text_mode,
         asr_provider: "mock".to_string(),
+        duration_ms: None,
+        llm_rewritten: None,
+        skill_id: None,
+        mode: PreviewMode::Recognition,
     };
     emit_preview_ready(&app, &draft)?;
     Ok(draft)
@@ -173,11 +200,18 @@ pub fn confirm_preview(
     }
 
     info!("确认预览，开始注入文本，长度: {} 字符", input.final_text.len());
+
+    // 先短暂让出焦点（等待面板窗口最小化/隐藏，操作系统切回目标窗口），再注入文本
+    crate::services::app_context::yield_focus();
     crate::services::injector::inject_text(&input.final_text)
         .map_err(|error| {
             error!("文本注入失败: {error}");
             format!("文本注入失败: {error}")
         })?;
+
+    // 注入后再等待，然后采集前台窗口信息（此时焦点已回到目标应用）
+    crate::services::app_context::yield_after_inject();
+    let app_context = crate::services::app_context::get_foreground_app_context();
 
     let history_result: Result<HistoryItem, String> = {
         let db = db.lock().map_err(|error| error.to_string())?;
@@ -186,6 +220,11 @@ pub fn confirm_preview(
             final_text: input.final_text,
             text_mode: input.text_mode.as_storage_value().to_string(),
             asr_provider: input.asr_provider,
+            duration_ms: input.duration_ms,
+            audio_file_path: None,
+            llm_rewritten: input.llm_rewritten.unwrap_or(false),
+            skill_id: input.skill_id,
+            app_context,
         })
         .map_err(|error| error.to_string())
     };
