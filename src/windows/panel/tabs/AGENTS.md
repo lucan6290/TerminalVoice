@@ -51,7 +51,7 @@ export function XxxTab() {
 所有 Tab 的增删改通过 store 的异步 action 调用 [lib/commands.ts](../../../lib/commands.ts) 对应 IPC 命令，采用乐观更新 + 失败回滚模式：
 - **HistoryTab**：`listHistory` / `searchHistory` / `deleteHistory` / `clearHistory` / `reinjectHistory`
 - **DictTab**：`listFilterWords` / `addFilterWord` / `deleteFilterWord` / `toggleFilterWord`
-- **ServiceTab**：`listAudioInputDevices` / `listModels` / `downloadModel` / `deleteModel` / `testAsrConnection` + `service.*` 配置持久化
+- **ServiceTab**：`listAudioInputDevices` / `listModels` / `downloadModel` / `deleteModel` / `testAsrConnection` / `testLlmConnection` + `service.*` 配置持久化
 - **HelpTab**：静态内容（版本 v0.2.0，快捷键 Right Alt/Alt+1/Alt+2）
 - 浏览器环境下所有命令 catch 静默降级
 

@@ -16,7 +16,7 @@ import {
 import { cn } from "../../../lib/cn";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
-import { testAsrConnection } from "../../../lib/commands";
+import { testAsrConnection, testLlmConnection } from "../../../lib/commands";
 import type { ASRProvider } from "../../../lib/types";
 
 function formatSize(bytes: number): string {
@@ -43,17 +43,30 @@ export function ServiceTab() {
 
   const [showAsrKey, setShowAsrKey] = useState(false);
   const [showLlmKey, setShowLlmKey] = useState(false);
-  const [testing, setTesting] = useState(false);
+  const [testingAsr, setTestingAsr] = useState(false);
+  const [testingLlm, setTestingLlm] = useState(false);
 
-  async function handleTestConnection() {
-    setTesting(true);
+  async function handleTestAsr() {
+    setTestingAsr(true);
     try {
       const ok = await testAsrConnection();
       showToast(ok ? "ASR 连接成功" : "ASR 连接失败，请检查配置", ok ? "success" : "error");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "连接测试失败", "error");
     } finally {
-      setTesting(false);
+      setTestingAsr(false);
+    }
+  }
+
+  async function handleTestLlm() {
+    setTestingLlm(true);
+    try {
+      const ok = await testLlmConnection();
+      showToast(ok ? "LLM 连接成功" : "LLM 连接失败，请检查配置", ok ? "success" : "error");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "连接测试失败", "error");
+    } finally {
+      setTestingLlm(false);
     }
   }
 
@@ -143,11 +156,11 @@ export function ServiceTab() {
               </div>
             </Field>
             <button
-              onClick={() => void handleTestConnection()}
-              disabled={testing}
+              onClick={() => void handleTestAsr()}
+              disabled={testingAsr}
               className="w-full mt-1 h-8 rounded-lg bg-green-500/15 text-green-400 text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-green-500/25 transition-colors disabled:opacity-50"
             >
-              {testing ? (
+              {testingAsr ? (
                 <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 测试中…</>
               ) : (
                 <><Wifi className="w-3.5 h-3.5" /> 测试 ASR 连接</>
@@ -195,6 +208,17 @@ export function ServiceTab() {
                 </button>
               </div>
             </Field>
+            <button
+              onClick={() => void handleTestLlm()}
+              disabled={testingLlm}
+              className="w-full mt-1 h-8 rounded-lg bg-purple-500/15 text-purple-400 text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-purple-500/25 transition-colors disabled:opacity-50"
+            >
+              {testingLlm ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 测试中…</>
+              ) : (
+                <><Wifi className="w-3.5 h-3.5" /> 测试 LLM 连接</>
+              )}
+            </button>
           </div>
         </section>
 

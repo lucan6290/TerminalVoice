@@ -268,7 +268,30 @@ pub fn test_asr_connection(db: tauri::State<Mutex<Database>>) -> Result<bool, St
 
 ---
 
-### 2.10 `delete_history`
+### 2.10 `test_llm_connection`
+
+测试 LLM（AI 整理）云端连接是否可达，同时验证 model 字段合法。
+
+**TS 封装**：`testLlmConnection(): Promise<boolean>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn test_llm_connection(db: tauri::State<Mutex<Database>>) -> Result<bool, String>
+```
+
+**请求参数**：无（从 DB 读取 `service.llmEndpoint`/`service.llmModel`/`service.llmApiKey`）
+
+**流程**：
+1. 从 DB 读取 endpoint、model、API Key（API Key 通过 DPAPI 解密）
+2. 构造最小 `chat/completions` 请求（`messages=[{"role":"user","content":"ping"}]`、`max_tokens=1`）
+3. 成功返回 `true`；可重试错误（网络/5xx）返回 `false`；致命错误（401/404/配置缺失）返回 `Err`
+
+**返回**：`boolean`（`true`=可达，`false`=暂时不可达）
+
+---
+
+### 2.11 `delete_history`
 
 删除单条历史记录。
 
@@ -289,7 +312,7 @@ pub fn delete_history(db: tauri::State<Mutex<Database>>, id: i64) -> Result<(), 
 
 ---
 
-### 2.11 `clear_history`
+### 2.12 `clear_history`
 
 清空所有历史记录。
 
@@ -307,7 +330,7 @@ pub fn clear_history(db: tauri::State<Mutex<Database>>) -> Result<(), String>
 
 ---
 
-### 2.12 `search_history`
+### 2.13 `search_history`
 
 按关键词搜索历史记录（匹配 `source_text` 或 `final_text`）。
 
@@ -331,7 +354,7 @@ pub fn search_history(
 
 ---
 
-### 2.13 `reinject_history`
+### 2.14 `reinject_history`
 
 重新注入历史记录中的文本到当前焦点窗口。
 
@@ -362,7 +385,7 @@ pub fn reinject_history(
 
 ---
 
-### 2.14 `list_filter_words`
+### 2.15 `list_filter_words`
 
 获取所有过滤词列表。
 
@@ -380,7 +403,7 @@ pub fn list_filter_words(db: tauri::State<Mutex<Database>>) -> Result<Vec<Filter
 
 ---
 
-### 2.15 `add_filter_word`
+### 2.16 `add_filter_word`
 
 添加自定义过滤词。
 
@@ -406,7 +429,7 @@ pub fn add_filter_word(
 
 ---
 
-### 2.16 `delete_filter_word`
+### 2.17 `delete_filter_word`
 
 删除过滤词。
 
@@ -427,7 +450,7 @@ pub fn delete_filter_word(db: tauri::State<Mutex<Database>>, id: i64) -> Result<
 
 ---
 
-### 2.17 `toggle_filter_word`
+### 2.18 `toggle_filter_word`
 
 启用/禁用过滤词。
 
@@ -448,7 +471,7 @@ pub fn toggle_filter_word(db: tauri::State<Mutex<Database>>, id: i64) -> Result<
 
 ---
 
-### 2.18 `cancel_preview`
+### 2.19 `cancel_preview`
 
 取消预览，回到 Idle 状态（不写入历史记录）。
 
@@ -473,7 +496,7 @@ pub fn cancel_preview(
 
 ---
 
-### 2.19 `list_audio_input_devices`
+### 2.20 `list_audio_input_devices`
 
 枚举系统录音设备列表。
 
@@ -496,7 +519,7 @@ interface AudioInputDevice {
 
 ---
 
-### 2.20 `list_models`
+### 2.21 `list_models`
 
 列出所有可用的 ASR 离线模型。
 
@@ -514,7 +537,7 @@ pub fn list_models() -> Result<Vec<ModelInfo>, String>
 
 ---
 
-### 2.21 `download_model`
+### 2.22 `download_model`
 
 下载指定 ASR 离线模型。
 
@@ -535,7 +558,7 @@ pub fn download_model(model_id: String) -> Result<(), String>
 
 ---
 
-### 2.22 `delete_model`
+### 2.23 `delete_model`
 
 删除已下载的 ASR 离线模型。
 
@@ -556,7 +579,7 @@ pub fn delete_model(model_id: String) -> Result<(), String>
 
 ---
 
-### 2.23 `export_data`
+### 2.24 `export_data`
 
 导出全部数据（配置 + 历史记录 + 过滤词）为二进制。
 
@@ -574,7 +597,7 @@ pub fn export_data(db: tauri::State<Mutex<Database>>) -> Result<Vec<u8>, String>
 
 ---
 
-### 2.24 `import_data`
+### 2.25 `import_data`
 
 从二进制数据导入（覆盖现有数据）。
 
@@ -595,7 +618,7 @@ pub fn import_data(db: tauri::State<Mutex<Database>>, data: Vec<u8>) -> Result<(
 
 ---
 
-### 2.25 `list_skills`
+### 2.26 `list_skills`
 
 列出所有可用的语音技能（预设 4 个：英文输出/清单模式/汇报格式/听写模板）。
 
@@ -613,7 +636,7 @@ pub fn list_skills() -> Vec<VoiceSkill>
 
 ---
 
-### 2.26 `set_skill`
+### 2.27 `set_skill`
 
 设置当前激活的技能。传入空字符串清除技能。
 
@@ -634,7 +657,7 @@ pub fn set_skill(app: AppHandle, skill_id: String) -> Result<(), String>
 
 ---
 
-### 2.27 `get_active_skill`
+### 2.28 `get_active_skill`
 
 获取当前激活的技能 ID。
 
@@ -652,7 +675,7 @@ pub fn get_active_skill(app: AppHandle) -> Result<Option<String>, String>
 
 ---
 
-### 2.28 `set_hotkey_config`
+### 2.29 `set_hotkey_config`
 
 更新全局快捷键（按住说话 / 朗读 / 翻译），写入 DB 后立即触发热键管线热重载，无需重启应用。
 

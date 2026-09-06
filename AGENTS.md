@@ -47,7 +47,7 @@ TerminalVoice/
 │   ├── App.tsx                   ← 路由 + Tauri 事件桥接 + 环境检测
 │   ├── index.css                 ← Tailwind v4 主题 tokens + 全局样式
 │   ├── lib/
-│   │   ├── commands.ts           ← Tauri invoke 封装（28 个命令）
+│   │   ├── commands.ts           ← Tauri invoke 封装（29 个命令）
 │   │   ├── events.ts             ← Tauri 事件名称常量（15 个事件）
 │   │   ├── types.ts              ← 共享 TS 类型（与 Rust serde 对齐）
 │   │   └── cn.ts                 ← className 合并工具（极简 join）
@@ -73,7 +73,7 @@ TerminalVoice/
 │   ├── build.rs
 │   └── src/
 │       ├── main.rs               ← 入口：调用 terminalvoice_lib::run()
-│       ├── lib.rs                ← setup：DB + Runtime + 28 个 invoke handler + 插件 + 日志 + 托盘
+│       ├── lib.rs                ← setup：DB + Runtime + 29 个 invoke handler + 插件 + 日志 + 托盘
 │       ├── state.rs              ← 5 状态机（Idle/Recording/Recognizing/Preview/Paused）+ 8 事件
 │       ├── commands/
 │       │   ├── mod.rs
@@ -132,7 +132,7 @@ TerminalVoice/
 - ErrorModal / TranslatePopup：全局浮层组件，自动消失
 - 设计系统完整：Tailwind v4 tokens（颜色/圆角/阴影/字体/动画）
 - Zustand store：`loadAll()`（Promise.allSettled 初始化）+ 异步 action（乐观更新 + 回滚）+ hydrate/persist 配置
-- IPC 联通：28 个 invoke 命令 + 15 个 Tauri 事件（`useBackendSync()` 集中监听）
+- IPC 联通：29 个 invoke 命令 + 15 个 Tauri 事件（`useBackendSync()` 集中监听）
 - 结构化日志：`tracing` + `tracing-subscriber`，输出到 `app_data_dir/logs/terminalvoice.log`
 - 语音技能系统：4 个预设技能（英文输出/清单模式/汇报格式/听写模板），通过 `list_skills`/`set_skill`/`get_active_skill` IPC 管理
 - LLM 流式输出：SSE streaming，通过 `llm-streaming-delta` 事件实时推送增量文本

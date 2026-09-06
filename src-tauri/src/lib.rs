@@ -126,6 +126,7 @@ pub fn run() {
             commands::preview::cancel_preview,
             commands::preview::inject_text,
             commands::preview::test_asr_connection,
+            commands::preview::test_llm_connection,
             commands::history::list_history,
             commands::history::delete_history,
             commands::history::clear_history,

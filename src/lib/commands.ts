@@ -20,6 +20,7 @@ const COMMANDS = {
   cancelPreview: "cancel_preview",
   injectText: "inject_text",
   testAsrConnection: "test_asr_connection",
+  testLlmConnection: "test_llm_connection",
   listHistory: "list_history",
   deleteHistory: "delete_history",
   clearHistory: "clear_history",
@@ -67,6 +68,10 @@ export async function injectText(text: string): Promise<void> {
 
 export async function testAsrConnection(): Promise<boolean> {
   return invoke<boolean>(COMMANDS.testAsrConnection);
+}
+
+export async function testLlmConnection(): Promise<boolean> {
+  return invoke<boolean>(COMMANDS.testLlmConnection);
 }
 
 export async function listHistory(): Promise<HistoryItem[]> {

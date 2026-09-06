@@ -287,3 +287,88 @@ pub fn test_asr_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
         }
     }
 }
+
+#[tauri::command]
+pub fn test_llm_connection(db: State<'_, Mutex<Database>>) -> Result<bool, String> {
+    info!("测试 LLM 连接");
+    let db = db.lock().map_err(|error| error.to_string())?;
+
+    let endpoint = db
+        .get_config("service.llmEndpoint")
+        .map_err(|error| {
+            error!("获取 LLM Endpoint 配置失败: {error}");
+            error.to_string()
+        })?
+        .ok_or_else(|| {
+            error!("LLM Endpoint 未配置");
+            "LLM Endpoint 未配置".to_string()
+        })?;
+    if endpoint.is_empty() {
+        error!("LLM Endpoint 为空");
+        return Err("LLM Endpoint 未配置".to_string());
+    }
+
+    let model = db
+        .get_config("service.llmModel")
+        .map_err(|error| error.to_string())?
+        .unwrap_or_default();
+    if model.trim().is_empty() {
+        error!("LLM Model 未配置");
+        return Err("LLM Model 未配置".to_string());
+    }
+
+    let stored_key = db
+        .get_config("service.llmApiKey")
+        .map_err(|error| error.to_string())?
+        .unwrap_or_default();
+    let api_key =
+        crate::services::secrets::decode_config_value("service.llmApiKey", &stored_key)
+            .map_err(|error| {
+                error!("解码 LLM API Key 失败: {error}");
+                error
+            })?;
+    if api_key.is_empty() {
+        error!("LLM API Key 未配置");
+        return Err("LLM API Key 未配置".to_string());
+    }
+
+    // 构造最小 chat completions 请求（单条短消息，max_tokens=1），验证 endpoint + key + model 都正确
+    #[derive(serde::Serialize)]
+    struct PingMessage<'a> {
+        role: &'static str,
+        content: &'a str,
+    }
+    #[derive(serde::Serialize)]
+    struct PingRequest<'a> {
+        model: &'a str,
+        messages: [PingMessage<'a>; 1],
+        max_tokens: u32,
+        temperature: f32,
+    }
+    let body = serde_json::to_vec(&PingRequest {
+        model: model.trim(),
+        messages: [PingMessage { role: "user", content: "ping" }],
+        max_tokens: 1,
+        temperature: 0.0,
+    })
+    .map_err(|error| format!("构建 LLM 请求失败: {error}"))?;
+
+    let headers = format!(
+        "Authorization: Bearer {api_key}\r\nContent-Type: application/json\r\n"
+    );
+
+    match crate::services::asr_cloud::post_bytes_with_label(&endpoint, &headers, &body, "LLM") {
+        Ok(_) => {
+            info!("LLM 连接测试成功，端点: {endpoint}, 模型: {model}");
+            Ok(true)
+        }
+        Err(error) if error.retryable => {
+            info!("LLM 连接测试失败（可重试），端点: {endpoint}，原因: {}", error.message);
+            Ok(false)
+        }
+        Err(error) => {
+            error!("LLM 连接测试失败（不可重试），端点: {endpoint}，原因: {}", error.message);
+            Err(error.message)
+        }
+    }
+}

@@ -22,6 +22,7 @@ vi.mock("../lib/commands", () => ({
   cancelPreview: vi.fn().mockResolvedValue(undefined),
   injectText: vi.fn().mockResolvedValue(undefined),
   testAsrConnection: vi.fn().mockResolvedValue(true),
+  testLlmConnection: vi.fn().mockResolvedValue(true),
   listAudioInputDevices: vi.fn().mockResolvedValue([]),
   exportData: vi.fn().mockResolvedValue(new Uint8Array()),
   importData: vi.fn().mockResolvedValue(undefined),
