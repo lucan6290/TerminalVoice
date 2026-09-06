@@ -138,6 +138,7 @@ export function BallWindow() {
     <div
       className="w-full h-full flex items-center justify-center relative"
       style={{ background: "transparent" }}
+      data-tauri-drag-region
     >
       <button
         ref={buttonRef}
@@ -145,6 +146,7 @@ export function BallWindow() {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className="relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ease-out outline-none group"
+        data-tauri-drag-region
         style={{
           transform: hovered ? "scale(1.08)" : "scale(1)",
         }}
