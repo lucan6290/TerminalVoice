@@ -100,7 +100,7 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
 
   return (
     <Field label={label}>
-      <div ref={wrapRef} className="relative flex gap-1.5">
+      <div ref={wrapRef} className="relative flex gap-1.5 w-full min-w-0">
         <input
           type="text"
           value={value}
@@ -510,7 +510,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (
     <div className="flex items-center gap-3">
       <label className="text-[12px] text-neutral-400 shrink-0 w-[72px]">{label}</label>
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 }
