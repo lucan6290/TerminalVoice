@@ -1,26 +1,21 @@
 //! 日志系统模块
 //!
 //! 使用 `tracing` + `tracing-subscriber` 实现结构化日志，
-//! 输出到文件（app_data_dir/logs/terminalvoice.log）和控制台。
+//! 输出到文件（`<home>/.terminalvoice/logs/terminalvoice.log`）和控制台。
 
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
-const LOG_DIR: &str = "logs";
+use crate::services::paths;
 
 /// 初始化日志系统。
 ///
-/// 在 `app.setup()` 中调用，日志文件写入 `app_data_dir/logs/terminalvoice.log`。
+/// 在 `app.setup()` 中调用，日志文件写入 `<home>/.terminalvoice/logs/terminalvoice.log`。
 /// 日志级别通过环境变量 `RUST_LOG` 控制，默认 `info`。
-pub fn init_logging(app: &AppHandle) -> Result<PathBuf, String> {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("无法获取数据目录: {e}"))?;
-
-    let log_dir = data_dir.join(LOG_DIR);
+pub fn init_logging(_app: &AppHandle) -> Result<PathBuf, String> {
+    let log_dir = paths::logs_dir();
     std::fs::create_dir_all(&log_dir)
-        .map_err(|e| format!("无法创建日志目录: {e}"))?;
+        .map_err(|e| format!("无法创建日志目录 {}: {e}", log_dir.display()))?;
 
     let log_file = log_dir.join("terminalvoice.log");
 
@@ -29,7 +24,7 @@ pub fn init_logging(app: &AppHandle) -> Result<PathBuf, String> {
         .create(true)
         .append(true)
         .open(&log_file)
-        .map_err(|e| format!("无法打开日志文件: {e}"))?;
+        .map_err(|e| format!("无法打开日志文件 {}: {e}", log_file.display()))?;
 
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
@@ -48,15 +43,12 @@ pub fn init_logging(app: &AppHandle) -> Result<PathBuf, String> {
 
     tracing::info!("TerminalVoice 日志系统已启动");
     tracing::info!("日志文件位置: {}", log_file.display());
+    tracing::info!("数据目录: {}", paths::app_data_dir().display());
 
     Ok(log_file)
 }
 
 /// 获取日志文件路径（不初始化，仅返回路径）。
-pub fn get_log_path(app: &AppHandle) -> PathBuf {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."));
-    data_dir.join(LOG_DIR).join("terminalvoice.log")
+pub fn get_log_path(_app: &AppHandle) -> PathBuf {
+    paths::logs_dir().join("terminalvoice.log")
 }

@@ -1,13 +1,13 @@
 /// Model manager for offline ASR models.
 ///
-/// Manages model files stored in `app_data_dir/models/`. Supports listing
+/// Manages model files stored in `<home>/.terminalvoice/models/`. Supports listing
 /// predefined models, downloading, deleting, and verifying integrity.
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
-const MODELS_DIR: &str = "models";
+use crate::services::paths;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -47,12 +47,11 @@ fn predefined_models() -> Vec<ModelInfo> {
     ]
 }
 
-fn get_models_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("无法获取数据目录: {e}"))?;
-    Ok(data_dir.join(MODELS_DIR))
+fn get_models_dir(_app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = paths::models_dir();
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("无法创建模型目录 {}: {e}", dir.display()))?;
+    Ok(dir)
 }
 
 impl ModelManager {

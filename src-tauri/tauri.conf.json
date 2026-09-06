@@ -65,6 +65,18 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1NThGOUQ1RTkzNjU3MUYKUldRZlZ6YnAxZmxZSlkzNHY1a0tldVEwcHlCYjFkV3hQWlBhZlMxV3AxK1FDWFdITWxTM0FnRDIK",
+      "endpoints": [
+        "https://github.com/OWNER/REPO/releases/latest/download/latest.json"
+      ],
+      "dialog": false,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

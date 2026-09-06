@@ -5,6 +5,7 @@ pub mod tray;
 
 use services::db::Database;
 use services::logging;
+use services::paths;
 use state::AppRuntime;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -64,13 +65,11 @@ pub fn run() {
                 ),
             }
 
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .map_err(|error| format!("failed to resolve app data dir: {error}"))?;
-            std::fs::create_dir_all(&data_dir)
+            // 确保数据目录存在
+            paths::ensure_dirs()
                 .map_err(|error| format!("failed to create data dir: {error}"))?;
-            let db_path = data_dir.join("terminalvoice.db");
+            let db_path = paths::db_path();
+            tracing::info!("数据库路径: {}", db_path.display());
             let db = Database::open(&db_path)
                 .map_err(|error| format!("failed to open database: {error}"))?;
 

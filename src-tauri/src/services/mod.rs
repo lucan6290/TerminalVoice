@@ -11,6 +11,7 @@ pub mod injector;
 pub mod llm;
 pub mod logging;
 pub mod model_manager;
+pub mod paths;
 pub mod pipeline;
 pub mod preprocess;
 pub mod recorder;
