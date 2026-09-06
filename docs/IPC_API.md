@@ -652,6 +652,32 @@ pub fn get_active_skill(app: AppHandle) -> Result<Option<String>, String>
 
 ---
 
+### 2.28 `set_hotkey_config`
+
+更新全局快捷键（按住说话 / 朗读 / 翻译），写入 DB 后立即触发热键管线热重载，无需重启应用。
+
+**TS 封装**：`setHotkeyConfig(config: HotkeyConfig): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn set_hotkey_config(payload: HotkeyConfigPayload, db: State<'_, DbState>, app: AppHandle) -> Result<(), String>
+```
+
+**请求参数**（`payload`，camelCase）：
+
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `pttKey` | `string` | 按住说话键名（如 `RightAlt`、`F6`、`Ctrl`） |
+| `ttsKey` | `string` | 朗读键名（与 Alt 组合触发，如 `1`） |
+| `translateKey` | `string` | 翻译键名（与 Alt 组合触发，如 `2`） |
+
+合法键名（大小写/横线无关）：`RightAlt/AltGr`、`LeftAlt/Alt`、`RightCtrl/LeftCtrl/Ctrl`、`RightShift/LeftShift/Shift`、`Space`、`Enter/Return`、`Tab`、`Esc/Escape`、`Backspace`、`0`~`9`、`F1`~`F12`、`A`~`Z`。
+
+**返回**：`void`。非法键名返回错误 `String`。成功后会发送一条 `toast` 事件通知新热键。
+
+---
+
 ## 三、Events（Rust → 前端）
 
 ### 3.1 `runtime-state-changed`
@@ -1067,6 +1093,18 @@ interface VoiceSkill {
 
 Rust 端定义为 `services/skills.rs` 中的 `VoiceSkill` 结构体（`#[serde(rename_all = "camelCase")]`），预设 4 个技能，通过 `find_skill(id)` 按 ID 查找。
 
+### 4.15 HotkeyConfig / HotkeyConfigPayload
+
+```ts
+interface HotkeyConfig {
+  pttKey: string;        // 按住说话键名，默认 "RightAlt"
+  ttsKey: string;        // 朗读键（与 Alt 组合），默认 "1"
+  translateKey: string;  // 翻译键（与 Alt 组合），默认 "2"
+}
+```
+
+Rust 端对应 `services/hotkey.rs::HotkeyConfig`（字段为 `rdev::Key` 枚举），持久化到 DB 的配置键为 `input.pttKey` / `input.ttsKey` / `input.translateKey`；命令 payload 类型 `HotkeyConfigPayload` 为字符串版本。
+
 ---
 
 ## 五、当前已使用的配置键
@@ -1079,7 +1117,9 @@ Rust 端定义为 `services/skills.rs` 中的 `VoiceSkill` 结构体（`#[serde(
 | `ui.soundOn` | `"true"/"false"` | `"true"` | 交互声音 |
 | `ui.muteSys` | `"true"/"false"` | `"false"` | 使用时静音系统声音 |
 | `ui.autoStart` | `"true"/"false"` | `"false"` | 开机自启 |
-| `input.pttKey` | string | `"Right-Alt"` | 语音触发键 |
+| `input.pttKey` | string | `"RightAlt"` | 按住说话键名 |
+| `input.ttsKey` | string | `"1"` | 朗读键（Alt+此键触发） |
+| `input.translateKey` | string | `"2"` | 翻译键（Alt+此键触发） |
 | `input.micDevice` | string | `""` | 麦克风设备（空=自动检测） |
 | `service.asrProvider` | `"cloud"/"offline"/"auto"` | `"auto"` | ASR 提供商 |
 | `service.asrEndpoint` | string | OpenAI 默认 | ASR 云端接口地址 |

@@ -37,8 +37,8 @@
 | 文件 | 状态 | 说明 |
 | :--- | :---: | :--- |
 | [lib/cn.ts](../src/lib/cn.ts) | ✅ | 极简 className 合并：`classes.filter(Boolean).join(" ")`，无 clsx/tailwind-merge |
-| [lib/types.ts](../src/lib/types.ts) | ✅ | TS 类型定义：AppStatus（5 状态）、ConfigEntry、AudioInputDevice、TextMode（3模式）、TextProcessMode、HistoryItem、PreviewMode（`"recognition" \| "rewrite"`）、PreviewDraft（含可选 `mode?: PreviewMode`）、ConfirmPreviewInput（含可选 `mode?: PreviewMode`）、FilterWord、ASRProvider、ServiceConfig（含 `translateTargetLang`）、ModelInfo、TranslateResultPayload、RewriteResultPayload、RecordingTickPayload、ToastPayload、VoiceSkill、LlmStreamingDeltaPayload。与 Rust serde 类型一一对应。已移除旧的 `LocalModel` 接口（由 `ModelInfo` 替代） |
-| [lib/commands.ts](../src/lib/commands.ts) | ✅ | 封装 27 个 invoke 命令：`getAppStatus`/`createMockPreview`/`confirmPreview`/`cancelPreview`/`injectText`/`testAsrConnection`/`listHistory`/`deleteHistory`/`clearHistory`/`searchHistory`/`reinjectHistory`/`getConfig`/`setConfig`/`listConfig`/`listAudioInputDevices`/`listFilterWords`/`addFilterWord`/`deleteFilterWord`/`toggleFilterWord`/`listModels`/`downloadModel`/`deleteModel`/`exportData`/`importData`/`listSkills`/`setSkill`/`getActiveSkill`。均为直接 `invoke("snake_case", args)` 的薄封装 |
+| [lib/types.ts](../src/lib/types.ts) | ✅ | TS 类型定义：AppStatus（5 状态）、ConfigEntry、AudioInputDevice、TextMode（3模式）、TextProcessMode、HistoryItem、PreviewMode（`"recognition" \| "rewrite"`）、PreviewDraft（含可选 `mode?: PreviewMode`）、ConfirmPreviewInput（含可选 `mode?: PreviewMode`）、FilterWord、ASRProvider、ServiceConfig（含 `translateTargetLang`）、ModelInfo、TranslateResultPayload、RewriteResultPayload、RecordingTickPayload、ToastPayload、VoiceSkill、LlmStreamingDeltaPayload、HotkeyConfig（含 `DEFAULT_HOTKEY_CONFIG` 常量）。与 Rust serde 类型一一对应。已移除旧的 `LocalModel` 接口（由 `ModelInfo` 替代） |
+| [lib/commands.ts](../src/lib/commands.ts) | ✅ | 封装 28 个 invoke 命令：`getAppStatus`/`createMockPreview`/`confirmPreview`/`cancelPreview`/`injectText`/`testAsrConnection`/`listHistory`/`deleteHistory`/`clearHistory`/`searchHistory`/`reinjectHistory`/`getConfig`/`setConfig`/`listConfig`/`listAudioInputDevices`/`listFilterWords`/`addFilterWord`/`deleteFilterWord`/`toggleFilterWord`/`listModels`/`downloadModel`/`deleteModel`/`exportData`/`importData`/`listSkills`/`setSkill`/`getActiveSkill`/`setHotkeyConfig`。均为直接 `invoke("snake_case", args)` 的薄封装 |
 | [lib/events.ts](../src/lib/events.ts) | ✅ | Tauri 事件名称常量。导出 15 个 `EVENT_*` 常量（runtime-state-changed / config-updated / toast / preview-ready / preview-cleared / recording-started / recording-stopped / recording-cancelled / recording-tick / tts-started / tts-stopped / translate-result / rewrite-started / rewrite-result / llm-streaming-delta）+ `TauriEventName` 联合类型。前端监听事件时必须使用此处常量，禁止硬编码字符串 |
 
 ### stores/ — 状态管理
@@ -79,6 +79,7 @@
 | [components/ui/SettingRow.tsx](../src/components/ui/SettingRow.tsx) | ✅ | 设置行组件：左标签 + 右控件（children），card 背景圆角 14px |
 | [components/ui/ErrorModal.tsx](../src/components/ui/ErrorModal.tsx) | ✅ | 阻断式错误模态对话框：从 store 的 `errorMessage` 读取，为 null 时不渲染，5s 自动消失，红色 accent（`ring-red-500/30`），点击遮罩或「知道了」关闭。在 App.tsx 全局挂载 |
 | [components/ui/TranslatePopup.tsx](../src/components/ui/TranslatePopup.tsx) | ✅ | 翻译结果浮窗：从 store 的 `translateResult` 读取，浮球旁临时显示译文，8s 自动消失，青色 accent（teal），显示原文+译文。在 BallWindow 中渲染 |
+| [components/ui/HotkeyRecorder.tsx](../src/components/ui/HotkeyRecorder.tsx) | ✅ | 按键录入按钮：点击后进入捕获状态，监听下一次 keydown 并通过 `eventToKeyName()` 将 KeyboardEvent.code 转成后端键名字符串；Esc 取消；导出 `formatKeyLabel()` 做展示格式化（Left/Right 修饰键友好名） |
 | [components/StatusBadge.tsx](../src/components/StatusBadge.tsx) | 🧹 | 已删除。面板状态显示使用 `StateView.tsx` 替代 |
 
 ### pages/ — 已清理
@@ -103,7 +104,7 @@
 | 文件 | 状态 | 说明 |
 | :--- | :---: | :--- |
 | [main.rs](../src-tauri/src/main.rs) | ✅ | 调用 `terminalvoice_lib::run()` |
-| [lib.rs](../src-tauri/src/lib.rs) | ✅ | Tauri Builder setup：注册 `tauri-plugin-single-instance`（第二实例唤起面板窗口）+ `tauri-plugin-autostart` → setup 中初始化日志系统（`logging::init_logging()`，写入 `app_data_dir/logs/terminalvoice.log`）→ 创建 data_dir → 打开 SQLite → manage(Mutex\<Database\>) + manage(Mutex\<AppRuntime\>) → start_hotkey_pipeline → setup_tray → 注册 27 个 invoke_handler（preview 7个 + history 5个 + config 3个 + dictionary 4个 + audio 1个 + backup 2个 + model 3个 + skills 3个）。**已注册**：autostart/single-instance 插件、系统托盘 |
+| [lib.rs](../src-tauri/src/lib.rs) | ✅ | Tauri Builder setup：注册 `tauri-plugin-single-instance`（第二实例唤起面板窗口）+ `tauri-plugin-autostart` → setup 中初始化日志系统（`logging::init_logging()`，写入 `app_data_dir/logs/terminalvoice.log`）→ 创建 data_dir → 打开 SQLite → manage(Mutex\<Database\>) + manage(Mutex\<AppRuntime\>) + manage(PipelineHandle) → start_hotkey_pipeline → setup_tray → 注册 28 个 invoke_handler（preview 7个 + history 5个 + config 3个 + dictionary 4个 + audio 1个 + backup 2个 + model 3个 + skills 3个 + hotkey 1个）。**已注册**：autostart/single-instance 插件、系统托盘 |
 
 ### 状态机
 
@@ -115,9 +116,10 @@
 
 | 文件 | 状态 | 说明 |
 | :--- | :---: | :--- |
-| [commands/mod.rs](../src-tauri/src/commands/mod.rs) | ✅ | 声明 audio/backup/config/dictionary/history/model/preview/skills 八个子模块 |
+| [commands/mod.rs](../src-tauri/src/commands/mod.rs) | ✅ | 声明 audio/backup/config/dictionary/history/hotkey/model/preview/skills 九个子模块 |
 | [commands/config.rs](../src-tauri/src/commands/config.rs) | ✅ | ConfigUpdatedPayload（camelCase）+ `get_config(key)`/`set_config(key,value)`（写入DB后 emit "config-updated"）/`list_config()` |
 | [commands/history.rs](../src-tauri/src/commands/history.rs) | ✅ | `list_history()` → db.list_history() 按时间 DESC |
+| [commands/hotkey.rs](../src-tauri/src/commands/hotkey.rs) | ✅ | `set_hotkey_config(payload: HotkeyConfigPayload)`：校验三个键名合法后写入 DB（`input.pttKey/ttsKey/translateKey`），并通过 PipelineHandle 发送 `ReloadHotkeys` 触发热键管线热重载 |
 | [commands/preview.rs](../src-tauri/src/commands/preview.rs) | ✅🟡 | AppStatus 枚举（与 RuntimeState 对应）+ RuntimeStateChangedPayload + emit_runtime_state() 发送 "runtime-state-changed" + TextMode 枚举（含 as_storage_value/to_backend_mode）+ PreviewDraft/ConfirmPreviewInput（camelCase）+ `get_app_status()` + `create_mock_preview(raw_text)`（**模拟完整流程**：验证Idle→Recording→Recognizing→preprocess→Preview，emit 状态事件，asr_provider="mock"）+ `confirm_preview(input)`（→Idle，写DB，返回 HistoryItem）。**注意**：create_mock_preview 是 mock，真实 ASR 未接入 |
 | [commands/skills.rs](../src-tauri/src/commands/skills.rs) | ✅ | 技能相关 IPC 命令：`list_skills()` 返回所有预设 VoiceSkill 列表 / `set_skill(skill_id)` 传入 skill_id 存入 `service.activeSkill` 配置，空字符串清除 / `get_active_skill()` 读取 `service.activeSkill` 返回 Option\<String\> |
 
@@ -151,7 +153,7 @@
 
 | 模块文件 | 状态 | 说明 |
 | :--- | :---: | :--- |
-| `services/hotkey.rs` | ✅ | 全局热键监听（rdev）：Right Alt 录音/Shift+Right Alt 改写/Alt+1 朗读/Alt+2 翻译/Esc 取消。`HotkeyEdgeState` 状态机 + `spawn_listener()` 线程 + 4 测试 |
+| `services/hotkey.rs` | ✅ | 全局热键监听（rdev）：支持可配置 HotkeyConfig（ptt/tts/translate 三键），默认 RightAlt/1/2；`HotkeyEdgeState` 状态机 + 边缘检测（长按 PTT 录音、Shift+PTT 改写、Alt+tts/translate 触发）+ `parse_hotkey()/format_hotkey()` 键名 ↔ rdev::Key 互转 + 4 测试。热键通过 `Arc<RwLock<HotkeyConfig>>` 在运行时热更新，无需重启监听线程 |
 | `services/recorder.rs` | ✅ | cpal 录音：16KHz/16bit/mono，支持所有 SampleFormat（i8~f64），`Recorder` + `AudioBuffer` + `resample_to_16k()` + `list_input_devices()` + 3 测试 |
 | `services/asr.rs` | ✅ | ASR trait 抽象层：`AsrProvider` trait + `AsrMode`（Auto/Cloud/Offline）+ `create_provider()` 工厂 |
 | `services/asr_cloud.rs` | ✅ | 云端 ASR：WinHTTP multipart 请求（OpenAI Whisper API 兼容），重试逻辑，endpoint 解析 + 5 测试 |
@@ -165,7 +167,7 @@
 | `services/secrets.rs` | ✅ | DPAPI 加密：`protect_secret()` / `unprotect_secret()` / `encode_config_value()` / `decode_config_value()`，自动加密 API Key |
 | `services/vad.rs` | ✅ | 能量 VAD：RMS 静音检测，`VadState`（Speaking/Silence/SilenceTimeout）+ `VadConfig` |
 | `services/llm.rs` | ✅ | LLM 客户端：SSE 流式 + 非流式 + 自定义 prompt + 翻译 + 改写 + SseAccumulator + 5 测试 |
-| `services/pipeline.rs` | ✅ | 核心管线：热键事件循环 + 录音→ASR→LLM 流式→预览 + 口译模式 + 改写 + TTS |
+| `services/pipeline.rs` | ✅ | 核心管线：持有 `Arc<RwLock<HotkeyConfig>>`，启动时从 DB 加载热键配置；监听线程每次按键前读取最新 config 实现热重载；`PipelineControl::ReloadHotkeys` 指令重新读 DB 并 toast 通知。热键事件循环 + 录音→ASR→LLM 流式→预览 + 口译模式 + 改写 + TTS |
 | `services/model_manager.rs` | ✅ | 模型管理：HuggingFace URL + SHA256 校验 + 下载/删除/列表 + 4 测试 |
 | `services/logging.rs` | ✅ | tracing 日志：文件输出到 `app_data_dir/logs/terminalvoice.log` |
 | `services/skills.rs` | ✅ | 语音技能：4 预设技能 + `find_skill()` + 4 测试 |

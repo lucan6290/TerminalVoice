@@ -11,6 +11,7 @@
 | [Toast.tsx](Toast.tsx) | Toast 通知容器（`ToastContainer`） | 无 props，从 toastStore 订阅 |
 | [ErrorModal.tsx](ErrorModal.tsx) | 错误浮层（阻塞式） | 无 props，从 store 读取 `errorMessage` |
 | [TranslatePopup.tsx](TranslatePopup.tsx) | 翻译结果浮层（非阻塞） | 无 props，从 store 读取 `translateResult` |
+| [HotkeyRecorder.tsx](HotkeyRecorder.tsx) | 按键录入按钮（快捷键自定义） | `value`、`onChange(next)`、`widthClass?`、`className?`；导出 `formatKeyLabel(key)` |
 
 ## 组件规范
 
@@ -46,6 +47,14 @@
 - `Languages` 图标，8 秒自动消失
 - 从 `usePanelStore` 读取 `translateResult`，显示原文 + 译文
 - 作为 BallWindow 的子组件挂载
+
+### HotkeyRecorder
+
+- 按键录入按钮：默认 `rounded-lg px-3 py-1.5 font-mono text-[13px]`，深色背景（`bg-neutral-900`）配白色文字；捕获态绿色边框 + `animate-pulse`
+- 点击进入捕获态后监听 `window.keydown`（capture 阶段），捕获到合法键后调用 `onChange(next)`；Esc 取消录制，blur 自动取消
+- 通过私有 `eventToKeyName()` 将 `KeyboardEvent.code`（如 `AltRight`/`Digit1`/`KeyA`/`F6`）映射为后端 `parse_hotkey` 可识别的键名字符串
+- 导出 `formatKeyLabel(key)` 将键名转成 UI 友好名（如 `RightAlt`→`Right-Alt`，`LeftCtrl`/`Ctrl`→`Ctrl`）
+- 保存中（`onChange` 返回 Promise 期间）显示"保存中..."
 
 ## 约定
 
