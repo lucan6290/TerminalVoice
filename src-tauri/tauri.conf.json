@@ -64,7 +64,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1NThGOUQ1RTkzNjU3MUYKUldRZlZ6YnAxZmxZSlkzNHY1a0tldVEwcHlCYjFkV3hQWlBhZlMxV3AxK1FDWFdITWxTM0FnRDIK",
       "endpoints": [
-        "https://github.com/OWNER/REPO/releases/latest/download/latest.json"
+        "https://github.com/lucan6290/TerminalVoice/releases/latest/download/latest.json"
       ],
       "dialog": false,
       "windows": {
@@ -89,7 +89,7 @@
       },
       "nsis": {
         "installerIcon": "icons/icon.ico",
-        "displayLanguageSelector": false,
+        "displayLanguageSelector": true,
         "languages": ["SimpChinese", "English"]
       }
     },

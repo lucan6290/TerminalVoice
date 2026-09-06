@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerminalVoice · 常驻桌面 · 按住就说</title>
+<style>
+/* ============ ccswitch-style warm marketing theme ============ */
+:root{
+  --bg:#f3ece1;
+  --bg-2:#ede3d2;
+  --card:#faf5ec;
+  --card-border:rgba(140,110,70,.14);
+  --ink:#2c2520;
+  --ink-2:#5b4f42;
+  --ink-3:#8a7c6a;
+  --ink-4:#b8ab97;
+  --accent:#c9623a;
+  --accent-2:#e08a57;
+  --green:#5a9a4a;
+  --accent-soft:rgba(201,98,58,.10);
+  --accent-glow:rgba(224,138,87,.45);
+  --radius:22px;
+  --radius-sm:14px;
+  --shadow:0 2px 4px rgba(80,55,20,.04),0 20px 50px -20px rgba(80,55,20,.18);
+  --shadow-lg:0 4px 8px rgba(80,55,20,.05),0 40px 80px -24px rgba(80,55,20,.28);
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{font-family:var(--font);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.6;}
+a{color:inherit;text-decoration:none;}
+img,svg{display:block;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+
+/* ============ Background grid ============ */
+.bg-grid{
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%,rgba(224,138,87,.25),transparent 60%),
+    radial-gradient(900px 500px at 10% 20%,rgba(90,154,74,.10),transparent 55%),
+    linear-gradient(rgba(140,110,70,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(140,110,70,.05) 1px,transparent 1px);
+  background-size:auto,auto,28px 28px,28px 28px;
+}
+.bg-dots{
+  background-image:radial-gradient(rgba(140,110,70,.12) 1px,transparent 1px);
+  background-size:22px 22px;
+}
+
+/* ============ Layout ============ */
+.container{max-width:1200px;margin:0 auto;padding:0 32px;}
+
+/* ============ Nav ============ */
+.nav{
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  background:rgba(243,236,225,.8);
+  border-bottom:1px solid var(--card-border);
+}
+.nav-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  height:64px;
+}
+.nav-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;}
+.nav-logo{
+  width:32px;height:32px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px var(--accent-glow);
+}
+.nav-logo svg{width:18px;height:18px;color:#fff;}
+.nav-links{display:flex;gap:4px;}
+.nav-links a{
+  font-size:14px;color:var(--ink-2);
+  padding:8px 14px;border-radius:10px;transition:all .15s;
+}
+.nav-links a:hover{background:var(--accent-soft);color:var(--accent);}
+.nav-cta{
+  font-size:14px;padding:9px 20px;border-radius:12px;
+  background:var(--ink);color:var(--bg);font-weight:500;
+  transition:all .15s;
+}
+.nav-cta:hover{background:var(--accent);}
+
+/* ============ Hero ============ */
+.hero{padding:60px 0 80px;position:relative;overflow:hidden;}
+.hero-inner{
+  display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:500;color:var(--accent);
+  background:var(--accent-soft);
+  padding:6px 14px;border-radius:999px;margin-bottom:24px;
+}
+.hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.hero h1{
+  font-size:64px;font-weight:800;line-height:1.05;letter-spacing:-.03em;
+  margin-bottom:20px;color:var(--ink);
+}
+.hero h1 em{font-style:normal;color:var(--accent);}
+.hero-sub{
+  font-size:18px;color:var(--ink-2);line-height:1.7;
+  margin-bottom:36px;max-width:480px;
+}
+.hero-actions{display:flex;gap:12px;margin-bottom:40px;}
+.btn-primary{
+  font-size:15px;padding:13px 28px;border-radius:14px;
+  background:var(--accent);color:#fff;font-weight:600;
+  box-shadow:0 8px 20px -6px var(--accent-glow);
+  transition:all .15s;
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px -6px var(--accent-glow);}
+.btn-ghost{
+  font-size:15px;padding:13px 24px;border-radius:14px;
+  background:var(--card);color:var(--ink);font-weight:500;
+  border:1px solid var(--card-border);
+  transition:all .15s;
+}
+.btn-ghost:hover{background:#fff;}
+.hero-stats{display:flex;gap:32px;}
+.hero-stat .num{font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.02em;}
+.hero-stat .label{font-size:13px;color:var(--ink-3);}
+
+/* Hero product mockup */
+.hero-mockup{position:relative;display:flex;justify-content:center;align-items:center;}
+.hero-mockup-bg{
+  position:absolute;width:460px;height:460px;
+  background:radial-gradient(circle,rgba(201,98,58,.18) 0%,transparent 70%);
+  border-radius:50%;
+}
+.mockup-card{
+  position:relative;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:28px;
+  padding:24px;
+  box-shadow:var(--shadow-lg);
+  transform:rotate(-2deg);
+  transition:transform .4s;
+}
+.mockup-card:hover{transform:rotate(0) translateY(-4px);}
+.mockup-card::before{
+  content:"";position:absolute;inset:-8px;border-radius:32px;
+  background:linear-gradient(135deg,rgba(201,98,58,.15),rgba(90,154,74,.08));
+  z-index:-1;filter:blur(20px);
+}
+/* Floating ball on hero */
+.hero-ball-float{
+  position:absolute;right:-10px;top:-20px;
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,.9);
+  backdrop-filter:blur(10px);
+  border:1px solid var(--card-border);
+  box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center;
+  animation:floaty 3s ease-in-out infinite;
+}
+.hero-ball-float .inner{
+  width:54px;height:54px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.3);
+}
+.hero-ball-float .inner svg{width:24px;height:24px;color:#fff;}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ============ Stats strip ============ */
+.stats-strip{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  padding:32px 40px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:24px;
+  margin-bottom:80px;
+  box-shadow:var(--shadow);
+}
+.stat-item{text-align:center;}
+.stat-num{font-size:36px;font-weight:800;color:var(--accent);letter-spacing:-.03em;line-height:1;}
+.stat-label{font-size:13px;color:var(--ink-3);margin-top:8px;}
+.stat-divider{width:1px;background:var(--card-border);}
+
+/* ============ Section header ============ */
+.section{padding:80px 0;}
+.section-header{text-align:center;margin-bottom:64px;}
+.section-eyebrow{
+  display:inline-block;
+  font-size:13px;font-weight:600;letter-spacing:.1em;
+  color:var(--accent);text-transform:uppercase;
+  background:var(--accent-soft);
+  padding:5px 14px;border-radius:999px;margin-bottom:16px;
+}
+.section-title{
+  font-size:44px;font-weight:800;letter-spacing:-.02em;
+  line-height:1.15;margin-bottom:16px;
+}
+.section-desc{
+  font-size:17px;color:var(--ink-2);max-width:580px;
+  margin:0 auto;line-height:1.7;
+}
+
+/* ============ Feature 3-up ============ */
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.feature-card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  padding:32px;
+  transition:all .25s;
+  box-shadow:var(--shadow);
+}
+.feature-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:rgba(201,98,58,.25);}
+.feature-icon{
+  width:56px;height:56px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;
+}
+.feature-icon.talk{background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 8px 20px -6px var(--accent-glow);}
+.feature-icon.listen{background:linear-gradient(135deg,var(--green),#7ab868);box-shadow:0 8px 20px -6px rgba(90,154,74,.4);}
+.feature-icon.translate{background:linear-gradient(135deg,#7b5ea7,#9d7fc4);box-shadow:0 8px 20px -6px rgba(123,94,167,.4);}
+.feature-icon svg{width:26px;height:26px;color:#fff;}
+.feature-card h3{font-size:20px;font-weight:700;margin-bottom:10px;letter-spacing:-.01em;}
+.feature-card p{font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:16px;}
+.kbd{
+  display:inline-block;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:12px;padding:3px 9px;border-radius:7px;
+  background:var(--bg-2);color:var(--ink-2);
+  border:1px solid var(--card-border);
+  font-weight:600;
+}
+
+/* ============ Workflow 3 steps ============ */
+.workflow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;position:relative;}
+.workflow::before{
+  content:"";position:absolute;top:44px;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 20%,var(--accent) 80%,transparent);
+  opacity:.3;
+}
+.step{text-align:center;padding:0 24px;position:relative;}
+.step-num{
+  width:88px;height:88px;border-radius:50%;
+  background:var(--card);border:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:800;color:var(--accent);
+  margin:0 auto 20px;position:relative;z-index:1;
+  box-shadow:0 0 0 8px var(--bg);
+}
+.step h3{font-size:18px;font-weight:700;margin-bottom:8px;}
+.step p{font-size:14px;color:var(--ink-2);line-height:1.6;}
+
+/* ============ Showcase blocks (alternating image/text) ============ */
+.showcase{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;margin-bottom:100px;}
+.showcase.reverse{direction:rtl;}
+.showcase.reverse > *{direction:ltr;}
+.showcase-label{
+  font-size:13px;font-weight:700;letter-spacing:.12em;
+  color:var(--accent);margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.showcase-label::before{
+  content:attr(data-num);
+  font-size:12px;font-weight:800;
+  width:28px;height:28px;border-radius:8px;
+  background:var(--accent);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  letter-spacing:0;
+}
+.showcase h2{font-size:36px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:16px;}
+.showcase p{font-size:16px;color:var(--ink-2);line-height:1.8;margin-bottom:24px;}
+.showcase ul{list-style:none;}
+.showcase li{
+  font-size:14px;color:var(--ink-2);
+  padding:10px 0 10px 28px;position:relative;
+  border-bottom:1px solid var(--card-border);
+}
+.showcase li::before{
+  content:"";position:absolute;left:0;top:16px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--accent-soft);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23c9623a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:center;
+}
+.showcase li:last-child{border-bottom:none;}
+
+/* Mockup frame */
+.mock-frame{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:28px;
+  padding:28px;
+  box-shadow:var(--shadow-lg);
+  position:relative;
+}
+.mock-frame::after{
+  content:"";position:absolute;inset:0;border-radius:28px;
+  background:linear-gradient(135deg,rgba(255,255,255,.4),transparent 40%);
+  pointer-events:none;
+}
+.scene-stand{
+  border-radius:20px;
+  padding:48px 32px;
+  background:
+    radial-gradient(ellipse at 30% 80%,rgba(201,98,58,.10),transparent 60%),
+    radial-gradient(ellipse at 70% 20%,rgba(90,154,74,.08),transparent 60%),
+    linear-gradient(180deg,#e8dcc6,#d9cbb0);
+  border:1px solid rgba(140,110,70,.15);
+  display:flex;justify-content:center;align-items:center;
+  position:relative;overflow:hidden;min-height:380px;
+}
+
+/* ============ Ball component (reusable) ============ */
+.ball{
+  width:54px;height:54px;border-radius:50%;
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+.ball-core{
+  position:absolute;inset:4px;border-radius:50%;
+  background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.8);
+  border:1px solid rgba(0,0,0,.08);
+  display:flex;align-items:center;justify-content:center;z-index:2;
+}
+.ball-ring{position:absolute;inset:0;border-radius:50%;}
+.ball-dot{width:12px;height:12px;border-radius:50%;}
+.glow{animation:breathe 1.8s ease-out infinite;}
+@keyframes breathe{
+  0%,100%{box-shadow:0 0 0 0 var(--glow,rgba(48,209,88,.35))}
+  50%{box-shadow:0 0 0 12px transparent}
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1.5s linear infinite;}
+
+/* Ball states grid */
+.ball-states{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;}
+.ball-state-cell{
+  background:#fff;border:1px solid var(--card-border);
+  border-radius:18px;padding:24px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  text-align:center;
+  transition:all .2s;
+}
+.ball-state-cell:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+.ball-state-cell .nm{font-size:13px;font-weight:600;}
+.ball-state-cell .ds{font-size:11px;color:var(--ink-3);line-height:1.4;}
+
+/* ============ Panel mock (dark inner UI on warm bg) ============ */
+.panel-mock{
+  width:340px;background:#1c1c1e;border-radius:20px;
+  overflow:hidden;color:#f5f5f7;font-size:13px;
+  box-shadow:0 24px 48px -12px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.08);
+}
+.pm-topbar{
+  height:44px;display:flex;align-items:center;padding:0 14px;gap:10px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.02);
+}
+.pm-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pm-title{font-size:13px;font-weight:500;flex:1;color:#f5f5f7;}
+.pm-body{padding:14px;}
+.pm-card{
+  padding:10px 12px;border-radius:10px;
+  background:rgba(255,255,255,.06);margin-bottom:8px;
+  display:flex;align-items:center;gap:10px;
+}
+.pm-ic{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pm-ic svg{width:13px;height:13px;}
+.pm-txt{flex:1;min-width:0;}
+.pm-lbl{font-size:12px;font-weight:500;color:#f5f5f7;}
+.pm-sub{font-size:11px;color:#8e8e93;margin-top:1px;}
+.pm-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:rgba(255,255,255,.04);
+  border-radius:10px;margin-bottom:6px;
+}
+.pm-row .lbl{font-size:12px;color:#f5f5f7;}
+.pm-row .sub{font-size:10px;color:#8e8e93;}
+.pm-toggle{width:36px;height:20px;border-radius:10px;background:#636366;position:relative;flex-shrink:0;}
+.pm-toggle.on{background:#34c759;}
+.pm-toggle::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.pm-toggle.on::after{transform:translateX(16px);}
+.pm-sel{
+  font-size:11px;padding:4px 22px 4px 8px;border-radius:7px;
+  background:rgba(255,255,255,.08);color:#f5f5f7;border:none;font-family:inherit;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 7px center;
+}
+.pm-tabs{display:flex;justify-content:space-around;padding:6px 8px 10px;border-top:1px solid rgba(255,255,255,.06);}
+.pm-tab{display:flex;flex-direction:column;align-items:center;gap:2px;color:#636366;font-size:10px;padding:5px 10px;border-radius:8px;}
+.pm-tab.on{color:#34c759;}
+.pm-tab svg{width:18px;height:18px;}
+
+/* Preview popup mock */
+.preview-mock{
+  width:340px;background:#1c1c1e;border-radius:20px;
+  overflow:hidden;color:#f5f5f7;
+  box-shadow:0 24px 48px -12px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.08);
+}
+.pv-head{padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center;}
+.pv-tag{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600;}
+.pv-tag.g{background:rgba(52,199,89,.15);color:#34c759;}
+.pv-tag.p{background:rgba(175,82,222,.15);color:#bf5af2;}
+.pv-body{padding:0 16px;}
+.pv-sec{font-size:10px;color:#636366;text-transform:uppercase;letter-spacing:.06em;margin:8px 0 5px;}
+.pv-box{background:rgba(255,255,255,.06);border-radius:10px;padding:10px;font-size:12px;line-height:1.6;color:#a1a1a6;max-height:60px;overflow:hidden;}
+.pv-box.edit{background:rgba(255,255,255,.1);color:#f5f5f7;min-height:56px;max-height:none;}
+.pv-arrow{text-align:center;color:#636366;margin:4px 0;font-size:14px;}
+.pv-foot{display:flex;gap:8px;padding:14px 16px;}
+.pv-btn{flex:1;padding:9px;border-radius:10px;font-size:12px;font-weight:600;border:none;font-family:inherit;cursor:pointer;}
+.pv-btn.cancel{background:rgba(255,255,255,.06);color:#a1a1a6;}
+.pv-btn.ok-g{background:#34c759;color:#fff;}
+.pv-btn.ok-p{background:#bf5af2;color:#fff;}
+
+/* Translate popup */
+.translate-mock{
+  display:flex;gap:16px;align-items:center;justify-content:center;
+}
+.tp-bubble{
+  width:240px;background:rgba(28,28,30,.96);backdrop-filter:blur(14px);
+  border-radius:14px;padding:14px;color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 12px 32px rgba(0,0,0,.4);
+}
+.tp-hd{display:flex;align-items:center;gap:6px;font-size:11px;color:#64d2ff;font-weight:600;margin-bottom:8px;}
+.tp-src{font-size:12px;color:#8e8e93;line-height:1.5;}
+.tp-div{height:1px;background:rgba(255,255,255,.06);margin:8px 0;}
+.tp-dst{font-size:13px;color:#f5f5f7;line-height:1.5;}
+
+/* Skills grid in panel */
+.skill-grid-mock{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.skill-m{padding:10px;background:rgba(255,255,255,.05);border-radius:10px;border:1.5px solid transparent;font-size:11px;}
+.skill-m.on{border-color:#34c759;background:rgba(52,199,89,.1);}
+.skill-m .sk-n{font-weight:600;margin-bottom:3px;color:#f5f5f7;font-size:12px;}
+.skill-m .sk-d{color:#8e8e93;line-height:1.4;}
+
+/* Main window mock */
+.main-mock{
+  width:420px;background:#1c1c1e;border-radius:14px;
+  overflow:hidden;color:#f5f5f7;
+  box-shadow:0 24px 48px -12px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.08);
+}
+.mm-bar{height:34px;background:rgba(255,255,255,.04);display:flex;align-items:center;padding:0 12px;gap:6px;border-bottom:1px solid rgba(255,255,255,.06);}
+.mm-dots{display:flex;gap:5px;}
+.mm-dots span{width:11px;height:11px;border-radius:50%;}
+.mm-dots .r{background:#ff5f57;}.mm-dots .y{background:#febc2e;}.mm-dots .g{background:#28c840;}
+.mm-ti{font-size:11px;color:#8e8e93;flex:1;text-align:center;}
+.mm-body{padding:22px;}
+.mm-logo{
+  width:64px;height:64px;border-radius:16px;
+  background:linear-gradient(135deg,#34c759,#0a84ff);
+  margin:0 auto 12px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(52,199,89,.3);
+}
+.mm-logo svg{width:30px;height:30px;color:#fff;}
+.mm-name{text-align:center;font-size:17px;font-weight:700;}
+.mm-ver{text-align:center;font-size:11px;color:#8e8e93;margin-top:3px;margin-bottom:18px;}
+.mm-sec{font-size:10px;color:#636366;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px;font-weight:600;}
+.mm-btn-row{display:flex;gap:8px;margin-top:6px;}
+.mm-btn{flex:1;padding:9px;border-radius:10px;font-size:12px;font-weight:600;border:none;font-family:inherit;cursor:pointer;}
+.mm-btn.ghost{background:rgba(255,255,255,.06);color:#f5f5f7;}
+.mm-btn.primary{background:#c9623a;color:#fff;}
+.mm-btn.danger{background:rgba(255,69,58,.1);color:#ff453a;}
+
+/* ============ Tech chips ============ */
+.tech-wrap{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:48px;text-align:center;box-shadow:var(--shadow);}
+.tech-chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:24px;}
+.chip{
+  font-size:13px;padding:8px 16px;border-radius:999px;
+  background:var(--bg);color:var(--ink-2);
+  border:1px solid var(--card-border);font-weight:500;
+}
+.chip.hot{background:var(--accent);color:#fff;border-color:transparent;}
+
+/* ============ CTA banner ============ */
+.cta{
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+  border-radius:32px;padding:64px 48px;text-align:center;
+  position:relative;overflow:hidden;margin:80px 0 0;
+  box-shadow:0 30px 60px -20px var(--accent-glow);
+}
+.cta::before{
+  content:"";position:absolute;top:-50%;right:-20%;width:500px;height:500px;
+  background:radial-gradient(circle,rgba(255,255,255,.15),transparent 60%);
+  border-radius:50%;
+}
+.cta::after{
+  content:"";position:absolute;bottom:-30%;left:-10%;width:400px;height:400px;
+  background:radial-gradient(circle,rgba(255,255,255,.1),transparent 60%);
+  border-radius:50%;
+}
+.cta h2{font-size:42px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:12px;position:relative;z-index:1;}
+.cta p{font-size:17px;color:rgba(255,255,255,.85);margin-bottom:32px;position:relative;z-index:1;}
+.cta .btn-white{
+  display:inline-block;
+  font-size:15px;padding:14px 32px;border-radius:14px;
+  background:#fff;color:var(--accent);font-weight:700;
+  box-shadow:0 8px 20px -6px rgba(0,0,0,.2);
+  position:relative;z-index:1;transition:all .15s;
+}
+.cta .btn-white:hover{transform:translateY(-2px);box-shadow:0 12px 28px -6px rgba(0,0,0,.3);}
+
+/* ============ Footer ============ */
+footer{
+  background:var(--ink);color:var(--ink-4);
+  padding:60px 0 40px;margin-top:80px;
+}
+.footer-inner{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;}
+.footer-brand{font-size:18px;font-weight:700;color:#f5f5f7;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.footer-brand .fl{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;}
+.footer-brand .fl svg{width:16px;height:16px;color:#fff;}
+.footer-desc{font-size:13px;line-height:1.7;max-width:300px;}
+.footer-col h4{font-size:13px;color:#f5f5f7;font-weight:600;margin-bottom:16px;}
+.footer-col a{display:block;font-size:13px;color:var(--ink-4);padding:4px 0;transition:color .15s;}
+.footer-col a:hover{color:#fff;}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.08);text-align:center;font-size:12px;}
+
+/* ============ Shot mode ============ */
+body.shot .nav,body.shot footer{display:none!important;}
+body.shot{background:var(--bg);}
+
+/* Small key */
+.k{display:inline-block;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;padding:3px 7px;border-radius:6px;background:var(--bg-2);color:var(--ink);border:1px solid var(--card-border);font-weight:600;margin:0 2px;}
+
+/* misc */
+svg{display:block;}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="container nav-inner">
+    <div class="nav-brand">
+      <span class="nav-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      </span>
+      TerminalVoice
+    </div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#workflow">工作流</a>
+      <a href="#ui">界面</a>
+      <a href="#tech">技术栈</a>
+      <a href="https://github.com/lucan6290/TerminalVoice" target="_blank">GitHub</a>
+    </div>
+    <button class="nav-cta" onclick="window.open('https://github.com/lucan6290/TerminalVoice','_blank')">↓ 免费下载</button>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero bg-grid">
+  <div class="container hero-inner">
+    <div>
+      <div class="hero-eyebrow"><span class="dot"></span>Windows 全局语音输入 · v0.2.0</div>
+      <h1>常驻桌面<br><em>按住就说</em></h1>
+      <p class="hero-sub">一个始终置顶的悬浮小球。按住 Right Alt 说话，松开即上屏到任何输入框。ASR 识别、AI 整理、朗读、翻译，一颗小球，全状态可视。</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="window.open('https://github.com/lucan6290/TerminalVoice','_blank')">↓ 下载 v0.2.0 (Windows)</button>
+        <button class="btn-ghost">📖 查看文档</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">3</div><div class="label">核心动作</div></div>
+        <div class="hero-stat"><div class="num">7</div><div class="label">可视状态</div></div>
+        <div class="hero-stat"><div class="num">0</div><div class="label">后台打扰</div></div>
+      </div>
+    </div>
+    <div class="hero-mockup">
+      <div class="hero-mockup-bg"></div>
+      <div class="mockup-card">
+        <div class="panel-mock">
+          <div class="pm-topbar">
+            <span class="pm-dot" style="background:#34c759;box-shadow:0 0 8px rgba(52,199,89,.5)"></span>
+            <span class="pm-title">TerminalVoice</span>
+          </div>
+          <div class="pm-body">
+            <div class="pm-card">
+              <div class="pm-ic" style="background:rgba(52,199,89,.15);color:#34c759;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="pm-txt"><div class="pm-lbl">就绪</div><div class="pm-sub">按住 Right-Alt 开始说话</div></div>
+            </div>
+            <div class="pm-row"><div><div class="lbl">ASR 服务</div><div class="sub">云端 Whisper API</div></div><select class="pm-sel"><option>云端</option></select></div>
+            <div class="pm-row"><div><div class="lbl">AI 整理</div><div class="sub">识别后自动润色</div></div><div class="pm-toggle on"></div></div>
+            <div class="pm-row"><div><div class="lbl">跳过预览</div><div class="sub">识别后直接上屏</div></div><div class="pm-toggle"></div></div>
+            <div style="text-align:center;font-size:10px;color:#636366;padding:10px 0 4px;line-height:1.6;">按住 <span class="k" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.1);color:#a1a1a6">Right-Alt</span> 说话 · 松开上屏</div>
+          </div>
+          <div class="pm-tabs">
+            <div class="pm-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>技能</div>
+            <div class="pm-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>词典</div>
+            <div class="pm-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>首页</div>
+            <div class="pm-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>帮助</div>
+          </div>
+        </div>
+        <div class="hero-ball-float">
+          <div class="inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STATS STRIP ============ -->
+<section class="container" style="margin-top:-20px">
+  <div class="stats-strip bg-dots">
+    <div class="stat-item"><div class="stat-num">3</div><div class="stat-label">窗口架构</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-item"><div class="stat-num">32</div><div class="stat-label">IPC 命令</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-item"><div class="stat-num">17</div><div class="stat-label">实时事件</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">AI 语音技能</div></div>
+  </div>
+</section>
+
+<!-- ============ FEATURES (3-up) ============ -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">核心能力</div>
+      <h2 class="section-title">三个动作，覆盖日常输入</h2>
+      <p class="section-desc">说、听、译——三个快捷键，覆盖语音输入、文本朗读和翻译口译的全部日常场景。</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon talk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </div>
+        <h3>说 — 语音输入</h3>
+        <p>按住 <span class="kbd">Right Alt</span> 说话，ASR 实时识别，可选 AI 整理润色，松开直接注入到当前光标位置。支持跳过预览直接上屏。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon listen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </div>
+        <h3>听 — TTS 朗读</h3>
+        <p>选中文字后按 <span class="kbd">Alt</span>+<span class="kbd">1</span>，使用 Windows SAPI 语音合成朗读。再按一次停止，适合听长文、校对。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon translate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+        </div>
+        <h3>译 — 翻译 / 口译</h3>
+        <p>选中文本按 <span class="kbd">Alt</span>+<span class="kbd">2</span> 即时翻译；不选中文本直接按键进入口译模式，说中文出外文，并自动朗读译文。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORKFLOW 3 STEPS ============ -->
+<section class="section bg-dots" id="workflow" style="background:var(--bg-2);">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">工作流</div>
+      <h2 class="section-title">松开按键，文字已在光标处</h2>
+      <p class="section-desc">从按下按键到文字上屏，只需要三步，全程不打断你的工作流。</p>
+    </div>
+    <div class="workflow">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>按住说话</h3>
+        <p>在任意应用中按住 Right Alt，小球变为录音状态，开始捕捉你的语音。</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>实时识别</h3>
+        <p>ASR 实时转写文字，开启 AI 整理时自动润色为规范格式，可预览确认。</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>松开上屏</h3>
+        <p>松开按键，文字直接注入当前光标位置——无论是 IDE、微信还是记事本。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ UI SHOWCASES ============ -->
+<section class="section" id="ui">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">界面设计</div>
+      <h2 class="section-title">极简而不简陋</h2>
+      <p class="section-desc">透明无边框、毛玻璃质感、圆角面板——一颗 54px 的小球常驻桌面，不抢焦点，随叫随到。</p>
+    </div>
+
+    <!-- 01 Desktop scene -->
+    <div class="showcase" id="scene-shot">
+      <div class="showcase-text">
+        <div class="showcase-label" data-num="01">桌面形态</div>
+        <h2>悬浮小球 + 极简面板</h2>
+        <p>一个 54×54 的毛玻璃小球常驻桌面边缘，点击展开 388×620 的圆角面板。透明无边框、窗口置顶、不在任务栏显示，不打扰你的工作流。</p>
+        <ul>
+          <li>54px 毛玻璃悬浮球，全状态颜色反馈</li>
+          <li>388×620 圆角面板，深浅主题自动适配</li>
+          <li>系统托盘常驻，全局快捷键一按即用</li>
+          <li>不抢焦点、不占任务栏、无弹窗打扰</li>
+        </ul>
+      </div>
+      <div class="mock-frame">
+        <div class="scene-stand" style="min-height:340px;">
+          <!-- Mini desktop scene -->
+          <div style="position:relative;width:100%;height:260px;">
+            <!-- Wallpaper gradient -->
+            <div style="position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,#3a3a5c,#2a2a3e);overflow:hidden;">
+              <div style="position:absolute;top:20%;left:10%;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(52,199,89,.25),transparent 70%);"></div>
+              <div style="position:absolute;bottom:10%;right:10%;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(10,132,255,.2),transparent 70%);"></div>
+            </div>
+            <!-- Taskbar -->
+            <div style="position:absolute;bottom:0;left:0;right:0;height:32px;background:rgba(30,30,32,.8);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;gap:5px;border-radius:0 0 14px 14px;">
+              <div style="width:22px;height:22px;border-radius:5px;background:rgba(255,255,255,.1);"></div>
+              <div style="width:22px;height:22px;border-radius:5px;background:rgba(52,199,89,.3);position:relative;"><span style="position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);width:8px;height:2px;border-radius:1px;background:#34c759;"></span></div>
+              <div style="width:22px;height:22px;border-radius:5px;background:rgba(255,255,255,.08);"></div>
+            </div>
+            <!-- Ball -->
+            <div style="position:absolute;right:40px;top:30px;">
+              <div class="ball">
+                <div class="ball-ring" style="background:rgba(52,199,89,.2);"></div>
+                <div class="ball-core" style="box-shadow:0 0 0 1.5px #34c759,0 4px 12px rgba(0,0,0,.2);">
+                  <div class="ball-dot" style="background:#34c759;"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Panel mini -->
+            <div style="position:absolute;right:80px;top:18px;transform:scale(.45);transform-origin:top right;">
+              <div class="panel-mock" style="width:340px;">
+                <div class="pm-topbar"><span class="pm-dot" style="background:#34c759;"></span><span class="pm-title">TerminalVoice</span></div>
+                <div class="pm-body">
+                  <div class="pm-card"><div class="pm-ic" style="background:rgba(52,199,89,.15);color:#34c759;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pm-txt"><div class="pm-lbl">就绪</div></div></div>
+                  <div class="pm-row"><div class="lbl">AI 整理</div><div class="pm-toggle on"></div></div>
+                  <div class="pm-row"><div class="lbl">跳过预览</div><div class="pm-toggle"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 Ball states -->
+    <div class="showcase reverse" id="ball-shot">
+      <div class="showcase-text">
+        <div class="showcase-label" data-num="02">全状态可视</div>
+        <h2>一颗小球，七种状态</h2>
+        <p>悬浮球通过颜色、图标和光晕动画实时反映当前状态——空闲、录音、识别、改写、朗读、暂停、出错，一目了然。</p>
+        <ul>
+          <li>绿色：就绪，等待语音输入</li>
+          <li>天蓝脉动：录音中，呼吸光晕提示</li>
+          <li>琥珀旋转：ASR 识别中</li>
+          <li>紫色魔杖：AI 改写润色中</li>
+          <li>青色音波：TTS 朗读中</li>
+          <li>灰色/红色：暂停或出错</li>
+        </ul>
+      </div>
+      <div class="mock-frame">
+        <div class="ball-states" id="ball-grid">
+          <!-- idle -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring" style="background:rgba(52,199,89,.2)"></div><div class="ball-core" style="box-shadow:0 0 0 1.5px #34c759,0 4px 12px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.8);"><div class="ball-dot" style="background:#34c759;"></div></div></div>
+            <div class="nm">空闲</div><div class="ds">绿色圆点<br>等待输入</div>
+          </div>
+          <!-- recording -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring glow" style="background:rgba(90,200,250,.25);--glow:rgba(90,200,250,.5)"></div><div class="ball-core"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5ac8fa" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></div></div>
+            <div class="nm">录音</div><div class="ds">天蓝麦克风<br>呼吸光晕</div>
+          </div>
+          <!-- thinking -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring glow" style="background:rgba(255,180,0,.25);--glow:rgba(255,180,0,.5)"></div><div class="ball-core"><svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffb400" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg></div></div>
+            <div class="nm">识别</div><div class="ds">琥珀加载<br>旋转等待</div>
+          </div>
+          <!-- rewrite -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring glow" style="background:rgba(175,82,222,.25);--glow:rgba(175,82,222,.5)"></div><div class="ball-core"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bf5af2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 3 3-9 9H6v-3z"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></div></div>
+            <div class="nm">改写</div><div class="ds">紫色魔杖<br>AI 润色</div>
+          </div>
+          <!-- tts -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring glow" style="background:rgba(100,210,255,.25);--glow:rgba(100,210,255,.5)"></div><div class="ball-core"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64d2ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></div></div>
+            <div class="nm">朗读</div><div class="ds">青色音量<br>TTS 播放</div>
+          </div>
+          <!-- disabled -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring" style="background:rgba(120,120,128,.18)"></div><div class="ball-core"><div class="ball-dot" style="background:#8e8e93;width:10px;height:10px;"></div></div></div>
+            <div class="nm">暂停</div><div class="ds">灰色圆点<br>不响应热键</div>
+          </div>
+          <!-- error -->
+          <div class="ball-state-cell">
+            <div class="ball"><div class="ball-ring glow" style="background:rgba(255,69,58,.25);--glow:rgba(255,69,58,.5)"></div><div class="ball-core"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff453a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div></div>
+            <div class="nm">出错</div><div class="ds">红色感叹号<br>点击查看</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 Preview popup -->
+    <div class="showcase" id="preview-shot">
+      <div class="showcase-text">
+        <div class="showcase-label" data-num="03">预览确认</div>
+        <h2>识别原文 → AI 整理</h2>
+        <p>识别完成后弹出预览窗口，原文（绿色）与整理结果（紫色）上下对照。Ctrl+Enter 确认上屏，Esc 取消；也可以开启"跳过预览"直接上屏。</p>
+        <ul>
+          <li>双模式预览：识别原文（绿）+ AI 整理（紫）</li>
+          <li>可编辑整理结果，确认前任意修改</li>
+          <li>快捷键 Ctrl+Enter / Esc 高效操作</li>
+          <li>一键开关"跳过预览"，追求极致效率</li>
+        </ul>
+      </div>
+      <div class="mock-frame">
+        <div class="scene-stand" style="padding:36px 24px;">
+          <div class="preview-mock">
+            <div style="height:40px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);">
+              <span class="pm-dot" style="background:#bf5af2;box-shadow:0 0 8px rgba(191,90,242,.5)"></span>
+              <span class="pm-title" style="font-size:13px;">确认语音输入</span>
+            </div>
+            <div class="pv-head"><span class="pv-tag p">AI 整理</span></div>
+            <div class="pv-body">
+              <div class="pv-sec">识别原文</div>
+              <div class="pv-box">明天下午三点开产品周会记得准备好上周数据</div>
+              <div class="pv-arrow">↓</div>
+              <div class="pv-sec">整理结果</div>
+              <div class="pv-box edit">明天下午 3 点召开产品周会，请提前准备：
+1. 上周数据复盘
+2. 本周迭代计划</div>
+            </div>
+            <div class="pv-foot">
+              <button class="pv-btn cancel">取消 (Esc)</button>
+              <button class="pv-btn ok-p">确认上屏 (⌘↵)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 Skills -->
+    <div class="showcase reverse" id="skills-shot">
+      <div class="showcase-text">
+        <div class="showcase-label" data-num="04">AI 语音技能</div>
+        <h2>预设技能，说话即生效</h2>
+        <p>内置 4 种语音技能：英文输出、清单模式、汇报格式、听写模板。选中后说话即按该技能的 Prompt 自动处理，无需反复说明格式要求。</p>
+        <ul>
+          <li>🌍 英文输出：中文说出，自动翻译为地道英文</li>
+          <li>📋 清单模式：口语化描述自动转为结构化要点</li>
+          <li>📊 汇报格式：口语内容润色为正式书面汇报</li>
+          <li>✏️ 听写模板：仅添加标点、断句，不改动原意</li>
+        </ul>
+      </div>
+      <div class="mock-frame">
+        <div class="scene-stand" style="padding:36px 24px;">
+          <div class="panel-mock">
+            <div class="pm-topbar">
+              <span class="pm-dot" style="background:#34c759;"></span>
+              <span class="pm-title">语音技能</span>
+            </div>
+            <div class="pm-body">
+              <div style="font-size:11px;font-weight:600;color:#f5f5f7;margin-bottom:8px;">说话时自动应用：</div>
+              <div class="skill-grid-mock">
+                <div class="skill-m"><div class="sk-n">🌍 英文输出</div><div class="sk-d">翻译为英文输出</div></div>
+                <div class="skill-m on"><div class="sk-n">📋 清单模式</div><div class="sk-d">结构化清单要点</div></div>
+                <div class="skill-m"><div class="sk-n">📊 汇报格式</div><div class="sk-d">正式书面汇报</div></div>
+                <div class="skill-m"><div class="sk-n">✏️ 听写模板</div><div class="sk-d">仅加标点不改意</div></div>
+              </div>
+            </div>
+            <div class="pm-tabs">
+              <div class="pm-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>技能</div>
+              <div class="pm-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>词典</div>
+              <div class="pm-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>首页</div>
+              <div class="pm-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>帮助</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 Translate -->
+    <div class="showcase" id="translate-shot">
+      <div class="showcase-text">
+        <div class="showcase-label" data-num="05">翻译 / 口译</div>
+        <h2>一键翻译，语音双语</h2>
+        <p>选中文本按 Alt+2 即时弹出翻译浮窗；未选中文本时直接进入口译模式，说中文即实时翻译为外文，并自动朗读译文。</p>
+        <ul>
+          <li>文本翻译：选中即译，浮窗紧贴光标</li>
+          <li>语音口译：按住说话，自动翻译+TTS 朗读</li>
+          <li>支持自定义目标语言与翻译服务</li>
+          <li>浮窗毛玻璃质感，不打断阅读</li>
+        </ul>
+      </div>
+      <div class="mock-frame">
+        <div class="scene-stand" style="padding:48px 24px;">
+          <div class="translate-mock">
+            <div class="ball" style="flex-shrink:0;">
+              <div class="ball-ring glow" style="background:rgba(100,210,255,.25);--glow:rgba(100,210,255,.5)"></div>
+              <div class="ball-core">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64d2ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+              </div>
+            </div>
+            <div class="tp-bubble">
+              <div class="tp-hd">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                翻译结果 · 中 → 英
+              </div>
+              <div class="tp-src">今天天气怎么样？适合出去散步吗？</div>
+              <div class="tp-div"></div>
+              <div class="tp-dst">How's the weather today? Is it nice for a walk?</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 Main settings window -->
+    <div class="showcase reverse" id="main-shot">
+      <div class="showcase-text">
+        <div class="showcase-label" data-num="06">偏好设置</div>
+        <h2>完整设置，开箱即用</h2>
+        <p>主设置窗口提供开机自启、深色模式、服务配置、数据备份、自定义快捷键、模型管理等完整选项。托盘右键可快速打开，也可直接双击小球。</p>
+        <ul>
+          <li>开机自启、单实例、自动更新</li>
+          <li>ASR/LLM/TTS 服务配置，支持云端+离线</li>
+          <li>数据导入导出，SQLite 本地存储</li>
+          <li>自定义全局快捷键，即时生效</li>
+        </ul>
+      </div>
+      <div class="mock-frame">
+        <div class="scene-stand" style="padding:36px 24px;">
+          <div class="main-mock">
+            <div class="mm-bar">
+              <div class="mm-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <div class="mm-ti">TerminalVoice 设置</div>
+              <div style="width:42px"></div>
+            </div>
+            <div class="mm-body">
+              <div class="mm-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              </div>
+              <div class="mm-name">TerminalVoice</div>
+              <div class="mm-ver">v0.2.0 · Tauri v2</div>
+              <div class="mm-sec">偏好</div>
+              <div class="pm-row" style="background:transparent;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0;"><div class="lbl" style="font-size:12px;">开机自启</div><div class="pm-toggle on"></div></div>
+              <div class="pm-row" style="background:transparent;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0;"><div class="lbl" style="font-size:12px;">深色模式</div><div class="pm-toggle on"></div></div>
+              <div class="pm-row" style="background:transparent;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0;"><div class="lbl" style="font-size:12px;">单实例运行</div><div class="pm-toggle on"></div></div>
+              <div class="mm-sec">数据管理</div>
+              <div class="mm-btn-row"><button class="mm-btn ghost">导出备份</button><button class="mm-btn ghost">导入恢复</button></div>
+              <div class="mm-sec">关于</div>
+              <div class="mm-btn-row"><button class="mm-btn primary">检查更新</button><button class="mm-btn danger">退出</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ TECH STACK ============ -->
+<section class="section" id="tech" style="padding-top:0;">
+  <div class="container">
+    <div class="tech-wrap bg-dots">
+      <div class="section-eyebrow" style="margin-bottom:12px;">技术栈</div>
+      <h2 style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;">现代原生，轻量快速</h2>
+      <p style="color:var(--ink-2);font-size:15px;max-width:520px;margin:0 auto;">基于 Tauri v2 构建，Rust 后端 + React 前端，安装包小巧、内存占用低、启动毫秒级。</p>
+      <div class="tech-chips">
+        <span class="chip hot">Tauri v2</span>
+        <span class="chip hot">Rust 1.85+</span>
+        <span class="chip">React 19</span>
+        <span class="chip">TypeScript 5.7</span>
+        <span class="chip">Vite 8</span>
+        <span class="chip">Tailwind CSS v4</span>
+        <span class="chip">Zustand 5</span>
+        <span class="chip">SQLite (WAL)</span>
+        <span class="chip">SSE Streaming</span>
+        <span class="chip">Windows SAPI</span>
+        <span class="chip">WebView2</span>
+        <span class="chip">GPL-3.0</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="container cta-banner-wrap">
+  <div class="cta">
+    <h2>开始用声音解放双手</h2>
+    <p>免费、开源、Windows 原生。下载即用，无需注册登录。</p>
+    <a class="btn-white" href="https://github.com/lucan6290/TerminalVoice" target="_blank">
+      ↓ 从 GitHub 下载 v0.2.0
+    </a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand">
+          <span class="fl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </span>
+          TerminalVoice
+        </div>
+        <p class="footer-desc">Windows 平台常驻全局语音输入桌面工具。悬浮小球 + 极简面板，按住就说，松开即上屏。</p>
+      </div>
+      <div class="footer-col">
+        <h4>产品</h4>
+        <a href="#features">功能介绍</a>
+        <a href="#ui">界面预览</a>
+        <a href="#workflow">使用流程</a>
+        <a href="#tech">技术栈</a>
+      </div>
+      <div class="footer-col">
+        <h4>资源</h4>
+        <a href="https://github.com/lucan6290/TerminalVoice" target="_blank">GitHub 仓库</a>
+        <a href="#">使用文档</a>
+        <a href="#">更新日志</a>
+        <a href="#">问题反馈</a>
+      </div>
+      <div class="footer-col">
+        <h4>社区</h4>
+        <a href="#">Issues</a>
+        <a href="#">Discussions</a>
+        <a href="#">贡献指南</a>
+        <a href="#">许可证 (GPL-3.0)</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2026 TerminalVoice · Built with Tauri v2 + React 19 + Rust · GPL-3.0 License
+    </div>
+  </div>
+</footer>
+
+<script>
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const id=a.getAttribute('href');
+    if(id.length>1){
+      e.preventDefault();
+      const el=document.querySelector(id);
+      if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  });
+});
+
+// Shot mode: ?shot=hero|scene|ball|preview|skills|translate|main|tech|cta|full
+(function(){
+  const p=new URLSearchParams(location.search);
+  const shot=p.get('shot');
+  if(!shot)return;
+  document.body.classList.add('shot');
+  const ids={
+    hero:'.hero',
+    scene:'#scene-shot',
+    ball:'#ball-shot',
+    preview:'#preview-shot',
+    skills:'#skills-shot',
+    translate:'#translate-shot',
+    main:'#main-shot',
+    tech:'#tech',
+    cta:'.cta-banner-wrap'
+  };
+  // Hide all sections
+  document.querySelectorAll('section,.showcase').forEach(s=>s.style.display='none');
+  document.querySelector('.stats-strip').parentElement.style.display='none';
+  const target=ids[shot];
+  if(!target||shot==='full'){
+    // full: show everything except nav/footer (which shot class hides)
+    document.querySelectorAll('section,.showcase').forEach(s=>s.style.display='');
+    document.querySelector('.stats-strip').parentElement.style.display='';
+    return;
+  }
+  const el=document.querySelector(target);
+  if(el){
+    el.style.display='';
+    // Walk up to display all parents
+    let p=el.parentElement;
+    while(p&&p!==document.body){
+      if(p.tagName==='SECTION'||p.classList.contains('container'))p.style.display='';
+      p=p.parentElement;
+    }
+    // Remove gap/padding for cleaner shots
+    el.style.marginBottom='0';
+    if(el.classList.contains('showcase'))el.style.gap='40px';
+    // Hide section header if inside a section
+    const sec=el.closest('section');
+    if(sec&&sec.querySelector('.section-header'))sec.querySelector('.section-header').style.display='none';
+  }
+  window.scrollTo(0,0);
+})();
+</script>
+
+</body>
+</html>
