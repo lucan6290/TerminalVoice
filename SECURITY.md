@@ -18,7 +18,7 @@
 请通过 GitHub Security Advisories 私密报告：
 
 - **GitHub Security Advisories（推荐）**：通过仓库的 Security → Advisories 页面创建私有报告
-- 仓库地址：`https://github.com/OWNER/TerminalVoice/security/advisories/new`（创建仓库后替换 `OWNER`）
+- 仓库地址：`https://github.com/lucan6290/TerminalVoice/security/advisories/new`
 
 ### 报告应包含的信息
 

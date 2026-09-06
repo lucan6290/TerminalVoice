@@ -18,7 +18,7 @@ If you discover a security vulnerability (such as arbitrary file read/write, pat
 Report privately through GitHub Security Advisories:
 
 - **GitHub Security Advisories (recommended)**: Create a private report via the repository's Security → Advisories page
-- Repository URL: `https://github.com/OWNER/TerminalVoice/security/advisories/new` (replace `OWNER` after creating the repository)
+- Repository URL: `https://github.com/lucan6290/TerminalVoice/security/advisories/new`
 
 ### What to include in your report
 

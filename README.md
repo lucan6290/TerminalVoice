@@ -7,7 +7,7 @@
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![Rust](https://img.shields.io/badge/Rust-1.85+-dea584)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
 ---
 
@@ -25,11 +25,12 @@ TerminalVoice 是一款 Windows 桌面端的全局语音输入工具。以一个
 
 ## 当前状态
 
-项目处于**从 MVP 骨架向三窗口浮球方案演进**阶段：
+项目处于 **v0.1.0 MVP 可用**阶段，核心语音管线已打通：
 
-- ✅ 前端三窗口 UI 已基本完成（悬浮球 + 面板 + 设计系统），可在浏览器中预览
-- ✅ 后端骨架已搭好（状态机、SQLite、文本预处理、配置 CRUD、IPC 桥接）
-- ⚠️ 录音、ASR、文本注入、热键、托盘等核心功能尚未接入（Cargo.toml 已声明依赖待实现）
+- ✅ 前端三窗口 UI 完整（悬浮球 + 面板 + 主设置窗口）+ 设计系统（Tailwind v4）
+- ✅ 后端核心功能已实现：全局热键、麦克风录音（cpal）、云端 ASR、LLM 流式改写/翻译/技能、TTS 朗读、文本注入（enigo）、系统托盘、自动更新、DPAPI 密钥加密、SQLite 持久化
+- ✅ 29 个 IPC 命令 + 15 个事件已联通前后端
+- 🟡 离线 ASR（Whisper）推理引擎骨架已搭，尚未接入实际模型
 - 📋 详见 [docs/CODE_MAP.md](docs/CODE_MAP.md) 了解每个模块的完整状态
 
 ---
@@ -104,11 +105,12 @@ pnpm tauri build
 | 桌面框架 | Tauri v2 |
 | 语言 | Rust 2021 edition |
 | 数据库 | SQLite（rusqlite 0.40 bundled，WAL 模式） |
-| 音频采集 | cpal 0.16（待接入） |
-| 文本注入 | enigo 0.6 + arboard 3（待接入） |
-| 全局热键 | rdev（待接入，计划迁移 tauri-plugin-global-shortcut） |
-| HTTP | reqwest（待接入） |
-| 加密 | Windows DPAPI（待接入） |
+| 音频采集 | cpal 0.16 |
+| 文本注入 | enigo 0.6 + arboard 3（剪贴板回退） |
+| 全局热键 | rdev（运行时可配置，支持热重载） |
+| HTTP | reqwest（云端 ASR / LLM SSE 流式） |
+| TTS | Windows SAPI（COM） |
+| 加密 | Windows DPAPI（API Key 加密存储） |
 
 ---
 
@@ -162,14 +164,14 @@ src/                    # 前端 React + TS
 │   └── panel/          # 面板（含 5 个 Tab）
 ├── components/ui/      # 原子 UI 组件
 ├── stores/             # Zustand 状态管理
-├── lib/                # invoke 封装、类型、工具
-└── pages/              # 旧版页面（待迁移）
+└── lib/                # invoke 封装、类型、工具、i18n
 
 src-tauri/              # 后端 Rust
 ├── src/
 │   ├── state.rs        # 5 状态机
-│   ├── commands/       # Tauri IPC 命令
-│   └── services/       # 业务服务（DB、预处理）
+│   ├── commands/       # Tauri IPC 命令（29 个）
+│   ├── services/       # 业务服务（DB/录音/ASR/LLM/管线/热键/注入/翻译/TTS/...）
+│   └── tray.rs         # 系统托盘
 └── tauri.conf.json     # 窗口/构建/权限配置
 
 docs/                   # 项目文档（见下方）
@@ -193,16 +195,25 @@ docs/                   # 项目文档（见下方）
 
 | 目录 | 说明 |
 | :--- | :--- |
-| [docs/v0.2/](docs/v0.2/) | **当前版本（v0.2 浮球方案）** 规划文档：总计划、UI 需求、复用调研 |
-| [docs/v0.1/](docs/v0.1/) | **v0.1（V1.1 单窗口方案）** 历史归档：PRD、架构、实施方案、11 份计划 |
+| [docs/v0.3/](docs/v0.3/) | **v0.3（使用统计）** 规划文档：计划、数据模型、复用调研 |
+| [docs/v0.2/](docs/v0.2/) | **v0.2（浮球方案）** 规划文档：总计划、UI 需求、复用调研 |
+| [docs/v0.1/](docs/v0.1/) | **v0.1（V1.1 单窗口方案）** 历史归档：PRD、架构、实施方案 |
+
+---
+
+## 链接
+
+- GitHub：https://github.com/lucan6290/TerminalVoice
+- 问题反馈：[Issues](https://github.com/lucan6290/TerminalVoice/issues)
+- 安全漏洞：[Security Advisories](https://github.com/lucan6290/TerminalVoice/security/advisories/new)
 
 ---
 
 ## Git 工作流
 
-- 仅保留 `main` 主分支
-- 默认本地提交，不推送远程
-- 未经明确要求不执行 `git push`
+- 主分支 `main`，功能分支从 main 分出
+- 提交信息遵循 Conventional Commits 中文规范（见 [CONTRIBUTING.md](CONTRIBUTING.md)）
+- 默认本地提交，推送远程需明确确认
 
 详见 [CLAUDE.md](CLAUDE.md)。
 
@@ -210,4 +221,4 @@ docs/                   # 项目文档（见下方）
 
 ## License
 
-MIT
+[GPL-3.0](LICENSE)

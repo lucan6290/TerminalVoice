@@ -252,9 +252,10 @@ TerminalVoice/
 | [docs/IPC_API.md](docs/IPC_API.md) | IPC 命令、事件、类型契约 | 涉及前后端通信时 |
 | [docs/STATE_MACHINE.md](docs/STATE_MACHINE.md) | 状态机定义、转移规则、测试 | 修改 state.rs 或状态相关逻辑时 |
 | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | 颜色/圆角/字体/阴影 tokens + 组件规范 | 写 UI 组件时 |
-| [docs/v0.2/](docs/v0.2/) | **当前版本规划**（浮球方案 PRD/计划/调研） | 开发 v0.2 新功能时 |
+| [docs/v0.3/](docs/v0.3/) | v0.3（使用统计）规划文档 | 开发 v0.3 新功能时 |
+| [docs/v0.2/](docs/v0.2/) | v0.2（浮球方案）规划文档 | 参考浮球方案设计决策时 |
 | [docs/v0.1/](docs/v0.1/) | **历史版本文档**（V1.1 单窗口方案，已归档） | 参考历史设计决策时 |
-| [CLAUDE.md](CLAUDE.md) | Git 工作流（main 分支、本地提交、不 push） | 提交代码前 |
+| [CLAUDE.md](CLAUDE.md) | Git 工作流与提交规范 | 提交代码前 |
 
 ---
 
@@ -285,7 +286,7 @@ cargo test
 
 ## 八、Git 规则（来自 CLAUDE.md）
 
-- 只保留 `main` 主分支，不使用长期开发分支
-- 每次修改直接在工作区完成并本地提交
-- **默认只做本地提交，不推送远程**
-- 未经用户明确要求，不执行 `git push`、创建远程仓库或配置远程地址
+- 主分支 `main`，功能通过 PR 合入
+- 每次修改完成后本地提交，提交信息遵循 Conventional Commits 中文规范
+- 远程仓库：`https://github.com/lucan6290/TerminalVoice`（`origin`）
+- 未经用户明确要求，不执行 `git push --force`、删除远程分支或改写历史

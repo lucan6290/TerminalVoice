@@ -25,7 +25,7 @@
 - 结构化日志（tracing + tracing-subscriber，文件输出）
 - CI/CD：GitHub Actions PR 检查 + Release 自动构建签名发布
 
-[Unreleased]: https://github.com/OWNER/TerminalVoice/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/TerminalVoice/releases/tag/v0.1.0
+[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/lucan6290/TerminalVoice/releases/tag/v0.1.0
 
 > 规则：`## [Unreleased]` 永远保留在顶部作为占位；新版本条目插在它下方。某分类无内容则省略该分类标题。每条 `- ` 开头、面向用户的中文描述、结尾不加标点、不含内部实现细节。compare 链接为可选，指向相邻版本 diff。
