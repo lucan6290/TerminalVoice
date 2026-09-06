@@ -1,5 +1,6 @@
 import { Mic, LoaderCircle, Volume2, Sparkles, Languages, Square } from "lucide-react";
 import { usePanelStore } from "../../stores/appStore";
+import { useT } from "../../lib/i18n";
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -12,6 +13,7 @@ function formatDuration(seconds: number): string {
  * 优先级：Recording > Recognizing > TTS speaking > LLM streaming > Translating > Idle(null)
  */
 export function StateView() {
+  const t = useT();
   const appStatus = usePanelStore((s) => s.appStatus);
   const recordingDuration = usePanelStore((s) => s.recordingDuration);
   const ttsSpeaking = usePanelStore((s) => s.ttsSpeaking);
@@ -26,7 +28,7 @@ export function StateView() {
           <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 animate-pulse-dot" />
           <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
         </span>
-        <span className="text-[14px] text-neutral-100">录音中</span>
+        <span className="text-[14px] text-neutral-100">{t("state.recording")}</span>
         <span className="ml-auto text-[14px] text-neutral-400 tabular-nums">
           {formatDuration(recordingDuration)}
         </span>
@@ -38,7 +40,7 @@ export function StateView() {
     return (
       <div className="mb-3 flex items-center gap-3 rounded-xl bg-neutral-800 border border-white/5 px-4 py-3 animate-fade-in">
         <LoaderCircle className="w-4 h-4 text-neutral-400 animate-spin shrink-0" />
-        <span className="text-[14px] text-neutral-100">识别中...</span>
+        <span className="text-[14px] text-neutral-100">{t("state.recognizing")}</span>
       </div>
     );
   }
@@ -47,12 +49,12 @@ export function StateView() {
     return (
       <div className="mb-3 flex items-center gap-3 rounded-xl bg-neutral-800 border border-white/5 px-4 py-3 animate-fade-in">
         <Volume2 className="w-4 h-4 text-green-400 shrink-0" />
-        <span className="text-[14px] text-neutral-100">朗读中...</span>
+        <span className="text-[14px] text-neutral-100">{t("state.tts")}</span>
         <button
           type="button"
           onClick={() => setTtsSpeaking(false)}
-          aria-label="停止朗读"
-          data-tip="停止朗读"
+          aria-label={t("state.tts.stop")}
+          data-tip={t("state.tts.stop")}
           className="ml-auto w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-neutral-200 hover:bg-white/5 transition-colors"
         >
           <Square className="w-3.5 h-3.5" fill="currentColor" />
@@ -66,7 +68,7 @@ export function StateView() {
       <div className="mb-3 flex items-start gap-3 rounded-xl bg-neutral-800 border border-white/5 px-4 py-3 animate-fade-in">
         <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
-          <span className="text-[14px] text-neutral-100">AI整理中...</span>
+          <span className="text-[14px] text-neutral-100">{t("state.llmStreaming")}</span>
           {llmStreamingText && (
             <p className="mt-1 text-[12px] text-neutral-400 leading-relaxed line-clamp-3 break-words">
               {llmStreamingText}
@@ -82,7 +84,7 @@ export function StateView() {
       <div className="mb-3 flex items-start gap-3 rounded-xl bg-neutral-800 border border-white/5 px-4 py-3 animate-fade-in">
         <Languages className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
-          <span className="text-[14px] text-neutral-100">翻译结果</span>
+          <span className="text-[14px] text-neutral-100">{t("state.translate")}</span>
           <p className="mt-1 text-[12px] text-neutral-400 leading-relaxed line-clamp-3 break-words">
             {translateResult.translatedText}
           </p>

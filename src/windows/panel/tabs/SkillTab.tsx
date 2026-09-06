@@ -1,17 +1,33 @@
 import { ArrowLeft, Wand2, FileText, Sparkles, List, Type, Languages, ListChecks, Presentation } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import { useT } from "../../../lib/i18n";
 import { usePanelStore } from "../../../stores/appStore";
 import { ToggleSwitch } from "../../../components/ui/ToggleSwitch";
 import type { TextProcessMode } from "../../../lib/types";
 
-const MODES: { key: TextProcessMode; label: string; desc: string; icon: typeof Wand2 }[] = [
-  { key: "off",       label: "原文直出",   desc: "不进行AI整理，输出识别原文",       icon: Type },
-  { key: "proofread", label: "原意校对",   desc: "修正错别字和标点，保留原意",       icon: FileText },
-  { key: "polish",    label: "自然润色",   desc: "优化表达流畅度，口语转书面",       icon: Wand2 },
-  { key: "structure", label: "结构整理",   desc: "自动分段、加标点、整理要点",       icon: List },
+const MODES: { key: TextProcessMode; icon: typeof Wand2 }[] = [
+  { key: "off",       icon: Type },
+  { key: "proofread", icon: FileText },
+  { key: "polish",    icon: Wand2 },
+  { key: "structure", icon: List },
 ];
 
+const MODE_LABEL_KEYS: Record<TextProcessMode, string> = {
+  off: "tab.skill.mode.off",
+  proofread: "tab.skill.mode.proofread",
+  polish: "tab.skill.mode.polish",
+  structure: "tab.skill.mode.structure",
+};
+
+const MODE_DESC_KEYS: Record<TextProcessMode, string> = {
+  off: "tab.skill.mode.offDesc",
+  proofread: "tab.skill.mode.proofreadDesc",
+  polish: "tab.skill.mode.polishDesc",
+  structure: "tab.skill.mode.structureDesc",
+};
+
 export function SkillTab() {
+  const t = useT();
   const service = usePanelStore((s) => s.service);
   const setServiceConfig = usePanelStore((s) => s.setServiceConfig);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
@@ -29,11 +45,11 @@ export function SkillTab() {
         >
           <ArrowLeft className="w-[18px] h-[18px]" strokeWidth={2} />
         </button>
-        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">语音技能</h2>
+        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.skill.title")}</h2>
       </div>
 
       {/* AI 整理模式 */}
-      <p className="text-[12px] text-neutral-500 mb-2 px-1">AI 文字整理模式</p>
+      <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.skill.modeSectionTitle")}</p>
       <div className="space-y-2 mb-4">
         {MODES.map((m) => {
           const active = service.textMode === m.key;
@@ -55,9 +71,9 @@ export function SkillTab() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className={cn("text-[13px] font-medium", active ? "text-green-400" : "text-neutral-100")}>
-                  {m.label}
+                  {t(MODE_LABEL_KEYS[m.key])}
                 </div>
-                <div className="text-[11px] text-neutral-500 leading-tight mt-0.5">{m.desc}</div>
+                <div className="text-[11px] text-neutral-500 leading-tight mt-0.5">{t(MODE_DESC_KEYS[m.key])}</div>
               </div>
               {active && <Sparkles className="w-4 h-4 text-green-400 shrink-0" />}
             </button>
@@ -66,7 +82,7 @@ export function SkillTab() {
       </div>
 
       {/* 语音输入技能 */}
-      <p className="text-[12px] text-neutral-500 mb-2 px-1 mt-2">语音输入模板</p>
+      <p className="text-[12px] text-neutral-500 mb-2 px-1 mt-2">{t("tab.skill.templateSectionTitle")}</p>
       <div className="space-y-2 mb-4">
         {skills.map((skill) => {
           const active = activeSkillId === skill.id;
@@ -101,8 +117,8 @@ export function SkillTab() {
       {/* 免提模式开关 */}
       <div className="flex items-center justify-between px-1 py-2 mb-3">
         <div>
-          <div className="text-[14px] text-neutral-100">免提模式</div>
-          <div className="text-[11px] text-neutral-500 mt-0.5">按一次开始录音，再按一次提交；松开不结束</div>
+          <div className="text-[14px] text-neutral-100">{t("tab.skill.handsFree")}</div>
+          <div className="text-[11px] text-neutral-500 mt-0.5">{t("tab.skill.handsFreeDesc")}</div>
         </div>
         <ToggleSwitch
           checked={service.handsFree}
@@ -111,7 +127,7 @@ export function SkillTab() {
       </div>
 
       <p className="text-[11px] text-neutral-600 px-1 leading-relaxed mt-auto">
-        提示：AI 整理需要配置 LLM 服务，前往服务配置页面设置 API Key。
+        {t("tab.skill.hint")}
       </p>
     </div>
   );

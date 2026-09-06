@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { usePanelStore } from "../../stores/appStore";
 import { showToast } from "../../stores/toastStore";
 import { cn } from "../../lib/cn";
+import { useT } from "../../lib/i18n";
 
 /**
  * 更新弹窗（接入 tauri-plugin-updater 真实更新流程）
@@ -11,6 +12,7 @@ import { cn } from "../../lib/cn";
  * - 适配深浅主题（通过 appStore.dark 切换）
  */
 export function UpdateModal() {
+  const t = useT();
   const dark = usePanelStore((s) => s.dark);
   const updateInfo = usePanelStore((s) => s.updateInfo);
   const showUpdateModal = usePanelStore((s) => s.showUpdateModal);
@@ -42,11 +44,11 @@ export function UpdateModal() {
           const { relaunch } = await import("@tauri-apps/plugin-process");
           await relaunch();
         } else {
-          showToast("浏览器模式：重启已模拟", "info");
+          showToast(t("update.browserSimulated"), "info");
           setShowUpdateModal(false);
         }
       } catch {
-        showToast("重启失败，请手动重启应用", "error");
+        showToast(t("update.restartFail"), "error");
       }
       return;
     }
@@ -76,10 +78,10 @@ export function UpdateModal() {
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h2 className="text-[18px] font-semibold" style={{ color: "var(--color-fg-primary)" }}>
-            v{updateInfo.version} 版本就绪
+            {t("update.title", { version: updateInfo.version })}
           </h2>
           <span className="text-[12px]" style={{ color: "var(--color-fg-tertiary)" }}>
-            当前 v{updateInfo.currentVersion}
+            {t("update.currentVersion", { version: updateInfo.currentVersion })}
           </span>
         </div>
 
@@ -101,7 +103,7 @@ export function UpdateModal() {
               />
             </div>
             <p className="text-center text-[12px] mt-2 tabular-nums" style={{ color: "var(--color-fg-tertiary)" }}>
-              {updateDownloaded ? "下载完成，请重启以完成安装" : `${updateProgress}%`}
+              {updateDownloaded ? t("update.downloadedHint") : `${updateProgress}%`}
             </p>
           </div>
         )}
@@ -119,7 +121,7 @@ export function UpdateModal() {
             onMouseEnter={(e) => !updateDownloading && (e.currentTarget.style.color = "var(--color-fg-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-fg-secondary)")}
           >
-            {updateDownloaded ? "稍后重启" : "取消"}
+            {updateDownloaded ? t("update.later") : t("common.cancel")}
           </button>
           <button
             onClick={handleUpdate}
@@ -132,7 +134,11 @@ export function UpdateModal() {
             {updateDownloading && (
               <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             )}
-            {updateDownloaded ? "立即重启" : updateDownloading ? "下载中" : "下载更新"}
+            {updateDownloaded
+              ? t("update.restartNow")
+              : updateDownloading
+                ? t("update.downloading")
+                : t("update.downloadBtn")}
           </button>
         </div>
       </div>

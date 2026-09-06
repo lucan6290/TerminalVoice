@@ -33,6 +33,7 @@ import {
 import { usePanelStore } from "./stores/appStore";
 import { showToast, type ToastLevel } from "./stores/toastStore";
 import { cn } from "./lib/cn";
+import { useT } from "./lib/i18n";
 import { BallWindow } from "./windows/ball/BallWindow";
 import { PanelWindow } from "./windows/panel/PanelWindow";
 import { ToastContainer } from "./components/ui/Toast";
@@ -256,6 +257,7 @@ export default function App() {
 }
 
 function MainWindow() {
+  const t = useT();
   const dark = usePanelStore((s) => s.dark);
   const toggleDark = usePanelStore((s) => s.toggleDark);
   const autoStart = usePanelStore((s) => s.autoStart);
@@ -271,27 +273,27 @@ function MainWindow() {
         "px-6 py-4 border-b sticky top-0 z-10",
         dark ? "border-white/5 bg-neutral-900/95 backdrop-blur" : "border-black/5 bg-neutral-100/95 backdrop-blur"
       )}>
-        <h1 className="text-[18px] font-semibold">TerminalVoice 设置</h1>
+        <h1 className="text-[18px] font-semibold">{t("app.main.title")}</h1>
       </header>
       <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
         {/* 通用设置 */}
         <section>
-          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>通用设置</h2>
+          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>{t("app.main.section.preferences")}</h2>
           <div className={cn(
             "rounded-xl divide-y",
             dark ? "bg-neutral-800 divide-white/5" : "bg-white divide-black/5"
           )}>
             <div className="flex items-center justify-between px-4 py-3">
               <div>
-                <div className="text-[13px]">开机自启</div>
-                <div className={cn("text-[11px] mt-0.5", dark ? "text-neutral-500" : "text-neutral-400")}>系统启动时自动运行</div>
+                <div className="text-[13px]">{t("app.main.autostart.label")}</div>
+                <div className={cn("text-[11px] mt-0.5", dark ? "text-neutral-500" : "text-neutral-400")}>{t("app.main.autostart.desc")}</div>
               </div>
               <ToggleSwitch checked={autoStart} onChange={setAutoStart} />
             </div>
             <div className="flex items-center justify-between px-4 py-3">
               <div>
-                <div className="text-[13px]">深色模式</div>
-                <div className={cn("text-[11px] mt-0.5", dark ? "text-neutral-500" : "text-neutral-400")}>切换界面主题</div>
+                <div className="text-[13px]">{t("app.main.dark.label")}</div>
+                <div className={cn("text-[11px] mt-0.5", dark ? "text-neutral-500" : "text-neutral-400")}>{t("app.main.dark.desc")}</div>
               </div>
               <ToggleSwitch checked={dark} onChange={toggleDark} />
             </div>
@@ -300,7 +302,7 @@ function MainWindow() {
 
         {/* 服务状态 */}
         <section>
-          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>服务状态</h2>
+          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>{t("app.main.section.service")}</h2>
           <div className={cn(
             "rounded-xl px-4 py-3 space-y-1.5",
             dark ? "bg-neutral-800" : "bg-white"
@@ -311,10 +313,10 @@ function MainWindow() {
             </div>
             <div className="flex items-center justify-between text-[12px]">
               <span className={dark ? "text-neutral-400" : "text-neutral-500"}>LLM Model</span>
-              <span className="font-medium">{service.llmModel || "未配置"}</span>
+              <span className="font-medium">{service.llmModel || t("app.main.llmUnconfigured")}</span>
             </div>
             <div className="flex items-center justify-between text-[12px]">
-              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>翻译目标语言</span>
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>{t("app.main.service.translateTarget")}</span>
               <span className="font-medium">{service.translateTargetLang}</span>
             </div>
           </div>
@@ -322,17 +324,17 @@ function MainWindow() {
 
         {/* 关于 */}
         <section id="section-about">
-          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>关于</h2>
+          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>{t("app.main.section.about")}</h2>
           <div className={cn(
             "rounded-xl px-4 py-3 space-y-1",
             dark ? "bg-neutral-800" : "bg-white"
           )}>
             <div className="text-[12px] flex items-center justify-between">
-              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>版本</span>
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>{t("app.main.about.version")}</span>
               <span className="font-medium">0.1.0</span>
             </div>
             <div className="text-[12px] flex items-center justify-between">
-              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>快捷键</span>
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>{t("app.main.about.hotkeys")}</span>
               <span className="font-medium">Right Alt · Shift+Alt · Alt+1 · Alt+2</span>
             </div>
           </div>
@@ -343,6 +345,7 @@ function MainWindow() {
 }
 
 function DevPreview() {
+  const t = useT();
   return (
     <div
       className="w-full h-full overflow-auto flex flex-col items-center"
@@ -354,17 +357,17 @@ function DevPreview() {
           className="text-[22px] font-semibold mb-1"
           style={{ color: "#1c1c1e", letterSpacing: "-0.01em" }}
         >
-          TerminalVoice UI 预览
+          {t("app.dev.title")}
         </h1>
         <p className="text-[13px]" style={{ color: "#636366" }}>
-          浏览器预览模式 · Tauri 中悬浮球与面板为独立透明窗口
+          {t("app.dev.subtitle")}
         </p>
       </header>
 
       {/* 两栏并列：标题在卡片顶部，与控件强关联 */}
       <section className="flex gap-12 items-start justify-center flex-wrap">
         {/* 悬浮小球卡片 */}
-        <PreviewCard title="悬浮小球" subtitle="点击切换 idle / 录音 / 识别 / 暂停">
+        <PreviewCard title={t("app.dev.card.ball")} subtitle={t("app.dev.card.ball.sub")}>
           <div
             className="w-[200px] h-[200px] rounded-2xl flex items-center justify-center"
             style={{
@@ -378,7 +381,7 @@ function DevPreview() {
         </PreviewCard>
 
         {/* 极简面板卡片 */}
-        <PreviewCard title="极简面板" subtitle="深/浅主题 · 可交互开关与按钮">
+        <PreviewCard title={t("app.dev.card.panel")} subtitle={t("app.dev.card.panel.sub")}>
           <div style={{ width: 380 }}>
             <PanelWindow />
           </div>
@@ -390,9 +393,9 @@ function DevPreview() {
         className="mt-10 text-center text-[12px] leading-7"
         style={{ color: "#636366" }}
       >
-        · 鼠标悬浮在小球/图标/按钮上可看到提示气泡
-        <br />· 面板左上角状态点与悬浮球均由后端 AppRuntime 同步驱动
-        <br />· 所有开关、按钮、主题切换均为可交互
+        {t("app.dev.footer1")}
+        <br />{t("app.dev.footer2")}
+        <br />{t("app.dev.footer3")}
       </footer>
     </div>
   );

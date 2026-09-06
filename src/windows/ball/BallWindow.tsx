@@ -5,6 +5,7 @@ import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { cn } from "../../lib/cn";
 import { usePanelStore } from "../../stores/appStore";
 import { TranslatePopup } from "../../components/ui/TranslatePopup";
+import { useT } from "../../lib/i18n";
 import type { AppStatus } from "../../lib/types";
 
 /**
@@ -43,54 +44,6 @@ export function computeBallState(
   }
 }
 
-const STATE_META: Record<BallState, BallStateMeta> = {
-  idle: {
-    core: "bg-[var(--color-accent)]",
-    ring: "bg-[var(--color-accent-soft)]",
-    label: "就绪 · 按住 Right-Alt 说话",
-  },
-  recording: {
-    core: "bg-sky-400",
-    ring: "bg-sky-400/30",
-    label: "录音中 · 松开上屏",
-    glow: true,
-    icon: "mic",
-  },
-  thinking: {
-    core: "bg-amber-400",
-    ring: "bg-amber-400/30",
-    label: "识别中…",
-    glow: true,
-    icon: "loader",
-  },
-  disabled: {
-    core: "bg-[var(--color-toggle-off)]",
-    ring: "bg-[var(--color-toggle-off)]/25",
-    label: "已暂停",
-  },
-  error: {
-    core: "bg-red-500",
-    ring: "bg-red-500/30",
-    label: "出错了 · 点击查看",
-    glow: true,
-    icon: "error",
-  },
-  rewrite: {
-    core: "bg-purple-400",
-    ring: "bg-purple-400/30",
-    label: "改写模式 · 选中文字后说话",
-    glow: true,
-    icon: "wand",
-  },
-  tts: {
-    core: "bg-teal-400",
-    ring: "bg-teal-400/30",
-    label: "朗读中 · Alt+1 停止",
-    glow: true,
-    icon: "volume",
-  },
-};
-
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -98,6 +51,54 @@ function formatDuration(seconds: number): string {
 }
 
 export function BallWindow() {
+  const t = useT();
+  const STATE_META: Record<BallState, BallStateMeta> = {
+    idle: {
+      core: "bg-[var(--color-accent)]",
+      ring: "bg-[var(--color-accent-soft)]",
+      label: t("ball.state.idle"),
+    },
+    recording: {
+      core: "bg-sky-400",
+      ring: "bg-sky-400/30",
+      label: t("ball.state.recording"),
+      glow: true,
+      icon: "mic",
+    },
+    thinking: {
+      core: "bg-amber-400",
+      ring: "bg-amber-400/30",
+      label: t("ball.state.thinking"),
+      glow: true,
+      icon: "loader",
+    },
+    disabled: {
+      core: "bg-[var(--color-toggle-off)]",
+      ring: "bg-[var(--color-toggle-off)]/25",
+      label: t("ball.state.disabled"),
+    },
+    error: {
+      core: "bg-red-500",
+      ring: "bg-red-500/30",
+      label: t("ball.state.error"),
+      glow: true,
+      icon: "error",
+    },
+    rewrite: {
+      core: "bg-purple-400",
+      ring: "bg-purple-400/30",
+      label: t("ball.state.rewrite"),
+      glow: true,
+      icon: "wand",
+    },
+    tts: {
+      core: "bg-teal-400",
+      ring: "bg-teal-400/30",
+      label: t("ball.state.tts"),
+      glow: true,
+      icon: "volume",
+    },
+  };
   const appStatus = usePanelStore((state) => state.appStatus);
   const rewriteMode = usePanelStore((state) => state.rewriteMode);
   const ttsSpeaking = usePanelStore((state) => state.ttsSpeaking);
@@ -115,7 +116,7 @@ export function BallWindow() {
   const showTimer = state === "recording" && recordingDuration > 0;
 
   // 动态更新原生 title（包含录音时长等实时信息）
-  const tooltipText = `${meta.label} · 点击切换面板${showTimer ? ` ${formatDuration(recordingDuration)}` : ""}`;
+  const tooltipText = `${meta.label} · ${t("ball.tooltip.clickToToggle")}${showTimer ? ` ${formatDuration(recordingDuration)}` : ""}`;
   useEffect(() => {
     if (buttonRef.current) {
       buttonRef.current.title = tooltipText;

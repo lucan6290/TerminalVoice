@@ -2,8 +2,10 @@ import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github } from "lucide-
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
 import { formatKeyLabel } from "../../../components/ui/HotkeyRecorder";
+import { useT } from "../../../lib/i18n";
 
 export function HelpTab() {
+  const t = useT();
   const pttKey = usePanelStore((s) => s.pttKey);
   const ttsKey = usePanelStore((s) => s.ttsKey);
   const translateKey = usePanelStore((s) => s.translateKey);
@@ -19,7 +21,7 @@ export function HelpTab() {
         >
           <ArrowLeft className="w-[18px] h-[18px]" strokeWidth={2} />
         </button>
-        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">帮助与关于</h2>
+        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.help.title")}</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-4 pb-2 allow-select">
@@ -28,45 +30,45 @@ export function HelpTab() {
           <div className="text-[18px] font-semibold text-neutral-100 tracking-tight mb-1">
             TerminalVoice
           </div>
-          <div className="text-[11px] text-neutral-500">v0.2.0 · 语音输入 AI 助手</div>
+          <div className="text-[11px] text-neutral-500">{t("tab.help.subtitle")}</div>
         </div>
 
         {/* 快捷键 */}
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1 flex items-center gap-1.5">
-            <Keyboard className="w-3.5 h-3.5" /> 快捷键
+            <Keyboard className="w-3.5 h-3.5" /> {t("tab.help.section.shortcuts")}
           </p>
           <div className="bg-neutral-800 rounded-xl divide-y divide-white/5">
-            <ShortcutRow keys={[formatKeyLabel(pttKey)]} desc="按住说话，松开上屏" />
-            <ShortcutRow keys={[formatKeyLabel(pttKey), "单击"]} desc="切换免提模式（按一次开始，再按一次结束）" />
-            <ShortcutRow keys={["Alt", formatKeyLabel(ttsKey)]} desc="朗读选中文本（再按一次停止）" />
-            <ShortcutRow keys={["Alt", formatKeyLabel(translateKey)]} desc="翻译选中文本" />
-            <ShortcutRow keys={["Esc"]} desc="关闭预览弹窗 / 停止录音" />
-            <ShortcutRow keys={["Ctrl", "Enter"]} desc="预览中确认并换行" />
+            <ShortcutRow keys={[formatKeyLabel(pttKey)]} desc={t("tab.help.shortcut.ptt")} />
+            <ShortcutRow keys={[formatKeyLabel(pttKey), t("tab.help.shortcut.handsFreeKey")]} desc={t("tab.help.shortcut.handsFree")} />
+            <ShortcutRow keys={["Alt", formatKeyLabel(ttsKey)]} desc={t("tab.help.shortcut.tts")} />
+            <ShortcutRow keys={["Alt", formatKeyLabel(translateKey)]} desc={t("tab.help.shortcut.translate")} />
+            <ShortcutRow keys={["Esc"]} desc={t("tab.help.shortcut.esc")} />
+            <ShortcutRow keys={["Ctrl", "Enter"]} desc={t("tab.help.shortcut.ctrlEnter")} />
           </div>
         </section>
 
         {/* 使用指南 */}
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1 flex items-center gap-1.5">
-            <Mic className="w-3.5 h-3.5" /> 使用指南
+            <Mic className="w-3.5 h-3.5" /> {t("tab.help.section.guide")}
           </p>
           <div className="bg-neutral-800 rounded-xl p-3 space-y-2.5 text-[12px] text-neutral-300 leading-relaxed">
             <div className="flex gap-2">
               <span className="text-green-400 shrink-0">1.</span>
-              <span>将光标定位到需要输入文字的地方（微信、浏览器、编辑器等）。</span>
+              <span>{t("tab.help.guide.step1")}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-green-400 shrink-0">2.</span>
-              <span>按住 <b className="text-neutral-100 font-mono text-[11px]">{formatKeyLabel(pttKey)}</b> 对着麦克风说话，音量适中即可。</span>
+              <span>{t("tab.help.guide.step2")}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-green-400 shrink-0">3.</span>
-              <span>松开按键，识别结果经AI整理后自动写入焦点输入框。</span>
+              <span>{t("tab.help.guide.step3")}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-green-400 shrink-0">4.</span>
-              <span>选中文本后按住热键说出修改要求，可直接改写选中内容。</span>
+              <span>{t("tab.help.guide.step4")}</span>
             </div>
           </div>
         </section>
@@ -74,21 +76,21 @@ export function HelpTab() {
         {/* AI 整理说明 */}
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1 flex items-center gap-1.5">
-            <Wand2 className="w-3.5 h-3.5" /> AI 整理模式
+            <Wand2 className="w-3.5 h-3.5" /> {t("tab.help.section.modes")}
           </p>
           <div className="bg-neutral-800 rounded-xl p-3 space-y-2 text-[12px] text-neutral-300 leading-relaxed">
-            <div><b className="text-neutral-100">原文直出</b>：不做任何AI处理，输出识别结果原样。</div>
-            <div><b className="text-neutral-100">原意校对</b>：只修正错别字、标点，保持原意和口语风格。</div>
-            <div><b className="text-neutral-100">自然润色</b>：将口语转为流畅书面表达，推荐日常使用。</div>
-            <div><b className="text-neutral-100">结构整理</b>：自动分段、加标点、提炼要点，适合长内容。</div>
+            <div>{t("tab.help.mode.off")}</div>
+            <div>{t("tab.help.mode.proofread")}</div>
+            <div>{t("tab.help.mode.polish")}</div>
+            <div>{t("tab.help.mode.structure")}</div>
           </div>
         </section>
 
         {/* 链接 */}
         <div className="flex gap-2">
-          <LinkBtn icon={Settings} label="服务配置" onClick={() => setActiveTab("service")} />
-          <LinkBtn icon={Github} label="项目主页" onClick={() => showToast("即将打开 GitHub", "info")} />
-          <LinkBtn icon={Info} label="反馈问题" onClick={() => showToast("感谢反馈！", "info")} />
+          <LinkBtn icon={Settings} label={t("tab.help.link.service")} onClick={() => setActiveTab("service")} />
+          <LinkBtn icon={Github} label={t("tab.help.link.github")} onClick={() => showToast(t("tab.help.openingGithub"), "info")} />
+          <LinkBtn icon={Info} label={t("tab.help.link.feedback")} onClick={() => showToast(t("tab.help.thanksFeedback"), "info")} />
         </div>
       </div>
     </div>

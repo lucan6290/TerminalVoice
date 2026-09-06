@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import { useT } from "../../../lib/i18n";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
 import {
@@ -35,10 +36,11 @@ function formatSize(bytes: number): string {
   return `${bytes} B`;
 }
 
+// label/desc 存 i18n key，渲染时用组件内 t() 取文案
 const ASR_OPTIONS: { key: ASRProvider; label: string; desc: string; icon: typeof Cloud }[] = [
-  { key: "auto",    label: "智能切换",   desc: "优先云端，失败时自动降级离线",   icon: Zap },
-  { key: "cloud",   label: "仅云端",     desc: "始终使用云端ASR，识别精度高",   icon: Cloud },
-  { key: "offline", label: "仅离线",     desc: "使用本地模型，无需网络",         icon: Cpu },
+  { key: "auto",    label: "tab.service.asr.auto",    desc: "tab.service.asr.autoDesc",    icon: Zap },
+  { key: "cloud",   label: "tab.service.asr.cloud",   desc: "tab.service.asr.cloudDesc",   icon: Cloud },
+  { key: "offline", label: "tab.service.asr.offline", desc: "tab.service.asr.offlineDesc", icon: Cpu },
 ];
 
 type ModelFieldProps = {
@@ -50,6 +52,7 @@ type ModelFieldProps = {
 };
 
 function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: ModelFieldProps) {
+  const t = useT();
   const [models, setModels] = useState<FetchedModel[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -72,14 +75,14 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
       const result = await onFetch();
       setModels(result);
       if (result.length === 0) {
-        showToast("未获取到模型列表", "warn");
+        showToast(t("tab.service.modelList.unavailable"), "warn");
       } else {
-        showToast(`获取到 ${result.length} 个模型`, "success");
+        showToast(t("tab.service.modelList.count", { n: result.length }), "success");
         setOpen(true);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      showToast(msg || "获取模型列表失败", "error");
+      showToast(msg || t("tab.service.modelList.fail"), "error");
     } finally {
       setLoading(false);
     }
@@ -121,7 +124,7 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
           <button
             type="button"
             onClick={handleFetch}
-            title="获取模型列表"
+            title={t("tab.service.modelList.fetchBtn")}
             className="shrink-0 w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-green-400 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
@@ -131,7 +134,7 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            title="选择模型"
+            title={t("tab.service.modelList.selectBtn")}
             className={cn(
               "shrink-0 w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center transition-colors",
               open ? "text-green-400 bg-neutral-700" : "text-neutral-400 hover:text-green-400 hover:bg-neutral-700",
@@ -148,14 +151,14 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索模型..."
+                placeholder={t("tab.service.modelList.searchPlaceholder")}
                 autoFocus
                 className="w-full bg-neutral-900 rounded px-2 py-1 text-[11px] text-neutral-200 placeholder:text-neutral-600 outline-none"
               />
             </div>
             <div className="max-h-56 overflow-y-auto py-1 text-[11px]">
               {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-neutral-500">无匹配模型</div>
+                <div className="px-3 py-2 text-neutral-500">{t("tab.service.modelList.noMatch")}</div>
               ) : (
                 vendors.map((vendor) => (
                   <div key={vendor}>
@@ -193,6 +196,7 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
 }
 
 export function ServiceTab() {
+  const t = useT();
   const service = usePanelStore((s) => s.service);
   const setServiceConfig = usePanelStore((s) => s.setServiceConfig);
   const models = usePanelStore((s) => s.models);
@@ -210,9 +214,9 @@ export function ServiceTab() {
     setTestingAsr(true);
     try {
       const ok = await testAsrConnection();
-      showToast(ok ? "ASR 连接成功" : "ASR 连接失败，请检查配置", ok ? "success" : "error");
+      showToast(ok ? t("tab.service.testSuccess.asr") : t("tab.service.testFail.asr"), ok ? "success" : "error");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "连接测试失败", "error");
+      showToast(error instanceof Error ? error.message : t("tab.service.testFail.generic"), "error");
     } finally {
       setTestingAsr(false);
     }
@@ -222,9 +226,9 @@ export function ServiceTab() {
     setTestingLlm(true);
     try {
       const ok = await testLlmConnection();
-      showToast(ok ? "LLM 连接成功" : "LLM 连接失败，请检查配置", ok ? "success" : "error");
+      showToast(ok ? t("tab.service.testSuccess.llm") : t("tab.service.testFail.llm"), ok ? "success" : "error");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "连接测试失败", "error");
+      showToast(error instanceof Error ? error.message : t("tab.service.testFail.generic"), "error");
     } finally {
       setTestingLlm(false);
     }
@@ -240,13 +244,13 @@ export function ServiceTab() {
         >
           <ArrowLeft className="w-[18px] h-[18px]" strokeWidth={2} />
         </button>
-        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">服务配置</h2>
+        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.service.title")}</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-4 pb-2">
         {/* ASR 服务商 */}
         <section>
-          <p className="text-[12px] text-neutral-500 mb-2 px-1">语音识别 (ASR)</p>
+          <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.asr.section")}</p>
           <div className="space-y-2 mb-3">
             {ASR_OPTIONS.map((o) => {
               const active = service.asrProvider === o.key;
@@ -268,9 +272,9 @@ export function ServiceTab() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className={cn("text-[13px] font-medium", active ? "text-green-400" : "text-neutral-100")}>
-                      {o.label}
+                      {t(o.label)}
                     </div>
-                    <div className="text-[11px] text-neutral-500 mt-0.5">{o.desc}</div>
+                    <div className="text-[11px] text-neutral-500 mt-0.5">{t(o.desc)}</div>
                   </div>
                   {active && <Check className="w-4 h-4 text-green-400 shrink-0" />}
                 </button>
@@ -284,7 +288,7 @@ export function ServiceTab() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Link className="w-3 h-3 text-blue-500 dark:text-blue-400" />
-                <span className="text-[12px] text-neutral-700 dark:text-neutral-200">完整 URL</span>
+                <span className="text-[12px] text-neutral-700 dark:text-neutral-200">{t("tab.service.fullUrl")}</span>
               </div>
               <ToggleSwitch
                 size="sm"
@@ -305,12 +309,12 @@ export function ServiceTab() {
 
             {service.asrFullUrl && (
               <p className="text-[11px] text-amber-500 dark:text-amber-400/90 leading-snug px-0.5">
-                请填写完整请求 URL，将直接使用此 URL，不拼接路径
+                {t("tab.service.fullUrl.hint")}
               </p>
             )}
             {!service.asrFullUrl && (
               <p className="text-[11px] text-neutral-500 dark:text-neutral-500 px-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                填写服务基础地址，自动拼接<span className="font-mono text-neutral-600 dark:text-neutral-400">/audio/transcriptions</span>
+                {t("tab.service.endpointHint.asr")}
               </p>
             )}
 
@@ -343,9 +347,9 @@ export function ServiceTab() {
               className="w-full mt-1 h-8 rounded-lg bg-green-500/15 text-green-400 text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-green-500/25 transition-colors disabled:opacity-50"
             >
               {testingAsr ? (
-                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 测试中…</>
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("tab.service.testing")}</>
               ) : (
-                <><Wifi className="w-3.5 h-3.5" /> 测试 ASR 连接</>
+                <><Wifi className="w-3.5 h-3.5" /> {t("tab.service.testBtn.asr")}</>
               )}
             </button>
           </div>
@@ -353,13 +357,13 @@ export function ServiceTab() {
 
         {/* LLM 配置 */}
         <section>
-          <p className="text-[12px] text-neutral-500 mb-2 px-1">AI 整理 (LLM)</p>
+          <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.llm.section")}</p>
           <div className="bg-neutral-800 rounded-xl p-3 space-y-2.5">
             {/* 完整 URL 开关 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Link className="w-3 h-3 text-purple-500 dark:text-purple-400" />
-                <span className="text-[12px] text-neutral-700 dark:text-neutral-200">完整 URL</span>
+                <span className="text-[12px] text-neutral-700 dark:text-neutral-200">{t("tab.service.fullUrl")}</span>
               </div>
               <ToggleSwitch
                 size="sm"
@@ -380,12 +384,12 @@ export function ServiceTab() {
 
             {service.llmFullUrl && (
               <p className="text-[11px] text-amber-500 dark:text-amber-400/90 leading-snug px-0.5">
-                请填写完整请求 URL，将直接使用此 URL，不拼接路径
+                {t("tab.service.fullUrl.hint")}
               </p>
             )}
             {!service.llmFullUrl && (
               <p className="text-[11px] text-neutral-500 dark:text-neutral-500 px-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                填写服务基础地址，自动拼接<span className="font-mono text-neutral-600 dark:text-neutral-400">/chat/completions</span>
+                {t("tab.service.endpointHint.llm")}
               </p>
             )}
 
@@ -418,9 +422,9 @@ export function ServiceTab() {
               className="w-full mt-1 h-8 rounded-lg bg-purple-500/15 text-purple-400 text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-purple-500/25 transition-colors disabled:opacity-50"
             >
               {testingLlm ? (
-                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 测试中…</>
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("tab.service.testing")}</>
               ) : (
-                <><Wifi className="w-3.5 h-3.5" /> 测试 LLM 连接</>
+                <><Wifi className="w-3.5 h-3.5" /> {t("tab.service.testBtn.llm")}</>
               )}
             </button>
           </div>
@@ -428,7 +432,7 @@ export function ServiceTab() {
 
         {/* 翻译目标语言 */}
         <section>
-          <p className="text-[12px] text-neutral-500 mb-2 px-1">翻译目标语言</p>
+          <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.translate.section")}</p>
           <div className="bg-neutral-800 rounded-xl p-3">
             <div className="flex items-center gap-3">
               <Globe className="w-4 h-4 text-neutral-400 shrink-0" />
@@ -437,26 +441,26 @@ export function ServiceTab() {
                 onChange={(e) => setServiceConfig({ translateTargetLang: e.target.value })}
                 className="flex-1 bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 outline-none border border-white/5 focus:border-green-500/40 cursor-pointer"
               >
-                <option value="英文">英文</option>
-                <option value="中文">中文</option>
-                <option value="日文">日文</option>
-                <option value="韩文">韩文</option>
-                <option value="法文">法文</option>
-                <option value="德文">德文</option>
-                <option value="西班牙文">西班牙文</option>
-                <option value="俄文">俄文</option>
+                <option value="英文">{t("tab.service.translate.lang.en")}</option>
+                <option value="中文">{t("tab.service.translate.lang.zh")}</option>
+                <option value="日文">{t("tab.service.translate.lang.ja")}</option>
+                <option value="韩文">{t("tab.service.translate.lang.ko")}</option>
+                <option value="法文">{t("tab.service.translate.lang.fr")}</option>
+                <option value="德文">{t("tab.service.translate.lang.de")}</option>
+                <option value="西班牙文">{t("tab.service.translate.lang.es")}</option>
+                <option value="俄文">{t("tab.service.translate.lang.ru")}</option>
               </select>
             </div>
-            <p className="text-[11px] text-neutral-600 mt-2">Alt+2 翻译时的目标语言</p>
+            <p className="text-[11px] text-neutral-600 mt-2">{t("tab.service.translate.hint")}</p>
           </div>
         </section>
 
         {/* 离线模型管理 */}
         <section>
-          <p className="text-[12px] text-neutral-500 mb-2 px-1">离线模型</p>
+          <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.offline.section")}</p>
           <div className="space-y-2">
             {models.length === 0 ? (
-              <div className="text-center text-neutral-500 text-[12px] py-6">暂无可用模型</div>
+              <div className="text-center text-neutral-500 text-[12px] py-6">{t("tab.service.offline.empty")}</div>
             ) : models.map((m) => {
               const isDownloading = downloadingModels.includes(m.id);
               return (
@@ -466,7 +470,7 @@ export function ServiceTab() {
                       <div className="text-[13px] text-neutral-100 flex items-center gap-2">
                         {m.name}
                         {m.installed && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">已安装</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">{t("tab.service.offline.installed")}</span>
                         )}
                       </div>
                       <div className="text-[11px] text-neutral-500 mt-0.5">
@@ -475,22 +479,22 @@ export function ServiceTab() {
                     </div>
                     {m.installed ? (
                       <button
-                        onClick={() => void deleteModel(m.id).then(() => showToast(`已删除 ${m.name}`, "info"))}
+                        onClick={() => void deleteModel(m.id).then(() => showToast(t("tab.service.offline.deleted", { name: m.name }), "info"))}
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-500 hover:text-red-400 hover:bg-white/5"
-                        data-tip="删除模型"
+                        data-tip={t("tab.service.offline.deleteBtn")}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     ) : isDownloading ? (
                       <div className="flex items-center gap-1.5 text-green-400">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-[11px]">下载中</span>
+                        <span className="text-[11px]">{t("tab.service.offline.downloading")}</span>
                       </div>
                     ) : (
                       <button
-                        onClick={() => void downloadModel(m.id).then(() => showToast(`开始下载 ${m.name}`, "info"))}
+                        onClick={() => void downloadModel(m.id).then(() => showToast(t("tab.service.offline.downloadStarted", { name: m.name }), "info"))}
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-green-400 hover:bg-green-500/10"
-                        data-tip="下载模型"
+                        data-tip={t("tab.service.offline.downloadBtn")}
                       >
                         <Download className="w-4 h-4" />
                       </button>

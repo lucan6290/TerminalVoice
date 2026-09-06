@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { ArrowLeft, Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import { useT } from "../../../lib/i18n";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
 import { ToggleSwitch } from "../../../components/ui/ToggleSwitch";
 
 export function DictTab() {
+  const t = useT();
   const words = usePanelStore((s) => s.filterWords);
   const addFilterWord = usePanelStore((s) => s.addFilterWord);
   const toggleFilterWord = usePanelStore((s) => s.toggleFilterWord);
@@ -22,7 +24,7 @@ export function DictTab() {
   function handleAdd() {
     const w = newWord.trim();
     if (!w) return;
-    void addFilterWord(w, newRepl.trim()).then(() => showToast(`已添加过滤词「${w}」`, "success"));
+    void addFilterWord(w, newRepl.trim()).then(() => showToast(t("tab.dict.added", { word: w }), "success"));
     setNewWord("");
     setNewRepl("");
   }
@@ -35,7 +37,7 @@ export function DictTab() {
 
   function saveEdit() {
     if (editingId === null) return;
-    void updateFilterWord(editingId, editWord.trim(), editRepl.trim()).then(() => showToast("已更新", "success"));
+    void updateFilterWord(editingId, editWord.trim(), editRepl.trim()).then(() => showToast(t("tab.dict.updated"), "success"));
     setEditingId(null);
   }
 
@@ -49,19 +51,19 @@ export function DictTab() {
         >
           <ArrowLeft className="w-[18px] h-[18px]" strokeWidth={2} />
         </button>
-        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">自定义词典</h2>
-        <span className="text-[11px] text-neutral-500">{words.filter((w) => w.enabled).length} 条生效</span>
+        <h2 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.dict.title")}</h2>
+        <span className="text-[11px] text-neutral-500">{t("tab.dict.activeCount", { n: words.filter((w) => w.enabled).length })}</span>
       </div>
 
       <p className="text-[12px] text-neutral-500 mb-3 px-1 leading-relaxed">
-        添加常见口语词或错别字，语音识别后会自动替换为空或指定文字。
+        {t("tab.dict.description")}
       </p>
 
       {/* 新增行 */}
       <div className="flex gap-2 mb-3">
         <input
           type="text"
-          placeholder="过滤词"
+          placeholder={t("tab.dict.input.word")}
           value={newWord}
           onChange={(e) => setNewWord(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
@@ -69,7 +71,7 @@ export function DictTab() {
         />
         <input
           type="text"
-          placeholder="替换为（空=删除）"
+          placeholder={t("tab.dict.input.replacement")}
           value={newRepl}
           onChange={(e) => setNewRepl(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
@@ -87,7 +89,7 @@ export function DictTab() {
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1.5">
         {words.length === 0 ? (
           <div className="text-center text-neutral-500 text-[13px] py-12">
-            暂无过滤词
+            {t("tab.dict.empty")}
           </div>
         ) : (
           words.map((w) => (
@@ -107,7 +109,7 @@ export function DictTab() {
                   <input
                     value={editRepl}
                     onChange={(e) => setEditRepl(e.target.value)}
-                    placeholder="（空）"
+                    placeholder={t("tab.dict.emptyReplacement")}
                     className="flex-1 bg-neutral-900 rounded px-2 py-1 text-[13px] text-neutral-100 outline-none border border-white/10"
                   />
                   <button onClick={saveEdit} className="w-7 h-7 rounded flex items-center justify-center text-green-400 hover:bg-white/5">
@@ -139,7 +141,7 @@ export function DictTab() {
                   </button>
                   <button
                     onClick={() => {
-                      void deleteFilterWord(w.id).then(() => showToast("已删除", "info"));
+                      void deleteFilterWord(w.id).then(() => showToast(t("tab.dict.deleted"), "info"));
                     }}
                     className="w-6 h-6 rounded flex items-center justify-center text-neutral-500 hover:text-red-400 hover:bg-white/5"
                   >

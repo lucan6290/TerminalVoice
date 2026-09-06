@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/cn";
+import { useT } from "../../lib/i18n";
 
 /**
  * 单个按键录入按钮：点击后进入"等待按键"状态，下一个按下的按键会被捕获，
@@ -79,6 +80,7 @@ export function HotkeyRecorder({
   className,
   widthClass = "min-w-[100px]",
 }: HotkeyRecorderProps) {
+  const t = useT();
   const [capturing, setCapturing] = useState(false);
   const [saving, setSaving] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -114,7 +116,7 @@ export function HotkeyRecorder({
     };
   }, [capturing, onChange]);
 
-  const display = capturing ? "按下按键..." : formatKeyLabel(value);
+  const display = capturing ? t("hotkey.capturing") : formatKeyLabel(value);
 
   return (
     <button
@@ -132,9 +134,9 @@ export function HotkeyRecorder({
           : "bg-neutral-900 text-neutral-100 border border-white/5 hover:border-white/20",
         className,
       )}
-      title={capturing ? "按下要设置的键，按 Esc 取消" : "点击修改按键"}
+      title={capturing ? t("hotkey.prompt") : t("hotkey.clickToEdit")}
     >
-      {saving ? "保存中..." : display}
+      {saving ? t("hotkey.saving") : display}
     </button>
   );
 }

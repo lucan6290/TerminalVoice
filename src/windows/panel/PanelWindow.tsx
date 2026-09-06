@@ -465,8 +465,8 @@ function HomeView({
       </div>
       <div className="flex items-center justify-between px-1 py-3 mb-1">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[14px] text-neutral-100 leading-none">识别后预览确认</span>
-          <span className="text-[11px] text-neutral-500">关闭则识别完成后直接上屏</span>
+          <span className="text-[14px] text-neutral-100 leading-none">{t("panel.home.preview.title")}</span>
+          <span className="text-[11px] text-neutral-500">{t("panel.home.preview.desc")}</span>
         </div>
         <ToggleSwitch checked={!skipPreview} onChange={(v) => setSkipPreview(!v)} />
       </div>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Info } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { useT } from "../../lib/i18n";
 
 export interface SettingRowProps {
   label: string;
@@ -23,6 +24,7 @@ export function SettingRow({
   childrenRight,
   className,
 }: SettingRowProps) {
+  const t = useT();
   return (
     <div
       className={cn(
@@ -36,7 +38,7 @@ export function SettingRow({
         </span>
         {helpIcon && (
           <span
-            aria-label={helpTip ?? `${label}帮助`}
+            aria-label={helpTip ?? t("settingRow.helpAria", { label })}
             data-tip={helpTip}
             className="w-[16px] h-[16px] rounded-full flex items-center justify-center text-neutral-500 cursor-help shrink-0"
           >

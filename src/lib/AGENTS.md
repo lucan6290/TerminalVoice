@@ -1,6 +1,6 @@
 # AGENTS.md — src/lib/ 工具层
 
-> 纯 TypeScript 工具层，**不含任何 React 依赖**。是跨层共享的最底层，禁止引用 `stores/`、`windows/`、`components/`。
+> 纯 TypeScript 工具层，禁止引用 `stores/`、`windows/`、`components/`。大部分文件不含 React；唯一例外是 [i18n.ts](i18n.ts)（导出 React hook `useT`），仅此文件允许依赖 `react`。
 
 ## 文件清单
 
@@ -10,6 +10,7 @@
 | [commands.ts](commands.ts) | Tauri `invoke` 命令封装 | 24 个命令，薄封装 |
 | [events.ts](events.ts) | Tauri 事件名称常量 | 14 个 `EVENT_*` 常量 + `TauriEventName` 联合类型，禁止硬编码事件字符串 |
 | [cn.ts](cn.ts) | className 合并工具 | 极简 `filter(Boolean).join(" ")`，无 clsx/tailwind-merge |
+| [i18n.ts](i18n.ts) | 中英双语字典 + 语言状态 | `zh`/`en` 两个字典、`t(key, params?)` 插值、`useT()` 订阅 hook；UI 文案一律走 `t()`，禁止硬编码中文 |
 
 ## 约定
 

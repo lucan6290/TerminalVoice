@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, LoaderCircle, X } from "lucide-react";
 import type { ConfirmPreviewInput, PreviewDraft, PreviewMode } from "../../lib/types";
 import { cn } from "../../lib/cn";
+import { useT } from "../../lib/i18n";
 
 interface PreviewPopupProps {
   draft: PreviewDraft | null;
@@ -10,6 +11,7 @@ interface PreviewPopupProps {
 }
 
 export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) {
+  const t = useT();
   const [finalText, setFinalText] = useState(draft?.processedText ?? "");
   const [action, setAction] = useState<"confirm" | "cancel" | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -75,7 +77,7 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
 
   return (
     <section
-      aria-label={isRewrite ? "改写结果预览" : "语音输入预览"}
+      aria-label={isRewrite ? t("preview.aria.rewrite") : t("preview.aria.recognition")}
       aria-modal="true"
       role="dialog"
       className="absolute inset-0 z-20 flex flex-col overflow-hidden rounded-[22px] bg-neutral-900 text-neutral-100"
@@ -83,15 +85,15 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
       <header className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 shrink-0">
         <div>
           <h2 className="text-[16px] font-medium">
-            {isRewrite ? "确认改写结果" : "确认语音输入"}
+            {isRewrite ? t("preview.title.rewrite") : t("preview.title.recognition")}
           </h2>
           <p className="text-[11px] text-neutral-500 mt-1">
-            {isRewrite ? "确认后将替换选中文本" : "可编辑整理结果，确认后写入当前输入框"}
+            {isRewrite ? t("preview.subtitle.rewrite") : t("preview.subtitle.recognition")}
           </p>
         </div>
         <button
           type="button"
-          aria-label="放弃预览"
+          aria-label={t("preview.aria.close")}
           onClick={() => void cancel()}
           disabled={busy}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-neutral-200 hover:bg-white/5 disabled:opacity-40"
@@ -104,7 +106,7 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[11px] font-medium text-neutral-400">
-              {isRewrite ? "改写原文" : "识别原文"}
+              {isRewrite ? t("preview.sourceLabel.rewrite") : t("preview.sourceLabel.recognition")}
             </span>
             {!isRewrite && (
               <span className="text-[10px] text-neutral-600">{currentDraft.asrProvider}</span>
@@ -124,12 +126,12 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
             htmlFor="preview-final-text"
             className={cn("block text-[11px] font-medium mb-1.5", accentText)}
           >
-            {isRewrite ? "改写结果（可编辑）" : "整理结果（可编辑）"}
+            {isRewrite ? t("preview.resultLabel.rewrite") : t("preview.resultLabel.recognition")}
           </label>
           <textarea
             ref={textareaRef}
             id="preview-final-text"
-            aria-label="预览文本"
+            aria-label={t("preview.aria.textarea")}
             value={finalText}
             onChange={(event) => setFinalText(event.target.value)}
             onKeyDown={handleKeyDown}
@@ -138,9 +140,9 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
               "allow-select w-full resize-none rounded-xl bg-neutral-800 px-3 py-2.5 text-[13px] leading-relaxed text-neutral-100 outline-none ring-1 ring-white/5 focus:ring-2 placeholder:text-neutral-600",
               accentRing,
             )}
-            placeholder={isRewrite ? "改写结果不能为空" : "整理结果不能为空"}
+            placeholder={isRewrite ? t("preview.empty.rewrite") : t("preview.empty.recognition")}
           />
-          <p className="text-[10px] text-neutral-600 mt-1.5">Ctrl + Enter 确认 · Esc 放弃</p>
+          <p className="text-[10px] text-neutral-600 mt-1.5">{t("preview.hint")}</p>
         </div>
       </div>
 
@@ -151,7 +153,7 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
           disabled={busy}
           className="flex-1 h-9 rounded-[10px] bg-neutral-800 text-[13px] text-neutral-300 hover:bg-neutral-700 disabled:opacity-40"
         >
-          {action === "cancel" ? "正在放弃…" : "放弃"}
+          {action === "cancel" ? t("preview.canceling") : t("preview.closeBtn")}
         </button>
         <button
           type="button"
@@ -165,11 +167,11 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
         >
           {action === "confirm" ? (
             <>
-              <LoaderCircle className="w-4 h-4 animate-spin" /> 正在上屏…
+              <LoaderCircle className="w-4 h-4 animate-spin" /> {t("preview.submitting")}
             </>
           ) : (
             <>
-              <Check className="w-4 h-4" /> 确认上屏
+              <Check className="w-4 h-4" /> {t("preview.confirmBtn")}
             </>
           )}
         </button>
