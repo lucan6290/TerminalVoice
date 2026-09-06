@@ -1,15 +1,15 @@
 // screenshot.cjs — captures marketing-style UI screenshots using Chrome headless
-// Run from project root:  node docs/ui-show/screenshot.cjs
-// Requires a static HTTP server running at PORT (e.g. `python -m http.server 7891` from docs/ui-show)
+// Run from project root:  node site/screenshot.cjs
+// Requires a static HTTP server running at PORT (e.g. `python -m http.server 7891` from site/)
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const ROOT = path.join(__dirname, '..', '..');          // project root
-const OUT_DIR = path.join(ROOT, 'docs', 'picture');      // -> docs/picture/
+const ROOT = path.join(__dirname, '..');                        // project root
+const OUT_DIR = path.join(ROOT, 'docs', 'picture');             // -> docs/picture/
 const PORT = 7891;
-const BASE = `http://localhost:${PORT}/showcase.html`;
+const BASE = `http://localhost:${PORT}/index.html`;
 const DPR = 2;
 const CREAM_BG = 'f3ece1';
 
@@ -59,6 +59,8 @@ shot('tech.png',        'tech',      1200, 360);
 shot('cta.png',         'cta',       1200, 380);
 // Full page (overview for README)
 shot('overview.png',    'full',      1280, 3600);
+// Panels composite (used in README)
+shot('panels.png',      'full',      1280, 2400);
 
 console.log('\n=== Done. Files in docs/picture/: ===');
 fs.readdirSync(OUT_DIR).forEach(f => console.log('  -', f));
