@@ -134,25 +134,35 @@ export function BallWindow() {
     }
   }
 
+  async function startDrag() {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    try {
+      await Window.getCurrent().startDragging();
+    } catch (error) {
+      console.warn("[TerminalVoice] 拖拽失败", error);
+    }
+  }
+
   return (
     <div
-      className="w-full h-full flex items-center justify-center relative cursor-default"
+      className="w-full h-full flex items-center justify-center relative cursor-default select-none"
       style={{ background: "transparent" }}
-      data-tauri-drag-region
+      onMouseDown={(e) => {
+        // 左键拖拽移动窗口，右键/其他键不处理
+        if (e.button === 0) {
+          void startDrag();
+        }
+      }}
       onClick={(e) => {
-        // Tauri drag-region: 如果发生了拖动则不会触发 click；
-        // 如果是短按点击，则在这里打开面板
+        // startDragging 在拖动时不会触发 click；短按点击才会到这里
         void openPanel();
-        e.stopPropagation();
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* 球：用 div 而非 button，避免交互元素阻断 data-tauri-drag-region */}
       <div
         ref={buttonRef}
-        className="relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ease-out outline-none group"
-        data-tauri-drag-region
+        className="relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ease-out outline-none group pointer-events-none"
         style={{
           transform: hovered ? "scale(1.08)" : "scale(1)",
         }}
