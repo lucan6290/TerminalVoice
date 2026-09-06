@@ -438,7 +438,7 @@ function HomeView({
             aria-label={t("panel.home.mic.label")}
             value={micDevice}
             onChange={(event) => setMicDevice(event.target.value)}
-            className="w-full min-w-0 appearance-none bg-neutral-900 rounded-lg px-3 py-2 text-[14px] text-neutral-100 border border-white/5 outline-none"
+            className="w-full min-w-0 appearance-none bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 border border-white/5 outline-none cursor-pointer"
           >
             {micDevices.map((device) => (
               <option key={device} value={device}>
