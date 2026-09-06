@@ -65,7 +65,7 @@ export function DictTab() {
           value={newWord}
           onChange={(e) => setNewWord(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          className="flex-1 bg-neutral-800 rounded-lg px-3 py-2 text-[13px] text-neutral-100 placeholder:text-neutral-500 outline-none border border-white/5 focus:border-green-500/40 transition-colors"
+          className="w-28 bg-neutral-800 rounded-lg px-3 py-2 text-[13px] text-neutral-100 placeholder:text-neutral-500 outline-none border border-white/5 focus:border-green-500/40 transition-colors"
         />
         <input
           type="text"
@@ -73,7 +73,7 @@ export function DictTab() {
           value={newRepl}
           onChange={(e) => setNewRepl(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          className="flex-1 bg-neutral-800 rounded-lg px-3 py-2 text-[13px] text-neutral-100 placeholder:text-neutral-500 outline-none border border-white/5 focus:border-green-500/40 transition-colors"
+          className="w-36 bg-neutral-800 rounded-lg px-3 py-2 text-[13px] text-neutral-100 placeholder:text-neutral-500 outline-none border border-white/5 focus:border-green-500/40 transition-colors"
         />
         <button
           onClick={handleAdd}
