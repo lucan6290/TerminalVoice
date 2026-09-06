@@ -1,9 +1,12 @@
 import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github } from "lucide-react";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
+import { formatKeyLabel } from "../../../components/ui/HotkeyRecorder";
 
 export function HelpTab() {
   const pttKey = usePanelStore((s) => s.pttKey);
+  const ttsKey = usePanelStore((s) => s.ttsKey);
+  const translateKey = usePanelStore((s) => s.translateKey);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
 
   return (
@@ -34,10 +37,10 @@ export function HelpTab() {
             <Keyboard className="w-3.5 h-3.5" /> 快捷键
           </p>
           <div className="bg-neutral-800 rounded-xl divide-y divide-white/5">
-            <ShortcutRow keys={[pttKey]} desc="按住说话，松开上屏" />
-            <ShortcutRow keys={[pttKey, "单击"]} desc="切换免提模式（按一次开始，再按一次结束）" />
-            <ShortcutRow keys={["Alt", "1"]} desc="朗读选中文本（再按一次停止）" />
-            <ShortcutRow keys={["Alt", "2"]} desc="翻译选中文本" />
+            <ShortcutRow keys={[formatKeyLabel(pttKey)]} desc="按住说话，松开上屏" />
+            <ShortcutRow keys={[formatKeyLabel(pttKey), "单击"]} desc="切换免提模式（按一次开始，再按一次结束）" />
+            <ShortcutRow keys={["Alt", formatKeyLabel(ttsKey)]} desc="朗读选中文本（再按一次停止）" />
+            <ShortcutRow keys={["Alt", formatKeyLabel(translateKey)]} desc="翻译选中文本" />
             <ShortcutRow keys={["Esc"]} desc="关闭预览弹窗 / 停止录音" />
             <ShortcutRow keys={["Ctrl", "Enter"]} desc="预览中确认并换行" />
           </div>
@@ -55,7 +58,7 @@ export function HelpTab() {
             </div>
             <div className="flex gap-2">
               <span className="text-green-400 shrink-0">2.</span>
-              <span>按住 <b className="text-neutral-100 font-mono text-[11px]">{pttKey}</b> 对着麦克风说话，音量适中即可。</span>
+              <span>按住 <b className="text-neutral-100 font-mono text-[11px]">{formatKeyLabel(pttKey)}</b> 对着麦克风说话，音量适中即可。</span>
             </div>
             <div className="flex gap-2">
               <span className="text-green-400 shrink-0">3.</span>

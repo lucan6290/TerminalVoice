@@ -75,7 +75,7 @@ pub fn run() {
             let db = Database::open(&db_path)
                 .map_err(|error| format!("failed to open database: {error}"))?;
 
-            // 根据持久化配置还原悬浮球显隐（默认显示）
+            // 根据持久化配置还原悬浮球显隐（默认显示），并定位到屏幕右上角
             if let Some(ball) = app.get_webview_window("ball") {
                 let visible = db
                     .get_config("ui.ballVisible")
@@ -86,6 +86,26 @@ pub fn run() {
                     .unwrap_or(true);
                 if !visible {
                     let _ = ball.hide();
+                }
+                // 将悬浮球定位到屏幕右上区域（距右边约72px、距顶230px，使用逻辑坐标）
+                if let Ok(Some(monitor)) = ball.current_monitor() {
+                    let phys_size = monitor.size();
+                    let scale = monitor.scale_factor();
+                    let logical_w = phys_size.width as f64 / scale;
+                    let logical_h = phys_size.height as f64 / scale;
+                    let ball_size = 64.0;
+                    let right_margin = 72.0_f64; // 距右边约 72px（与 2736px 屏幕 x=2600 对齐）
+                    let top_margin = 230.0_f64;  // 距顶部 230px
+                    use tauri::{LogicalPosition, Position};
+                    // 边界保护：确保球不超出屏幕
+                    let x = (logical_w - ball_size - right_margin).max(0.0_f64);
+                    let y = top_margin.min(logical_h - ball_size);
+                    let pos = LogicalPosition::new(x, y);
+                    let _ = ball.set_position(Position::Logical(pos));
+                    tracing::info!(
+                        "悬浮球已定位到屏幕右上区域 (逻辑坐标: {:.0}, {:.0}, 屏幕: {:.0}x{:.0}, 缩放: {})",
+                        x, y, logical_w, logical_h, scale
+                    );
                 }
             }
 

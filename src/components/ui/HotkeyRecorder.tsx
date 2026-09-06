@@ -56,19 +56,18 @@ export function formatKeyLabel(key: KeyName): string {
     case "AltGr":
       return "Right-Alt";
     case "LeftAlt":
-      return "Left-Alt";
     case "Alt":
       return "Alt";
     case "RightCtrl":
       return "Right-Ctrl";
     case "LeftCtrl":
     case "Ctrl":
-      return "Left-Ctrl";
+      return "Ctrl";
     case "RightShift":
       return "Right-Shift";
     case "LeftShift":
     case "Shift":
-      return "Left-Shift";
+      return "Shift";
     default:
       return key;
   }

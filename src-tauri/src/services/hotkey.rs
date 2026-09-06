@@ -117,10 +117,10 @@ pub fn parse_hotkey(s: &str) -> Option<Key> {
 pub fn format_hotkey(key: Key) -> String {
     match key {
         Key::AltGr => "Right-Alt".to_string(),
-        Key::Alt => "Left-Alt".to_string(),
-        Key::ControlLeft => "Left-Ctrl".to_string(),
+        Key::Alt => "Alt".to_string(),
+        Key::ControlLeft => "Ctrl".to_string(),
         Key::ControlRight => "Right-Ctrl".to_string(),
-        Key::ShiftLeft => "Left-Shift".to_string(),
+        Key::ShiftLeft => "Shift".to_string(),
         Key::ShiftRight => "Right-Shift".to_string(),
         Key::Space => "Space".to_string(),
         Key::Return => "Enter".to_string(),

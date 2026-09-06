@@ -20,7 +20,7 @@ import { cn } from "../../lib/cn";
 import { cancelPreview, confirmPreview, exportData, importData, listAudioInputDevices } from "../../lib/commands";
 import { SettingRow } from "../../components/ui/SettingRow";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
-import { HotkeyRecorder } from "../../components/ui/HotkeyRecorder";
+import { HotkeyRecorder, formatKeyLabel } from "../../components/ui/HotkeyRecorder";
 import { usePanelStore } from "../../stores/appStore";
 import { showToast } from "../../stores/toastStore";
 import { HistoryTab } from "./tabs/HistoryTab";
@@ -268,12 +268,12 @@ export function PanelWindow() {
           <div className="flex items-center gap-[2px]">
             <IconBtn
               title="通过触发键录音"
-              data-tip={`按住 ${pttKey} 录音`}
+              data-tip={`按住 ${formatKeyLabel(pttKey)} 录音`}
               accent={recording}
               className="tip-below"
               onClick={() => {
                 showToast(
-                  recording ? "录音进行中，请松开触发键结束" : `请使用 ${pttKey} 触发录音`,
+                  recording ? "录音进行中，请松开触发键结束" : `请使用 ${formatKeyLabel(pttKey)} 触发录音`,
                   "info",
                 );
               }}
@@ -540,7 +540,7 @@ function HomeView({
 
       {/* 底部提示 */}
       <p className="text-[12px] text-center text-neutral-500 my-4">
-        按住 {pttKey} 说话 · 松开上屏
+        按住 {formatKeyLabel(pttKey)} 说话 · 松开上屏
       </p>
     </>
   );
