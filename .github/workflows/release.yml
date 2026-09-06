@@ -52,8 +52,10 @@ jobs:
           }
           $header = "请下载下方对应的安装包进行安装/更新：`n- Windows: ``.msi`` 安装包（推荐）`n- Windows: ``.nsis.zip`` 便携版（可选）`n`n---`n`n"
           $full = $header + $body
-          $outPath = Join-Path $env:GITHUB_WORKSPACE "release-body.md"
-          [System.IO.File]::WriteAllText($outPath, $full, (New-Object System.Text.UTF8Encoding $false))
+          # 通过 GITHUB_OUTPUT 传递多行文本给后续步骤（使用 UTF8 no BOM）
+          $delim = "CHANGELOG_BODY_EOF"
+          $out = "body<<$delim`n$full`n$delim`n"
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, $out, (New-Object System.Text.UTF8Encoding $false))
           Write-Host "Extracted changelog body length: $($body.Length)"
 
       - name: Build & release
@@ -65,7 +67,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "TerminalVoice ${{ github.ref_name }}"
-          releaseBodyPath: "release-body.md"
+          releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: "--target x86_64-pc-windows-msvc"
