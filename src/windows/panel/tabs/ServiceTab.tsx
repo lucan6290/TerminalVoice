@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Cloud,
@@ -12,11 +12,20 @@ import {
   Loader2,
   Wifi,
   Globe,
+  Link,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
-import { testAsrConnection, testLlmConnection } from "../../../lib/commands";
+import {
+  testAsrConnection,
+  testLlmConnection,
+  fetchAsrModels,
+  fetchLlmModels,
+  type FetchedModel,
+} from "../../../lib/commands";
+import { ToggleSwitch } from "../../../components/ui/ToggleSwitch";
 import type { ASRProvider } from "../../../lib/types";
 
 function formatSize(bytes: number): string {
@@ -31,6 +40,157 @@ const ASR_OPTIONS: { key: ASRProvider; label: string; desc: string; icon: typeof
   { key: "cloud",   label: "仅云端",     desc: "始终使用云端ASR，识别精度高",   icon: Cloud },
   { key: "offline", label: "仅离线",     desc: "使用本地模型，无需网络",         icon: Cpu },
 ];
+
+type ModelFieldProps = {
+  label?: string;
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+  onFetch: () => Promise<FetchedModel[]>;
+};
+
+function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: ModelFieldProps) {
+  const [models, setModels] = useState<FetchedModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  async function handleFetch() {
+    setLoading(true);
+    try {
+      const result = await onFetch();
+      setModels(result);
+      if (result.length === 0) {
+        showToast("未获取到模型列表", "warn");
+      } else {
+        showToast(`获取到 ${result.length} 个模型`, "success");
+        setOpen(true);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(msg || "获取模型列表失败", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filtered = models.filter((m) =>
+    m.id.toLowerCase().includes(search.toLowerCase()) ||
+    (m.ownedBy || "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const grouped: Record<string, FetchedModel[]> = {};
+  for (const m of filtered) {
+    const vendor = m.ownedBy || "Other";
+    if (!grouped[vendor]) grouped[vendor] = [];
+    grouped[vendor].push(m);
+  }
+  const vendors = Object.keys(grouped).sort();
+
+  return (
+    <Field label={label}>
+      <div ref={wrapRef} className="relative flex gap-1.5">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => { if (models.length > 0) setOpen(true); }}
+          placeholder={placeholder}
+          className="flex-1 min-w-0 bg-neutral-900 dark:bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 dark:text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
+        />
+        {loading ? (
+          <button
+            type="button"
+            disabled
+            className="shrink-0 w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-500"
+          >
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleFetch}
+            title="获取模型列表"
+            className="shrink-0 w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-green-400 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {models.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            title="选择模型"
+            className={cn(
+              "shrink-0 w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center transition-colors",
+              open ? "text-green-400 bg-neutral-700" : "text-neutral-400 hover:text-green-400 hover:bg-neutral-700",
+            )}
+          >
+            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
+          </button>
+        )}
+
+        {open && models.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-neutral-800 border border-white/10 rounded-lg shadow-xl overflow-hidden">
+            <div className="p-1.5 border-b border-white/5">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="搜索模型..."
+                autoFocus
+                className="w-full bg-neutral-900 rounded px-2 py-1 text-[11px] text-neutral-200 placeholder:text-neutral-600 outline-none"
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto py-1 text-[11px]">
+              {filtered.length === 0 ? (
+                <div className="px-3 py-2 text-neutral-500">无匹配模型</div>
+              ) : (
+                vendors.map((vendor) => (
+                  <div key={vendor}>
+                    <div className="px-3 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500 font-medium">
+                      {vendor}
+                    </div>
+                    {grouped[vendor].map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          onChange(m.id);
+                          setOpen(false);
+                          setSearch("");
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 transition-colors",
+                          m.id === value
+                            ? "bg-green-500/10 text-green-400"
+                            : "text-neutral-200 hover:bg-white/5",
+                        )}
+                      >
+                        {m.id}
+                      </button>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </Field>
+  );
+}
 
 export function ServiceTab() {
   const service = usePanelStore((s) => s.service);
@@ -120,24 +280,46 @@ export function ServiceTab() {
 
           {/* ASR 配置 */}
           <div className="bg-neutral-800 rounded-xl p-3 space-y-2.5">
-            <Field label="API Endpoint">
+            {/* 完整 URL 开关 */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Link className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+                <span className="text-[12px] text-neutral-700 dark:text-neutral-200">完整 URL</span>
+              </div>
+              <ToggleSwitch
+                size="sm"
+                checked={service.asrFullUrl}
+                onChange={(checked) => setServiceConfig({ asrFullUrl: checked })}
+              />
+            </div>
+
+            <Field label="API URL">
               <input
                 type="text"
                 value={service.asrEndpoint}
                 onChange={(e) => setServiceConfig({ asrEndpoint: e.target.value })}
-                placeholder="https://api.openai.com/v1/audio/transcriptions"
+                placeholder={service.asrFullUrl ? "https://example.com/v1/your/custom/path" : "https://api.openai.com/v1"}
                 className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
               />
             </Field>
-            <Field label="Model">
-              <input
-                type="text"
-                value={service.asrModel}
-                onChange={(e) => setServiceConfig({ asrModel: e.target.value })}
-                placeholder="whisper-1"
-                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
-              />
-            </Field>
+
+            {service.asrFullUrl && (
+              <p className="text-[11px] text-amber-500 dark:text-amber-400/90 leading-snug px-0.5">
+                请填写完整请求 URL，将直接使用此 URL，不拼接路径
+              </p>
+            )}
+            {!service.asrFullUrl && (
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-500 px-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                填写服务基础地址，自动拼接<span className="font-mono text-neutral-600 dark:text-neutral-400">/audio/transcriptions</span>
+              </p>
+            )}
+
+            <ModelField
+              value={service.asrModel}
+              placeholder="whisper-1"
+              onChange={(v) => setServiceConfig({ asrModel: v })}
+              onFetch={fetchAsrModels}
+            />
             <Field label="API Key">
               <div className="relative">
                 <input
@@ -173,24 +355,46 @@ export function ServiceTab() {
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1">AI 整理 (LLM)</p>
           <div className="bg-neutral-800 rounded-xl p-3 space-y-2.5">
-            <Field label="API Endpoint">
+            {/* 完整 URL 开关 */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Link className="w-3 h-3 text-purple-500 dark:text-purple-400" />
+                <span className="text-[12px] text-neutral-700 dark:text-neutral-200">完整 URL</span>
+              </div>
+              <ToggleSwitch
+                size="sm"
+                checked={service.llmFullUrl}
+                onChange={(checked) => setServiceConfig({ llmFullUrl: checked })}
+              />
+            </div>
+
+            <Field label="API URL">
               <input
                 type="text"
                 value={service.llmEndpoint}
                 onChange={(e) => setServiceConfig({ llmEndpoint: e.target.value })}
-                placeholder="https://api.openai.com/v1/chat/completions"
-                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
+                placeholder={service.llmFullUrl ? "https://example.com/v1/your/custom/path" : "https://api.openai.com/v1"}
+                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-purple-500/40"
               />
             </Field>
-            <Field label="Model">
-              <input
-                type="text"
-                value={service.llmModel}
-                onChange={(e) => setServiceConfig({ llmModel: e.target.value })}
-                placeholder="gpt-4o-mini"
-                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
-              />
-            </Field>
+
+            {service.llmFullUrl && (
+              <p className="text-[11px] text-amber-500 dark:text-amber-400/90 leading-snug px-0.5">
+                请填写完整请求 URL，将直接使用此 URL，不拼接路径
+              </p>
+            )}
+            {!service.llmFullUrl && (
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-500 px-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                填写服务基础地址，自动拼接<span className="font-mono text-neutral-600 dark:text-neutral-400">/chat/completions</span>
+              </p>
+            )}
+
+            <ModelField
+              value={service.llmModel}
+              placeholder="gpt-4o-mini"
+              onChange={(v) => setServiceConfig({ llmModel: v })}
+              onFetch={fetchLlmModels}
+            />
             <Field label="API Key">
               <div className="relative">
                 <input

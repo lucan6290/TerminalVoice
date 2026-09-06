@@ -21,6 +21,8 @@ const COMMANDS = {
   injectText: "inject_text",
   testAsrConnection: "test_asr_connection",
   testLlmConnection: "test_llm_connection",
+  fetchAsrModels: "fetch_asr_models",
+  fetchLlmModels: "fetch_llm_models",
   listHistory: "list_history",
   deleteHistory: "delete_history",
   clearHistory: "clear_history",
@@ -72,6 +74,19 @@ export async function testAsrConnection(): Promise<boolean> {
 
 export async function testLlmConnection(): Promise<boolean> {
   return invoke<boolean>(COMMANDS.testLlmConnection);
+}
+
+export interface FetchedModel {
+  id: string;
+  ownedBy: string | null;
+}
+
+export async function fetchAsrModels(): Promise<FetchedModel[]> {
+  return invoke<FetchedModel[]>(COMMANDS.fetchAsrModels);
+}
+
+export async function fetchLlmModels(): Promise<FetchedModel[]> {
+  return invoke<FetchedModel[]>(COMMANDS.fetchLlmModels);
 }
 
 export async function listHistory(): Promise<HistoryItem[]> {

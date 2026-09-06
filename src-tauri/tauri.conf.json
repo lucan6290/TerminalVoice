@@ -46,7 +46,7 @@
         "height": 620,
         "x": 180,
         "y": 80,
-        "visible": true,
+        "visible": false,
         "decorations": false,
         "transparent": true,
         "resizable": false,

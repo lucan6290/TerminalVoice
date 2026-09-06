@@ -54,9 +54,11 @@ export type ASRProvider = "cloud" | "offline" | "auto";
 export interface ServiceConfig {
   asrProvider: ASRProvider;
   asrEndpoint: string;
+  asrFullUrl: boolean;
   asrApiKey: string;
   asrModel: string;
   llmEndpoint: string;
+  llmFullUrl: boolean;
   llmApiKey: string;
   llmModel: string;
   textMode: TextProcessMode;

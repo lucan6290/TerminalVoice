@@ -55,6 +55,16 @@ pub fn run() {
                 None => tracing::error!("找不到 main 窗口"),
             }
 
+            // panel 窗口初始隐藏（启动时只显示悬浮球，点击小球再打开面板）
+            match app.get_webview_window("panel") {
+                Some(win) => {
+                    if let Err(e) = win.hide() {
+                        tracing::warn!("隐藏 panel 窗口失败: {e}");
+                    }
+                }
+                None => tracing::error!("找不到 panel 窗口"),
+            }
+
             // 记录应用图标加载状态
             match app.default_window_icon() {
                 Some(icon) => tracing::info!(
@@ -127,6 +137,8 @@ pub fn run() {
             commands::preview::inject_text,
             commands::preview::test_asr_connection,
             commands::preview::test_llm_connection,
+            commands::preview::fetch_asr_models,
+            commands::preview::fetch_llm_models,
             commands::history::list_history,
             commands::history::delete_history,
             commands::history::clear_history,

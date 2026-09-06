@@ -51,9 +51,11 @@ const CONFIG_KEYS = {
   micDevice: "input.micDevice",
   asrProvider: "service.asrProvider",
   asrEndpoint: "service.asrEndpoint",
+  asrFullUrl: "service.asrFullUrl",
   asrApiKey: "service.asrApiKey",
   asrModel: "service.asrModel",
   llmEndpoint: "service.llmEndpoint",
+  llmFullUrl: "service.llmFullUrl",
   llmApiKey: "service.llmApiKey",
   llmModel: "service.llmModel",
   textMode: "service.textMode",
@@ -79,10 +81,12 @@ function isTauri(): boolean {
 
 const DEFAULT_SERVICE: ServiceConfig = {
   asrProvider: "auto",
-  asrEndpoint: "https://api.openai.com/v1/audio/transcriptions",
+  asrEndpoint: "https://api.openai.com/v1",
+  asrFullUrl: false,
   asrApiKey: "",
   asrModel: "whisper-1",
-  llmEndpoint: "https://api.openai.com/v1/chat/completions",
+  llmEndpoint: "https://api.openai.com/v1",
+  llmFullUrl: false,
   llmApiKey: "",
   llmModel: "gpt-4o-mini",
   textMode: "polish",
@@ -274,9 +278,11 @@ export const usePanelStore = create<PanelState>((set, get) => ({
         }
         return state;
       case CONFIG_KEYS.asrEndpoint: return { service: { ...state.service, asrEndpoint: entry.value } };
+      case CONFIG_KEYS.asrFullUrl: return { service: { ...state.service, asrFullUrl: parseBoolean(entry.value, state.service.asrFullUrl) } };
       case CONFIG_KEYS.asrApiKey: return { service: { ...state.service, asrApiKey: entry.value } };
       case CONFIG_KEYS.asrModel: return { service: { ...state.service, asrModel: entry.value } };
       case CONFIG_KEYS.llmEndpoint: return { service: { ...state.service, llmEndpoint: entry.value } };
+      case CONFIG_KEYS.llmFullUrl: return { service: { ...state.service, llmFullUrl: parseBoolean(entry.value, state.service.llmFullUrl) } };
       case CONFIG_KEYS.llmApiKey: return { service: { ...state.service, llmApiKey: entry.value } };
       case CONFIG_KEYS.llmModel: return { service: { ...state.service, llmModel: entry.value } };
       case CONFIG_KEYS.textMode:
@@ -321,9 +327,11 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     const mappings: [keyof ServiceConfig, string, (value: ServiceConfig[keyof ServiceConfig]) => string][] = [
       ["asrProvider", CONFIG_KEYS.asrProvider, String],
       ["asrEndpoint", CONFIG_KEYS.asrEndpoint, String],
+      ["asrFullUrl", CONFIG_KEYS.asrFullUrl, String],
       ["asrApiKey", CONFIG_KEYS.asrApiKey, String],
       ["asrModel", CONFIG_KEYS.asrModel, String],
       ["llmEndpoint", CONFIG_KEYS.llmEndpoint, String],
+      ["llmFullUrl", CONFIG_KEYS.llmFullUrl, String],
       ["llmApiKey", CONFIG_KEYS.llmApiKey, String],
       ["llmModel", CONFIG_KEYS.llmModel, String],
       ["textMode", CONFIG_KEYS.textMode, String],

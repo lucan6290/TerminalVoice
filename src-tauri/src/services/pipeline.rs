@@ -58,10 +58,62 @@ impl PipelineHandle {
     }
 }
 
-const DEFAULT_ASR_ENDPOINT: &str = "https://api.openai.com/v1/audio/transcriptions";
+pub const DEFAULT_ASR_BASE: &str = "https://api.openai.com/v1";
 const DEFAULT_ASR_MODEL: &str = "whisper-1";
-const DEFAULT_LLM_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
+pub const DEFAULT_LLM_BASE: &str = "https://api.openai.com/v1";
 const DEFAULT_LLM_MODEL: &str = "gpt-4o-mini";
+
+pub const ASR_PATH: &str = "/audio/transcriptions";
+pub const LLM_PATH: &str = "/chat/completions";
+
+/// 解析端点地址（供 commands 层测试连接等场景复用）。
+/// - `full_url = true`：直接使用用户填写的完整 URL。
+/// - `full_url = false`（默认）：用户填写的是基础地址，自动拼接 API 路径；
+///   若已包含目标路径后缀（兼容旧配置），则不重复拼接。
+pub fn resolve_endpoint(base: &str, path: &str, default_base: &str) -> String {
+    let trimmed = base.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        return format!("{}{}", default_base.trim_end_matches('/'), path);
+    }
+    if trimmed.ends_with(path) {
+        return trimmed.to_string();
+    }
+    format!("{trimmed}{path}")
+}
+
+/// 解析 /models 端点地址。
+/// - `full_url = true`：用户填写的是完整请求 URL（如 .../chat/completions 或 .../audio/transcriptions），
+///   尝试推导对应的 models URL（截断到最后一个 '/' 之前，拼 "/models"）。
+/// - `full_url = false`：用户填写的是基础地址，自动拼接 /models；
+///   若已包含 /models 后缀则不重复拼接。
+pub fn resolve_models_endpoint(base: &str, full_url: bool, default_base: &str) -> String {
+    let trimmed = base.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        return format!("{}/models", default_base.trim_end_matches('/'));
+    }
+    if full_url {
+        // 用户填的是完整请求 URL（如 .../chat/completions），推导到 base + /models
+        match trimmed.rfind('/') {
+            Some(pos) if pos > 8 => {
+                // pos > 8 确保不是 https:// 的斜杠
+                let candidate = format!("{}/models", &trimmed[..pos]);
+                return candidate;
+            }
+            _ => return format!("{trimmed}/models"),
+        }
+    }
+    if trimmed.ends_with("/models") {
+        return trimmed.to_string();
+    }
+    format!("{trimmed}/models")
+}
+
+/// 读取布尔配置项（"true"/"1" 为真）。
+fn read_bool_config(app: &AppHandle, key: &str) -> bool {
+    read_config(app, key)
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false)
+}
 
 struct RecordingTicker {
     cancel: Arc<AtomicBool>,
@@ -902,10 +954,17 @@ fn cloud_asr_config(app: &AppHandle) -> Option<CloudAsrConfig> {
     if api_key.trim().is_empty() {
         return None;
     }
+    let full_url = read_bool_config(app, "service.asrFullUrl");
+    let raw_endpoint = read_config(app, "service.asrEndpoint")
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_ASR_BASE.to_string());
+    let endpoint = if full_url {
+        raw_endpoint.trim().to_string()
+    } else {
+        resolve_endpoint(&raw_endpoint, ASR_PATH, DEFAULT_ASR_BASE)
+    };
     Some(CloudAsrConfig {
-        endpoint: read_config(app, "service.asrEndpoint")
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| DEFAULT_ASR_ENDPOINT.to_string()),
+        endpoint,
         api_key: Zeroizing::new(api_key),
         model: read_config(app, "service.asrModel")
             .filter(|value| !value.trim().is_empty())
@@ -919,10 +978,17 @@ fn cloud_llm_config(app: &AppHandle) -> Option<LlmConfig> {
     if api_key.trim().is_empty() {
         return None;
     }
+    let full_url = read_bool_config(app, "service.llmFullUrl");
+    let raw_endpoint = read_config(app, "service.llmEndpoint")
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_LLM_BASE.to_string());
+    let endpoint = if full_url {
+        raw_endpoint.trim().to_string()
+    } else {
+        resolve_endpoint(&raw_endpoint, LLM_PATH, DEFAULT_LLM_BASE)
+    };
     Some(LlmConfig {
-        endpoint: read_config(app, "service.llmEndpoint")
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| DEFAULT_LLM_ENDPOINT.to_string()),
+        endpoint,
         api_key: Zeroizing::new(api_key),
         model: read_config(app, "service.llmModel")
             .filter(|value| !value.trim().is_empty())

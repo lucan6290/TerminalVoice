@@ -38,7 +38,60 @@
 
 ## 支持的服务商配置
 
-### 方案一：OpenAI 官方（默认）
+> 🇨🇳 标注 = 国内可直连，无需科学上网
+
+### 🏆 方案一：硅基流动 SiliconFlow（免费 · 国内直连 · 中文优秀 · 首推）
+
+硅基流动（SiliconFlow）是国内 AI 推理平台，提供**两个永久免费**的 ASR 模型，完全兼容 OpenAI Whisper API 格式，国内直连延迟低，中文识别效果优秀。
+
+| 字段 | 值 |
+|:---|:---|
+| API Endpoint | `https://api.siliconflow.cn/v1/audio/transcriptions` |
+| Model | `FunAudioLLM/SenseVoiceSmall`（推荐，中文效果好）或 `TeleAI/TeleSpeechASR` |
+| API Key | 从硅基流动控制台获取（`sk-` 开头） |
+
+- **官网**：https://siliconflow.cn
+- **注册地址**：https://cloud.siliconflow.cn/account/register（支持手机号注册）
+- **API Key 获取**：https://cloud.siliconflow.cn/account/ak
+- **文档**：https://docs.siliconflow.cn/cn/userguide/capabilities/audio
+- **费用**：
+  - `FunAudioLLM/SenseVoiceSmall` 和 `TeleAI/TeleSpeechASR` **永久免费**（有并发限制，个人使用完全够用）
+  - 新用户注册赠送 2000 万 Token 免费额度
+  - 付费模型如 `Qwen3-Omni-30B-A3B-Instruct` 约 ￥0.02/分钟
+- **注意**：需要完成实名认证（国内手机号+身份证），Endpoint 域名是 `.cn` 不是 `.com`（`.com` 会返回 401）
+
+**配置步骤**：
+1. 打开 https://cloud.siliconflow.cn/account/register 用手机号注册
+2. 完成实名认证（免费，几分钟完成）
+3. 进入 https://cloud.siliconflow.cn/account/ak ，点击「新建 API 密钥」，复制密钥
+4. 填入 TerminalVoice：
+   - 模式选 **仅云端**
+   - API Endpoint：`https://api.siliconflow.cn/v1/audio/transcriptions`
+   - Model：`FunAudioLLM/SenseVoiceSmall`
+   - API Key：粘贴你的密钥
+5. 点击「测试 ASR 连接」验证
+
+---
+
+### 方案二：Groq（速度极快 · 需科学上网）
+
+Groq 提供 Whisper large-v3 的高速推理，延迟极低。免费额度每天 2000 次调用。
+
+| 字段 | 值 |
+|:---|:---|
+| API Endpoint | `https://api.groq.com/openai/v1/audio/transcriptions` |
+| Model | `whisper-large-v3-turbo`（或 `whisper-large-v3`） |
+| API Key | 从 Groq Console 获取（`gsk_` 开头） |
+
+- **官网**：https://groq.com
+- **API Key（免费注册）**：https://console.groq.com/keys（GitHub/Google 账号登录）
+- **文档**：https://console.groq.com/docs/speech-text
+- **费用**：Free Plan 每天约 2000 次调用；付费 $0.04-0.22 / 小时
+- **注意**：国内访问需要科学上网
+
+---
+
+### 方案三：OpenAI 官方
 
 | 字段 | 值 |
 |:---|:---|
@@ -49,29 +102,28 @@
 - **官网**：https://platform.openai.com
 - **API Key 获取**：https://platform.openai.com/api-keys
 - **文档**：https://platform.openai.com/docs/guides/speech-to-text
-- **费用**：$0.006 / 分钟
-- **注意**：需要可访问 OpenAI 的网络环境
+- **费用**：$0.006 / 分钟（约 ¥0.04/分钟）
+- **注意**：需要可访问 OpenAI 的网络环境+国际信用卡
 
 ---
 
-### 方案二：Groq（速度极快，推荐）
+### 方案四：Deepgram（每月200分钟免费 · 海外服务）
 
-Groq 提供 Whisper large-v3 的高速推理，延迟极低，免费额度充足。
+Deepgram 提供 Nova-3 模型，每月 200 分钟免费额度。
 
 | 字段 | 值 |
 |:---|:---|
-| API Endpoint | `https://api.groq.com/openai/v1/audio/transcriptions` |
-| Model | `whisper-large-v3-turbo`（或 `whisper-large-v3`） |
-| API Key | 从 Groq Console 获取（`gsk_` 开头） |
+| API Endpoint | `https://api.deepgram.com/v1/listen`（非标准 Whisper 格式，需适配） |
+| Model | `nova-3` |
+| API Key | 从 Deepgram Console 获取 |
 
-- **官网**：https://groq.com
-- **API Key（免费注册）**：https://console.groq.com/keys
-- **文档**：https://console.groq.com/docs/speech-text
-- **费用**：免费额度约每天 14,400 秒；付费 $0.04-0.22 / 小时
+- **官网**：https://deepgram.com
+- **免费额度**：每月 200 分钟
+- **注意**：API 格式不完全兼容 OpenAI Whisper，需要后端适配（当前代码暂不支持）
 
 ---
 
-### 方案三：本地部署 Whisper（完全免费）
+### 方案五：本地部署 Whisper（完全免费 · 需自己搭服务）
 
 本地运行 Whisper 服务（如 whisper.cpp server、faster-whisper-server 等），暴露 OpenAI 兼容端点即可：
 
@@ -81,28 +133,31 @@ Groq 提供 Whisper large-v3 的高速推理，延迟极低，免费额度充足
 | Model | 本地加载的模型名（如 `base`/`small`/`medium`） |
 | API Key | 本地服务通常不需要，填任意非空值（如 `sk-local`） |
 
-- **whisper.cpp server**：https://github.com/ggerganov/whisper.cpp/tree/master/examples/server
-- **faster-whisper-server**：参见 GitHub 上的开源实现（如 `faster-whisper-server`、`whisperX` 等）
+- **whisper.cpp server**：https://github.com/ggerganov/whisper.cpp/tree/master/examples/server（轻量，CPU 即可运行）
+- **faster-whisper-server**：https://github.com/fedirz/faster-whisper-server（基于 faster-whisper，GPU 加速）
+- **FunASR**（阿里达摩院，中文效果最佳）：https://github.com/modelscope/FunASR
 
 ---
 
-### 方案四：OpenAI 兼容中转/代理服务
+### 方案六：OpenAI 兼容中转/代理服务
 
-任何兼容 OpenAI `/v1/audio/transcriptions` 格式的中转服务均可使用，如 One-API、New-API、各类 API 聚合平台等，填入对应服务商提供的 endpoint、model 和 key 即可。
+任何兼容 OpenAI `/v1/audio/transcriptions` 格式的中转服务均可使用，如：
+- 国内的各类 API 聚合平台（支持 Whisper 接口的）
+- One-API / New-API 自建中转
+- 各云厂商的 OpenAI 兼容代理
+
+填入对应服务商提供的 endpoint、model 和 key 即可。
 
 ---
 
-## 详细配置步骤（以 Groq 为例）
+## 快速推荐
 
-1. 打开 https://console.groq.com/keys ，使用 GitHub 或 Google 账号登录
-2. 点击 **Create API Key**，复制生成的密钥（以 `gsk_` 开头，请注意保存，只显示一次）
-3. 回到 TerminalVoice 服务配置页面：
-   - 模式选择 **仅云端**
-   - API Endpoint 填入：`https://api.groq.com/openai/v1/audio/transcriptions`
-   - Model 填入：`whisper-large-v3-turbo`
-   - API Key 粘贴刚才复制的 Groq Key
-4. 点击页面下方的「测试 ASR 连接」按钮
-5. 提示连接成功后，即可按住 **Right Alt** 开始语音输入
+| 你的情况 | 推荐方案 |
+|:---|:---|
+| 国内用户，想零成本直接用 | ✅ **硅基流动 SiliconFlow**（免费 + 国内直连 + 中文好） |
+| 有科学上网条件，追求速度 | Groq |
+| 愿意付费，追求最佳效果 | OpenAI `whisper-1` 或 gpt-4o-transcribe |
+| 不想依赖网络 | 等待离线模式更新，或本地部署 whisper.cpp |
 
 ---
 

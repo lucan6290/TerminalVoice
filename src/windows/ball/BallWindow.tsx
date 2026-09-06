@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, AlertCircle, Loader2, Wand2, Volume2 } from "lucide-react";
 import { Window } from "@tauri-apps/api/window";
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { cn } from "../../lib/cn";
 import { usePanelStore } from "../../stores/appStore";
 import { TranslatePopup } from "../../components/ui/TranslatePopup";
@@ -10,7 +11,7 @@ import type { AppStatus } from "../../lib/types";
  * 悬浮小球
  * - 48×48 毛玻璃圆盘，64×64 透明窗口居中
  * - 状态：idle / recording / thinking / disabled / error / rewrite / tts
- * - 状态由后端 AppRuntime 同步，点击仅打开控制面板
+ * - 状态由后端 AppRuntime 同步，点击切换面板显隐
  * - 使用原生 title 实现 OS 级 tooltip（自动浮于窗口顶层，不受裁剪）
  */
 type BallState = "idle" | "recording" | "thinking" | "disabled" | "error" | "rewrite" | "tts";
@@ -104,6 +105,9 @@ export function BallWindow() {
   const recordingDuration = usePanelStore((state) => state.recordingDuration);
   const [hovered, setHovered] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
+  // 手动拖拽/点击判断：记录 mousedown 起点，移动超过阈值则拖拽，否则视为点击
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const hasDraggedRef = useRef(false);
 
   const state = computeBallState(appStatus, rewriteMode, ttsSpeaking, errorMessage);
   const meta = STATE_META[state];
@@ -111,14 +115,14 @@ export function BallWindow() {
   const showTimer = state === "recording" && recordingDuration > 0;
 
   // 动态更新原生 title（包含录音时长等实时信息）
-  const tooltipText = `${meta.label} · 点击打开面板${showTimer ? ` ${formatDuration(recordingDuration)}` : ""}`;
+  const tooltipText = `${meta.label} · 点击切换面板${showTimer ? ` ${formatDuration(recordingDuration)}` : ""}`;
   useEffect(() => {
     if (buttonRef.current) {
       buttonRef.current.title = tooltipText;
     }
   }, [tooltipText]);
 
-  async function openPanel() {
+  async function togglePanel() {
     if (!("__TAURI_INTERNALS__" in window)) return;
 
     try {
@@ -127,10 +131,33 @@ export function BallWindow() {
         console.warn("[TerminalVoice] 未找到 panel 窗口");
         return;
       }
-      await panel.show();
-      await panel.setFocus();
+      const visible = await panel.isVisible();
+      if (visible) {
+        await panel.hide();
+      } else {
+        // 将面板定位到悬浮球左侧，垂直居中对齐
+        const ballWin = Window.getCurrent();
+        const ballPos = await ballWin.outerPosition();
+        const ballScale = await ballWin.scaleFactor();
+        const ballLogicalX = ballPos.x / ballScale;
+        const ballLogicalY = ballPos.y / ballScale;
+        const ballSize = 64;
+        const panelWidth = 388;
+        const panelHeight = 620;
+        const gap = 8;
+        // 默认放在球的左侧
+        let panelX = ballLogicalX - panelWidth - gap;
+        const panelY = ballLogicalY + ballSize / 2 - panelHeight / 2;
+        // 如果左侧空间不足（球靠近屏幕左边缘），则放在右侧
+        if (panelX < 0) {
+          panelX = ballLogicalX + ballSize + gap;
+        }
+        await panel.setPosition(new LogicalPosition(panelX, panelY));
+        await panel.show();
+        await panel.setFocus();
+      }
     } catch (error) {
-      console.warn("[TerminalVoice] 打开面板失败", error);
+      console.warn("[TerminalVoice] 切换面板失败", error);
     }
   }
 
@@ -143,22 +170,52 @@ export function BallWindow() {
     }
   }
 
+  const DRAG_THRESHOLD = 5; // 移动超过 5px 视为拖拽
+
+  function handleMouseDown(e: React.MouseEvent) {
+    if (e.button !== 0) return;
+    dragStartRef.current = { x: e.screenX, y: e.screenY };
+    hasDraggedRef.current = false;
+  }
+
+  function handleMouseMove(e: React.MouseEvent) {
+    if (!dragStartRef.current || hasDraggedRef.current) return;
+    const dx = Math.abs(e.screenX - dragStartRef.current.x);
+    const dy = Math.abs(e.screenY - dragStartRef.current.y);
+    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+      hasDraggedRef.current = true;
+      dragStartRef.current = null;
+      void startDrag();
+    }
+  }
+
+  function handleMouseUp() {
+    dragStartRef.current = null;
+  }
+
+  function handleMouseLeave() {
+    dragStartRef.current = null;
+    setHovered(false);
+  }
+
+  function handleClick(e: React.MouseEvent) {
+    if (hasDraggedRef.current) {
+      hasDraggedRef.current = false;
+      return;
+    }
+    void togglePanel();
+  }
+
   return (
     <div
       className="w-full h-full flex items-center justify-center relative cursor-default select-none"
       style={{ background: "transparent" }}
-      onMouseDown={(e) => {
-        // 左键拖拽移动窗口，右键/其他键不处理
-        if (e.button === 0) {
-          void startDrag();
-        }
-      }}
-      onClick={(e) => {
-        // startDragging 在拖动时不会触发 click；短按点击才会到这里
-        void openPanel();
-      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       <div
         ref={buttonRef}

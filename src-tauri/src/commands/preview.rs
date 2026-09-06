@@ -239,7 +239,7 @@ pub fn test_asr_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
     info!("测试 ASR 连接");
     let db = db.lock().map_err(|error| error.to_string())?;
 
-    let endpoint = db
+    let raw_endpoint = db
         .get_config("service.asrEndpoint")
         .map_err(|error| {
             error!("获取 ASR Endpoint 配置失败: {error}");
@@ -249,7 +249,25 @@ pub fn test_asr_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
             error!("ASR Endpoint 未配置");
             "ASR Endpoint 未配置".to_string()
         })?;
-    if endpoint.is_empty() {
+
+    let full_url = db
+        .get_config("service.asrFullUrl")
+        .ok()
+        .flatten()
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    let endpoint = if full_url {
+        raw_endpoint.trim().to_string()
+    } else {
+        crate::services::pipeline::resolve_endpoint(
+            &raw_endpoint,
+            crate::services::pipeline::ASR_PATH,
+            crate::services::pipeline::DEFAULT_ASR_BASE,
+        )
+    };
+
+    if endpoint.trim().is_empty() {
         error!("ASR Endpoint 为空");
         return Err("ASR Endpoint 未配置".to_string());
     }
@@ -293,7 +311,7 @@ pub fn test_llm_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
     info!("测试 LLM 连接");
     let db = db.lock().map_err(|error| error.to_string())?;
 
-    let endpoint = db
+    let raw_endpoint = db
         .get_config("service.llmEndpoint")
         .map_err(|error| {
             error!("获取 LLM Endpoint 配置失败: {error}");
@@ -303,7 +321,25 @@ pub fn test_llm_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
             error!("LLM Endpoint 未配置");
             "LLM Endpoint 未配置".to_string()
         })?;
-    if endpoint.is_empty() {
+
+    let full_url = db
+        .get_config("service.llmFullUrl")
+        .ok()
+        .flatten()
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    let endpoint = if full_url {
+        raw_endpoint.trim().to_string()
+    } else {
+        crate::services::pipeline::resolve_endpoint(
+            &raw_endpoint,
+            crate::services::pipeline::LLM_PATH,
+            crate::services::pipeline::DEFAULT_LLM_BASE,
+        )
+    };
+
+    if endpoint.trim().is_empty() {
         error!("LLM Endpoint 为空");
         return Err("LLM Endpoint 未配置".to_string());
     }
@@ -371,4 +407,134 @@ pub fn test_llm_connection(db: State<'_, Mutex<Database>>) -> Result<bool, Strin
             Err(error.message)
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FetchedModel {
+    pub id: String,
+    #[serde(rename = "ownedBy", default)]
+    pub owned_by: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModelsResponse {
+    #[serde(default)]
+    data: Vec<ModelEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModelEntry {
+    id: String,
+    #[serde(default)]
+    owned_by: Option<String>,
+}
+
+fn fetch_models_common(
+    db: &std::sync::MutexGuard<'_, Database>,
+    endpoint_key: &str,
+    full_url_key: &str,
+    api_key_key: &str,
+    service_path: &str,
+    default_base: &str,
+    service_label: &str,
+) -> Result<Vec<FetchedModel>, String> {
+    let raw_endpoint = db
+        .get_config(endpoint_key)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| format!("{service_label} API URL 未配置"))?;
+
+    let full_url = db
+        .get_config(full_url_key)
+        .ok()
+        .flatten()
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    let models_url = crate::services::pipeline::resolve_models_endpoint(
+        &raw_endpoint, full_url, default_base,
+    );
+
+    // 如果 full_url=false，也尝试推导：用户可能填了完整路径（兼容旧配置）
+    let models_url = if !full_url && raw_endpoint.trim().ends_with(service_path) {
+        // 旧配置填的是完整路径，截断到 base 再拼 /models
+        let trimmed = raw_endpoint.trim().trim_end_matches('/');
+        match trimmed.rfind('/') {
+            Some(pos) if pos > 8 => format!("{}/models", &trimmed[..pos]),
+            _ => models_url,
+        }
+    } else {
+        models_url
+    };
+
+    let stored_key = db
+        .get_config(api_key_key)
+        .map_err(|error| error.to_string())?
+        .unwrap_or_default();
+    let api_key = crate::services::secrets::decode_config_value(api_key_key, &stored_key)
+        .map_err(|error| format!("解码 {service_label} API Key 失败: {error}"))?;
+
+    if api_key.is_empty() {
+        return Err(format!("{service_label} API Key 未配置"));
+    }
+
+    let headers = format!("Authorization: Bearer {api_key}\r\n");
+
+    info!("{service_label} 获取模型列表，端点: {models_url}");
+    let response = crate::services::asr_cloud::get_bytes(&models_url, &headers)
+        .map_err(|error| format!("获取{service_label}模型列表失败: {}", error.message))?;
+
+    if !(200..300).contains(&response.status) {
+        let body = String::from_utf8_lossy(&response.body);
+        let body: String = body.chars().take(512).collect();
+        let detail = if body.trim().is_empty() {
+            response.status.to_string()
+        } else {
+            format!("{}: {body}", response.status)
+        };
+        return Err(format!("{service_label} 模型列表请求失败: {detail}"));
+    }
+
+    let parsed: ModelsResponse = serde_json::from_slice(&response.body)
+        .map_err(|error| format!("{service_label} 模型列表响应格式无效: {error}"))?;
+
+    let mut models: Vec<FetchedModel> = parsed
+        .data
+        .into_iter()
+        .map(|entry| FetchedModel {
+            id: entry.id,
+            owned_by: entry.owned_by,
+        })
+        .collect();
+    models.sort_by(|a, b| a.id.to_lowercase().cmp(&b.id.to_lowercase()));
+
+    info!("{service_label} 获取到 {} 个模型", models.len());
+    Ok(models)
+}
+
+#[tauri::command]
+pub fn fetch_asr_models(db: State<'_, Mutex<Database>>) -> Result<Vec<FetchedModel>, String> {
+    let db = db.lock().map_err(|error| error.to_string())?;
+    fetch_models_common(
+        &db,
+        "service.asrEndpoint",
+        "service.asrFullUrl",
+        "service.asrApiKey",
+        crate::services::pipeline::ASR_PATH,
+        crate::services::pipeline::DEFAULT_ASR_BASE,
+        "ASR",
+    )
+}
+
+#[tauri::command]
+pub fn fetch_llm_models(db: State<'_, Mutex<Database>>) -> Result<Vec<FetchedModel>, String> {
+    let db = db.lock().map_err(|error| error.to_string())?;
+    fetch_models_common(
+        &db,
+        "service.llmEndpoint",
+        "service.llmFullUrl",
+        "service.llmApiKey",
+        crate::services::pipeline::LLM_PATH,
+        crate::services::pipeline::DEFAULT_LLM_BASE,
+        "LLM",
+    )
 }
