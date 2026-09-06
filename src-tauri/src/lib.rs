@@ -28,12 +28,23 @@ pub fn run() {
                 .map_err(|e| format!("日志初始化失败: {e}"))?;
             tracing::info!("日志文件: {}", log_path.display());
 
+            // 隐藏辅助窗口的任务栏图标（ball / panel 不应出现在任务栏）
+            for label in &["ball", "panel"] {
+                if let Some(win) = app.get_webview_window(label) {
+                    let _ = win.set_skip_taskbar(true);
+                }
+            }
+            // main 窗口初始隐藏
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.hide();
+            }
+
             let data_dir = app
                 .path()
                 .app_data_dir()
                 .map_err(|error| format!("failed to resolve app data dir: {error}"))?;
             std::fs::create_dir_all(&data_dir)
-                .map_err(|error| format!("failed to create app data dir: {error}"))?;
+                .map_err(|error| format!("failed to create data dir: {error}"))?;
             let db_path = data_dir.join("terminalvoice.db");
             let db = Database::open(&db_path)
                 .map_err(|error| format!("failed to open database: {error}"))?;
