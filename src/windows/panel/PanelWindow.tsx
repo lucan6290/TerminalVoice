@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   X,
-  MoreHorizontal,
+  Settings as SettingsIcon,
   Circle,
   ChevronRight,
   Sparkles,
@@ -10,17 +10,13 @@ import {
   HelpCircle,
   Minus,
   Square,
-  Download,
-  Upload,
-  RefreshCw,
-  LogOut,
   Moon,
   Sun,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cn } from "../../lib/cn";
 import { useT } from "../../lib/i18n";
-import { cancelPreview, confirmPreview, exportData, importData, listAudioInputDevices } from "../../lib/commands";
+import { cancelPreview, confirmPreview, listAudioInputDevices } from "../../lib/commands";
 import { SettingRow } from "../../components/ui/SettingRow";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
 import { HotkeyRecorder, formatKeyLabel } from "../../components/ui/HotkeyRecorder";
@@ -31,6 +27,7 @@ import { DictTab } from "./tabs/DictTab";
 import { SkillTab } from "./tabs/SkillTab";
 import { ServiceTab } from "./tabs/ServiceTab";
 import { HelpTab } from "./tabs/HelpTab";
+import { SettingsTab } from "./tabs/SettingsTab";
 import type { TabKey } from "../../stores/appStore";
 import { PreviewPopup } from "./PreviewPopup";
 import { StateView } from "./StateView";
@@ -75,21 +72,6 @@ export function PanelWindow() {
   const clearPreviewDraft = usePanelStore((s) => s.clearPreviewDraft);
   const setShowUpdateModal = usePanelStore((s) => s.setShowUpdateModal);
   const [micDevices, setMicDevices] = useState<string[]>([micDevice]);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    }
-    if (moreOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [moreOpen]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -100,7 +82,7 @@ export function PanelWindow() {
       })
       .catch((error) => {
         console.warn("[TerminalVoice] 枚举麦克风失败:", error);
-        showToast("无法读取麦克风设备", "warn");
+        showToast(t("toast.micEnumFail"), "warn");
       });
   }, [micDevice]);
 
@@ -121,86 +103,6 @@ export function PanelWindow() {
       await win.hide();
     } catch {
       // Browser dev mode - no-op
-    }
-  }
-
-  function handleMore() {
-    setMoreOpen((v) => !v);
-  }
-
-  async function handleExportData() {
-    setMoreOpen(false);
-    if (!("__TAURI_INTERNALS__" in window)) {
-      showToast("浏览器模式不支持数据导出", "info");
-      return;
-    }
-    try {
-      showToast("正在导出数据...", "info");
-      const data = await exportData();
-      const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const date = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `terminalvoice-backup-${date}.db`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast("数据导出成功", "success");
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "导出失败", "error");
-    }
-  }
-
-  function handleImportClick() {
-    setMoreOpen(false);
-    fileInputRef.current?.click();
-  }
-
-  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!("__TAURI_INTERNALS__" in window)) {
-      showToast("浏览器模式不支持数据导入", "info");
-      return;
-    }
-    try {
-      const buf = await file.arrayBuffer();
-      const data = Array.from(new Uint8Array(buf));
-      await importData(data);
-      showToast("数据导入成功，正在刷新...", "success");
-      await usePanelStore.getState().loadAll();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "导入失败", "error");
-    }
-  }
-
-  async function handleCheckUpdate() {
-    setMoreOpen(false);
-    const { checkForUpdate } = usePanelStore.getState();
-    showToast("正在检查更新...", "info");
-    await checkForUpdate();
-    const info = usePanelStore.getState().updateInfo;
-    if (info?.hasUpdate) {
-      usePanelStore.getState().setShowUpdateModal(true);
-    } else {
-      showToast("当前已是最新版本", "success");
-    }
-  }
-
-  async function handleQuit() {
-    setMoreOpen(false);
-    if (!("__TAURI_INTERNALS__" in window)) {
-      showToast("浏览器模式不支持退出", "info");
-      return;
-    }
-    try {
-      const { exit } = await import("@tauri-apps/plugin-process");
-      await exit(0);
-    } catch {
-      showToast("退出失败", "error");
     }
   }
 
@@ -405,38 +307,17 @@ export function PanelWindow() {
             >
               <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
-            <div className="w-px h-5 bg-neutral-700 mx-1 shrink-0" />
-            <div ref={moreMenuRef} className="relative">
-              <TabBtn
-                active={moreOpen}
-                onClick={handleMore}
-                title={t("panel.footer.more")}
-                data-tip={t("panel.footer.more")}
-                className="tip-above"
-              >
-                <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.8} />
-              </TabBtn>
-              {moreOpen && (
-                <div
-                  className="absolute bottom-[calc(100%+8px)] right-0 w-48 rounded-xl bg-neutral-800 shadow-2xl ring-1 ring-white/10 overflow-hidden animate-fade-in z-50"
-                >
-                  <MenuItem icon={Download} label={t("panel.footer.menu.backup")} onClick={handleExportData} />
-                  <MenuItem icon={Upload} label={t("panel.footer.menu.restore")} onClick={handleImportClick} />
-                  <MenuItem icon={RefreshCw} label={t("panel.footer.menu.checkUpdate")} onClick={handleCheckUpdate} />
-                  <div className="h-px bg-white/5" />
-                  <MenuItem icon={LogOut} label={t("panel.footer.menu.quit")} onClick={handleQuit} danger />
-                </div>
-              )}
-            </div>
+            <TabBtn
+              active={activeTab === "settings"}
+              onClick={() => setActiveTab(activeTab === "settings" ? null : "settings")}
+              title={t("panel.footer.tab.settings")}
+              data-tip={t("panel.footer.tab.settings")}
+              className="tip-above"
+            >
+              <SettingsIcon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+            </TabBtn>
           </div>
         </footer>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".db,.bin,application/octet-stream"
-          className="hidden"
-          onChange={handleImportFile}
-        />
         <PreviewPopup
           draft={displayDraft}
           onConfirm={handleConfirmPreview}
@@ -584,12 +465,13 @@ function HomeView({
 /* ========== Tab 内容分发 ========== */
 function TabContent({ activeTab }: { activeTab: TabKey | null }) {
   switch (activeTab) {
-    case "history": return <HistoryTab />;
-    case "dict":    return <DictTab />;
-    case "skill":   return <SkillTab />;
-    case "service": return <ServiceTab />;
-    case "help":    return <HelpTab />;
-    default:        return null;
+    case "history":  return <HistoryTab />;
+    case "dict":     return <DictTab />;
+    case "skill":    return <SkillTab />;
+    case "service":  return <ServiceTab />;
+    case "help":     return <HelpTab />;
+    case "settings": return <SettingsTab />;
+    default:         return null;
   }
 }
 
@@ -687,27 +569,3 @@ function FooterBtn({
   );
 }
 
-function MenuItem({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] transition-colors text-left",
-        danger ? "text-red-400 hover:bg-red-500/10" : "text-neutral-200 hover:bg-white/5",
-      )}
-    >
-      <Icon className="w-[16px] h-[16px] shrink-0" strokeWidth={1.8} />
-      <span>{label}</span>
-    </button>
-  );
-}

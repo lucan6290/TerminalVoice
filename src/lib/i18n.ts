@@ -52,6 +52,7 @@ const zh: Record<string, string> = {
   "panel.footer.tab.history": "历史记录",
   "panel.footer.tab.help": "帮助与关于",
   "panel.footer.tab.service": "服务配置",
+  "panel.footer.tab.settings": "设置",
   "panel.footer.more": "更多选项",
   "panel.footer.menu.backup": "备份数据",
   "panel.footer.menu.restore": "恢复数据",
@@ -59,6 +60,17 @@ const zh: Record<string, string> = {
   "panel.footer.menu.quit": "退出应用",
   "panel.footer.langLabel.cn": "中文",
   "panel.footer.langLabel.en": "English",
+
+  // ---- Tabs: Settings ----
+  "tab.settings.title": "设置",
+  "tab.settings.section.preferences": "偏好设置",
+  "tab.settings.section.data": "数据管理",
+  "tab.settings.section.about": "关于与更新",
+  "tab.settings.desc.backup": "导出配置与历史记录为备份文件",
+  "tab.settings.desc.restore": "从备份文件恢复数据（覆盖当前）",
+  "tab.settings.desc.checkUpdate": "检查是否有新版本可用",
+  "tab.settings.desc.quit": "退出 TerminalVoice",
+  "tab.settings.updateAvailable": "新版本 v{version} 可用，点击查看",
 
   // ---- Preview ----
   "preview.title.rewrite": "确认改写结果",
@@ -245,6 +257,7 @@ const en: Record<string, string> = {
   "panel.footer.tab.history": "History",
   "panel.footer.tab.help": "Help & About",
   "panel.footer.tab.service": "Services",
+  "panel.footer.tab.settings": "Settings",
   "panel.footer.more": "More",
   "panel.footer.menu.backup": "Backup data",
   "panel.footer.menu.restore": "Restore data",
@@ -252,6 +265,17 @@ const en: Record<string, string> = {
   "panel.footer.menu.quit": "Quit",
   "panel.footer.langLabel.cn": "中文",
   "panel.footer.langLabel.en": "English",
+
+  // ---- Tabs: Settings ----
+  "tab.settings.title": "Settings",
+  "tab.settings.section.preferences": "Preferences",
+  "tab.settings.section.data": "Data",
+  "tab.settings.section.about": "About & Updates",
+  "tab.settings.desc.backup": "Export config & history to a backup file",
+  "tab.settings.desc.restore": "Restore data from a backup file (overwrites)",
+  "tab.settings.desc.checkUpdate": "Check for new versions",
+  "tab.settings.desc.quit": "Quit TerminalVoice",
+  "tab.settings.updateAvailable": "v{version} available, click to view",
 
   // ---- Preview ----
   "preview.title.rewrite": "Confirm rewrite",

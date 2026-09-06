@@ -39,7 +39,7 @@ import type {
 import { DEFAULT_HOTKEY_CONFIG } from "../lib/types";
 
 /** 底部功能 Tab 类型 */
-export type TabKey = "skill" | "dict" | "history" | "help" | "service";
+export type TabKey = "skill" | "dict" | "history" | "help" | "service" | "settings";
 
 const CONFIG_KEYS = {
   dark: "ui.dark",
