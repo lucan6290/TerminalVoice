@@ -4,13 +4,30 @@ pub mod state;
 pub mod tray;
 
 use services::db::Database;
+use services::logging;
 use state::AppRuntime;
 use std::sync::Mutex;
 use tauri::Manager;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // 第二实例启动时，显示面板窗口并聚焦
+            let _ = app.get_webview_window("panel").map(|w| {
+                let _ = w.show();
+                let _ = w.set_focus();
+            });
+        }))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
+            // 初始化日志系统（tracing + 文件日志）
+            let log_path = logging::init_logging(app.handle())
+                .map_err(|e| format!("日志初始化失败: {e}"))?;
+            tracing::info!("日志文件: {}", log_path.display());
+
             let data_dir = app
                 .path()
                 .app_data_dir()
@@ -52,6 +69,9 @@ pub fn run() {
             commands::model::list_models,
             commands::model::download_model,
             commands::model::delete_model,
+            commands::skills::list_skills,
+            commands::skills::set_skill,
+            commands::skills::get_active_skill,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run TerminalVoice");

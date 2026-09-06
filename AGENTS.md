@@ -47,8 +47,8 @@ TerminalVoice/
 │   ├── App.tsx                   ← 路由 + Tauri 事件桥接 + 环境检测
 │   ├── index.css                 ← Tailwind v4 主题 tokens + 全局样式
 │   ├── lib/
-│   │   ├── commands.ts           ← Tauri invoke 封装（24 个命令）
-│   │   ├── events.ts             ← Tauri 事件名称常量（14 个事件）
+│   │   ├── commands.ts           ← Tauri invoke 封装（27 个命令）
+│   │   ├── events.ts             ← Tauri 事件名称常量（15 个事件）
 │   │   ├── types.ts              ← 共享 TS 类型（与 Rust serde 对齐）
 │   │   └── cn.ts                 ← className 合并工具（极简 join）
 │   ├── stores/
@@ -59,31 +59,42 @@ TerminalVoice/
 │   │   └── panel/                ← 极简面板窗口（#/panel）
 │   │       ├── PanelWindow.tsx   ← 面板主组件（顶部栏+首页+Tab+底栏）
 │   │       ├── PreviewPopup.tsx  ← 双模式预览弹窗（recognition/rewrite）
+│   │       ├── StateView.tsx     ← 面板状态卡片（录音/识别/TTS/LLM流式/翻译）
 │   │       └── tabs/             ← 5 个 Tab：Skill/Dict/History/Help/Service（IPC 驱动）
 │   ├── components/               ← 通用组件
-│   │   ├── ui/                   ← 原子组件：Toast/ToggleSwitch/SettingRow/ErrorModal/TranslatePopup
-│   │   └── StatusBadge.tsx       ← 早期 MVP 状态徽章（待整合）
-│   ├── pages/                    ← 旧版页面（History/Settings，待迁移）
+│   │   └── ui/                   ← 原子组件：Toast/ToggleSwitch/SettingRow/ErrorModal/TranslatePopup
+│   ├── pages/                    ← 已清理（旧文件已删除）
 │   └── test/setup.ts             ← Vitest setup（jest-dom）
 │
 ├── src-tauri/                    ← Rust 后端
 │   ├── Cargo.toml                ← Rust 依赖（tauri 2 / rusqlite / cpal 等）
 │   ├── tauri.conf.json           ← Tauri 配置：3 窗口（main/ball/panel）
-│   ├── capabilities/default.json ← 权限：仅 core:default + window show/focus
+│   ├── capabilities/default.json ← 权限：core:default + window show/focus + autostart
 │   ├── build.rs
 │   └── src/
 │       ├── main.rs               ← 入口：调用 terminalvoice_lib::run()
-│       ├── lib.rs                ← setup：DB + Runtime + 24 个 invoke handler
+│       ├── lib.rs                ← setup：DB + Runtime + 27 个 invoke handler + 插件 + 日志 + 托盘
 │       ├── state.rs              ← 5 状态机（Idle/Recording/Recognizing/Preview/Paused）+ 8 事件
 │       ├── commands/
 │       │   ├── mod.rs
 │       │   ├── config.rs         ← 配置 CRUD + config-updated 事件
 │       │   ├── history.rs        ← 历史列表
-│       │   └── preview.rs        ← 状态查询/mock 预览/确认 + 状态事件推送
+│       │   ├── preview.rs        ← 状态查询/mock 预览/确认 + 状态事件推送
+│       │   ├── skills.rs         ← 技能 IPC：list_skills/set_skill/get_active_skill
+│       │   ├── audio.rs          ← 音频设备列表
+│       │   ├── backup.rs         ← 数据导出/导入
+│       │   ├── dictionary.rs     ← 过滤词 CRUD
+│       │   └── model.rs          ← 模型管理（列表/下载/删除）
 │       └── services/
 │           ├── mod.rs
 │           ├── db.rs             ← SQLite（config/history/filter_words 三表）
-│           └── preprocess.rs     ← 文本预处理（3 模式 + 过滤词 + 标点）
+│           ├── preprocess.rs     ← 文本预处理（3 模式 + 过滤词 + 标点）
+│           ├── logging.rs        ← tracing 日志初始化（文件输出）
+│           ├── skills.rs         ← 语音技能预设（4 个：英文/清单/汇报/听写）
+│           ├── events.rs         ← 15 个事件常量 + emit 函数
+│           ├── llm.rs            ← LLM 客户端（SSE 流式 + 改写 + prompt 处理）
+│           ├── pipeline.rs       ← 核心管线（录音→ASR→LLM→预览 + 口译模式）
+│           └── model_manager.rs  ← 模型管理（HuggingFace URL + SHA256 校验）
 │
 └── docs/                         ← 项目文档
     ├── CODE_MAP.md               ← ⭐ 当前代码状态地图（必看）
@@ -113,23 +124,26 @@ TerminalVoice/
 - Rust 状态机 `state.rs`（5 状态 + 8 事件 + 7 单元测试）
 - 文本预处理 `preprocess.rs`（Normal/Developer/Raw + 过滤词 + 标点，5 测试）
 - SQLite 数据库 `db.rs`（三表 + WAL + 默认过滤词，3 测试）
-- 前端三窗口路由（`main` 隐藏 / `ball` 悬浮球 / `panel` 面板）
+- 前端三窗口路由（`main` 设置页 / `ball` 悬浮球 / `panel` 面板）
 - BallWindow：7 状态视觉（idle/recording/thinking/disabled/error/rewrite/tts）+ `computeBallState()` + 毛玻璃效果
-- PanelWindow：顶部栏 + 首页快捷设置 + 深浅主题 + 5 个 Tab + Service 页
+- PanelWindow：顶部栏 + 首页快捷设置 + 深浅主题 + 5 个 Tab + Service 页 + StateView 状态卡片
 - PreviewPopup：双模式预览弹窗（recognition=绿色 / rewrite=紫色），Ctrl+Enter 确认 / Esc 取消
 - ErrorModal / TranslatePopup：全局浮层组件，自动消失
 - 设计系统完整：Tailwind v4 tokens（颜色/圆角/阴影/字体/动画）
 - Zustand store：`loadAll()`（Promise.allSettled 初始化）+ 异步 action（乐观更新 + 回滚）+ hydrate/persist 配置
-- IPC 联通：24 个 invoke 命令 + 14 个 Tauri 事件（`useBackendSync()` 集中监听）
+- IPC 联通：27 个 invoke 命令 + 15 个 Tauri 事件（`useBackendSync()` 集中监听）
+- 结构化日志：`tracing` + `tracing-subscriber`，输出到 `app_data_dir/logs/terminalvoice.log`
+- 语音技能系统：4 个预设技能（英文输出/清单模式/汇报格式/听写模板），通过 `list_skills`/`set_skill`/`get_active_skill` IPC 管理
+- LLM 流式输出：SSE streaming，通过 `llm-streaming-delta` 事件实时推送增量文本
+- Tauri 插件：`tauri-plugin-autostart`（开机自启）+ `tauri-plugin-single-instance`（单实例）
+- 系统托盘：已注册，带菜单项
 
-### ⚠️ 前端 Mock，后端未实现
-- 录音、ASR 识别、文本注入（Cargo.toml 已声明 cpal/enigo/rdev/arboard 但代码未用）
-- 全局热键（前端 package.json 有 plugin API，但 Rust 未注册插件）
-- 系统托盘、DPAPI 加密、日志（tracing）、Tauri 插件注册
+### 🟡 部分实现
+- 离线 ASR 推理引擎（`asr_offline.rs` 骨架已搭建，`transcribe()` 未接入实际推理）
 
-### 🔴 遗留组件（早期 MVP，未接入新架构）
-- `StatusBadge.tsx`：朴素 inline style，未使用设计系统
-- `pages/History.tsx`、`pages/Settings.tsx`：旧版单页路由，待迁移到 panel tabs
+### 🔴 已清理（旧文件已删除）
+- `StatusBadge.tsx`：已删除，面板使用 `StateView.tsx` 替代
+- `pages/History.tsx`、`pages/Settings.tsx`：已删除，功能迁移到 panel tabs 和主窗口
 
 ---
 
@@ -160,7 +174,7 @@ TerminalVoice/
 - 基于 `window.location.hash` 的轻量路由，见 `App.tsx` 的 `useHashRoute()`
 - `#/ball` → BallWindow（tauri.conf.json 默认）
 - `#/panel` → PanelWindow
-- `#/main` → 主窗口（占位，待实现）
+- `#/main` → 主窗口（设置页：开机自启/深色模式/服务状态/关于）
 - 其他 hash（含空）→ DevPreview（浏览器开发时并列预览两窗口）
 
 ### 5.4 环境检测
@@ -173,8 +187,8 @@ TerminalVoice/
 
 - Rust 状态通过 `tauri::generate_handler![]` 注册 invoke commands
 - Rust→前端推送通过 `app.emit("event-name", payload)`
-- 当前已注册 14 个事件：`runtime-state-changed`、`config-updated`、`toast`、`preview-ready`、`preview-cleared`、`recording-started`、`recording-tick`、`recording-stopped`、`recording-cancelled`、`tts-started`、`tts-stopped`、`translate-result`、`rewrite-started`、`rewrite-result`
-- 前端在 `useBackendSync()` hook 中集中监听全部 14 个事件（使用 `unlisteners` 数组统一管理），事件名称常量定义在 [lib/events.ts](src/lib/events.ts)
+- 当前已注册 15 个事件：`runtime-state-changed`、`config-updated`、`toast`、`preview-ready`、`preview-cleared`、`recording-started`、`recording-tick`、`recording-stopped`、`recording-cancelled`、`tts-started`、`tts-stopped`、`translate-result`、`rewrite-started`、`rewrite-result`、`llm-streaming-delta`
+- 前端在 `useBackendSync()` hook 中集中监听全部 15 个事件（使用 `unlisteners` 数组统一管理），事件名称常量定义在 [lib/events.ts](src/lib/events.ts)
 
 ### 5.6 文档版本管理规则
 

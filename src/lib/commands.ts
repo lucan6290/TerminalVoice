@@ -8,6 +8,7 @@ import type {
   HistoryItem,
   ModelInfo,
   PreviewDraft,
+  VoiceSkill,
 } from "./types";
 
 const COMMANDS = {
@@ -35,6 +36,9 @@ const COMMANDS = {
   deleteModel: "delete_model",
   exportData: "export_data",
   importData: "import_data",
+  listSkills: "list_skills",
+  setSkill: "set_skill",
+  getActiveSkill: "get_active_skill",
 } as const;
 
 export async function getAppStatus(): Promise<AppStatus> {
@@ -131,4 +135,16 @@ export async function exportData(): Promise<number[]> {
 
 export async function importData(data: number[]): Promise<void> {
   await invoke<void>(COMMANDS.importData, { data });
+}
+
+export async function listSkills(): Promise<VoiceSkill[]> {
+  return invoke<VoiceSkill[]>(COMMANDS.listSkills);
+}
+
+export async function setSkill(skillId: string): Promise<void> {
+  await invoke<void>(COMMANDS.setSkill, { skillId });
+}
+
+export async function getActiveSkill(): Promise<string | null> {
+  return invoke<string | null>(COMMANDS.getActiveSkill);
 }

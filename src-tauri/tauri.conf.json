@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.terminalvoice.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1234",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -56,6 +56,11 @@
         "url": "#/panel"
       }
     ],
+    "trayIcon": {
+      "iconPath": "icons/icon.ico",
+      "iconAsTemplate": false,
+      "tooltip": "TerminalVoice"
+    },
     "security": {
       "csp": null
     }
@@ -69,6 +74,20 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false,
+        "languages": ["SimpChinese", "English"]
+      }
+    },
+    "copyright": "© 2026 TerminalVoice",
+    "category": "Utility",
+    "shortDescription": "Windows 平台常驻全局语音输入桌面工具",
+    "longDescription": "TerminalVoice — Windows 平台常驻全局语音输入桌面工具，支持语音输入、朗读选中文本、翻译/口译三大核心功能。"
   }
 }

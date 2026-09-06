@@ -29,6 +29,9 @@ export const EVENT_TRANSLATE_RESULT = 'translate-result';
 export const EVENT_REWRITE_STARTED = 'rewrite-started';
 export const EVENT_REWRITE_RESULT = 'rewrite-result';
 
+// ── LLM 流式输出事件 ──
+export const EVENT_LLM_STREAMING_DELTA = 'llm-streaming-delta';
+
 /**
  * 所有 Tauri 事件名称的联合类型
  */
@@ -46,4 +49,5 @@ export type TauriEventName =
   | typeof EVENT_TTS_STOPPED
   | typeof EVENT_TRANSLATE_RESULT
   | typeof EVENT_REWRITE_STARTED
-  | typeof EVENT_REWRITE_RESULT;
+  | typeof EVENT_REWRITE_RESULT
+  | typeof EVENT_LLM_STREAMING_DELTA;

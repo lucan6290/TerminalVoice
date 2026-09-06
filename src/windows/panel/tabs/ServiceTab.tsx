@@ -11,6 +11,7 @@ import {
   Check,
   Loader2,
   Wifi,
+  Globe,
 } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { usePanelStore } from "../../../stores/appStore";
@@ -194,6 +195,31 @@ export function ServiceTab() {
                 </button>
               </div>
             </Field>
+          </div>
+        </section>
+
+        {/* 翻译目标语言 */}
+        <section>
+          <p className="text-[12px] text-neutral-500 mb-2 px-1">翻译目标语言</p>
+          <div className="bg-neutral-800 rounded-xl p-3">
+            <div className="flex items-center gap-3">
+              <Globe className="w-4 h-4 text-neutral-400 shrink-0" />
+              <select
+                value={service.translateTargetLang}
+                onChange={(e) => setServiceConfig({ translateTargetLang: e.target.value })}
+                className="flex-1 bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 outline-none border border-white/5 focus:border-green-500/40 cursor-pointer"
+              >
+                <option value="英文">英文</option>
+                <option value="中文">中文</option>
+                <option value="日文">日文</option>
+                <option value="韩文">韩文</option>
+                <option value="法文">法文</option>
+                <option value="德文">德文</option>
+                <option value="西班牙文">西班牙文</option>
+                <option value="俄文">俄文</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-neutral-600 mt-2">Alt+2 翻译时的目标语言</p>
           </div>
         </section>
 

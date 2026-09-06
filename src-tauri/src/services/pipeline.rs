@@ -3,9 +3,9 @@ use crate::services::asr::{transcribe, AsrMode};
 use crate::services::asr_cloud::CloudAsrConfig;
 use crate::services::db::Database;
 use crate::services::events::{
-    emit_recording_cancelled, emit_recording_started, emit_recording_stopped, emit_recording_tick,
-    emit_rewrite_result, emit_rewrite_started, emit_toast, emit_translate_result,
-    emit_tts_started, emit_tts_stopped, transition_runtime,
+    emit_llm_streaming_delta, emit_recording_cancelled, emit_recording_started,
+    emit_recording_stopped, emit_recording_tick, emit_rewrite_result, emit_rewrite_started,
+    emit_toast, emit_translate_result, emit_tts_started, emit_tts_stopped, transition_runtime,
 };
 use crate::services::hotkey::{spawn_listener, HotkeyEvent};
 use crate::services::llm::{LlmClient, LlmConfig, TextProcessMode};
@@ -13,6 +13,7 @@ use crate::services::preprocess::{process_text, PreprocessConfig, TextMode};
 use crate::services::recorder::Recorder;
 use crate::services::rewrite;
 use crate::services::secrets::decode_config_value;
+use crate::services::skills;
 use crate::services::translate;
 use crate::services::tts;
 use crate::state::{AppRuntime, RuntimeEvent, RuntimeState};
@@ -23,6 +24,7 @@ use std::sync::{
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
+use tracing::{info, warn};
 use zeroize::Zeroizing;
 
 const DEFAULT_ASR_ENDPOINT: &str = "https://api.openai.com/v1/audio/transcriptions";
@@ -84,11 +86,27 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<HotkeyEvent>) {
     let mut recorder = Recorder::new();
     let mut ticker: Option<RecordingTicker> = None;
     let mut rewrite_selected_text: Option<String> = None;
+    let mut interpreting = false;
     while let Ok(event) = receiver.recv() {
         match event {
             HotkeyEvent::Pressed => handle_pressed(&app, &mut recorder, &mut ticker),
             HotkeyEvent::Released => handle_released(&app, &mut recorder, &mut ticker),
-            HotkeyEvent::Cancelled => handle_cancelled(&app, &mut recorder, &mut ticker),
+            HotkeyEvent::Cancelled => {
+                if interpreting {
+                    // 取消口译模式录音
+                    if let Some(mut t) = ticker.take() {
+                        t.stop();
+                    }
+                    if recorder.is_recording() {
+                        recorder.cancel();
+                    }
+                    let _ = emit_recording_cancelled(&app);
+                    interpreting = false;
+                    info!("口译模式已取消");
+                } else {
+                    handle_cancelled(&app, &mut recorder, &mut ticker);
+                }
+            }
             HotkeyEvent::RewritePressed => {
                 handle_rewrite_pressed(&app, &mut recorder, &mut ticker, &mut rewrite_selected_text)
             }
@@ -99,7 +117,7 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<HotkeyEvent>) {
                 &mut rewrite_selected_text,
             ),
             HotkeyEvent::TtsToggle => handle_tts_toggle(&app),
-            HotkeyEvent::Translate => handle_translate(&app),
+            HotkeyEvent::Translate => handle_translate(&app, &mut recorder, &mut ticker, &mut interpreting),
             HotkeyEvent::ListenerFailed(message) => {
                 emit_toast(&app, "error", format!("热键不可用: {message}"));
             }
@@ -219,6 +237,36 @@ fn stop_recording_and_transcribe(
 }
 
 fn apply_llm(app: &AppHandle, input: &str) -> String {
+    // 检查是否有激活的语音技能
+    let active_skill = read_config(app, "service.activeSkill")
+        .filter(|v| !v.trim().is_empty())
+        .and_then(|id| skills::find_skill(&id));
+
+    // 如果有激活的技能，使用技能的 system prompt
+    if let Some(skill) = &active_skill {
+        info!(skill_id = %skill.id, "使用语音技能");
+        let result = cloud_llm_config(app)
+            .ok_or_else(|| "LLM 配置不完整".to_string())
+            .and_then(LlmClient::new)
+            .and_then(|client| {
+                let app_clone = app.clone();
+                let mut accumulated = String::new();
+                client.process_with_prompt_streaming(&skill.prompt, input, |delta| {
+                    accumulated.push_str(delta);
+                    let _ = emit_llm_streaming_delta(&app_clone, delta, &accumulated);
+                })
+            });
+        return match result {
+            Ok(text) => text,
+            Err(error) => {
+                warn!(error = %error, "技能处理不可用");
+                emit_toast(app, "warn", format!("技能处理不可用，已使用原始文本: {error}"));
+                input.to_string()
+            }
+        };
+    }
+
+    // 正常路径：使用 organize_streaming
     let mode_value = read_config(app, "service.textMode");
     let mode = TextProcessMode::parse(mode_value.as_deref());
     if mode == TextProcessMode::Off {
@@ -228,10 +276,18 @@ fn apply_llm(app: &AppHandle, input: &str) -> String {
     let result = cloud_llm_config(app)
         .ok_or_else(|| "LLM 配置不完整".to_string())
         .and_then(LlmClient::new)
-        .and_then(|client| client.organize(mode, input));
+        .and_then(|client| {
+            let app_clone = app.clone();
+            let mut accumulated = String::new();
+            client.organize_streaming(mode, input, |delta| {
+                accumulated.push_str(delta);
+                let _ = emit_llm_streaming_delta(&app_clone, delta, &accumulated);
+            })
+        });
     match result {
         Ok(text) => text,
         Err(error) => {
+            warn!(error = %error, "AI 整理不可用");
             emit_toast(
                 app,
                 "warn",
@@ -414,14 +470,93 @@ fn handle_tts_toggle(app: &AppHandle) {
         .ok();
 }
 
-/// Alt+2: 翻译选中文本。捕获选中文本，调用 LLM 翻译，推送翻译结果事件。
-fn handle_translate(app: &AppHandle) {
-    let selected_text = rewrite::capture_selected_text();
-    if selected_text.trim().is_empty() {
-        emit_toast(app, "info", "未选中文本，无法翻译");
+/// Alt+2: 翻译/口译模式。
+///
+/// - 有选中文本时：翻译选中文本并推送结果。
+/// - 无选中文本时：进入口译模式（录音→ASR→翻译→TTS）。
+///   首次 Alt+2 开始录音，再次 Alt+2 停止录音并执行翻译+TTS。
+fn handle_translate(
+    app: &AppHandle,
+    recorder: &mut Recorder,
+    ticker: &mut Option<RecordingTicker>,
+    interpreting: &mut bool,
+) {
+    // 如果正在口译，停止录音并执行翻译+TTS
+    if *interpreting {
+        *interpreting = false;
+        stop_interpretation(app, recorder, ticker);
         return;
     }
 
+    // 检查是否有选中文本
+    let selected_text = rewrite::capture_selected_text();
+    if !selected_text.trim().is_empty() {
+        // 正常翻译模式
+        translate_selected_text(app, &selected_text);
+        return;
+    }
+
+    // 无选中文本 → 进入口译模式，开始录音
+    *interpreting = true;
+    info!("进入口译模式，开始录音");
+
+    let device = read_config(app, "input.micDevice");
+    if let Err(error) = recorder.start(device.as_deref()) {
+        *interpreting = false;
+        emit_toast(app, "error", error);
+        return;
+    }
+    let _ = emit_recording_started(app);
+    *ticker = Some(RecordingTicker::start(app.clone()));
+}
+
+/// 口译模式：停止录音 → ASR → 翻译 → TTS
+fn stop_interpretation(
+    app: &AppHandle,
+    recorder: &mut Recorder,
+    ticker: &mut Option<RecordingTicker>,
+) {
+    if !recorder.is_recording() {
+        return;
+    }
+    if let Some(mut t) = ticker.take() {
+        t.stop();
+    }
+    let _ = emit_recording_stopped(app);
+
+    let audio = match recorder.stop() {
+        Ok(audio) => audio,
+        Err(error) => {
+            emit_toast(app, "error", error);
+            return;
+        }
+    };
+    if !audio.is_valid() {
+        emit_toast(app, "info", "录音时间太短，已取消");
+        return;
+    }
+
+    // ASR 识别
+    let mode_value = read_config(app, "service.asrProvider");
+    let mode = AsrMode::parse(mode_value.as_deref());
+    let cloud_config = cloud_asr_config(app);
+    let result = match transcribe(mode, cloud_config, &audio, app) {
+        Ok(result) => result,
+        Err(error) => {
+            emit_toast(app, "error", format!("语音识别失败: {error}"));
+            return;
+        }
+    };
+
+    let source_text = result.text;
+    if source_text.trim().is_empty() {
+        emit_toast(app, "info", "未识别到语音内容");
+        return;
+    }
+
+    info!(text = %source_text, "口译 ASR 结果");
+
+    // 翻译
     let config = match cloud_llm_config(app) {
         Some(config) => config,
         None => {
@@ -434,9 +569,50 @@ fn handle_translate(app: &AppHandle) {
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| "英文".to_string());
 
-    match translate::translate(&selected_text, &target_lang, &config) {
+    let translated_text = match translate::translate(&source_text, &target_lang, &config) {
+        Ok(text) => text,
+        Err(error) => {
+            emit_toast(app, "error", format!("翻译失败: {error}"));
+            return;
+        }
+    };
+
+    info!(translated = %translated_text, "口译翻译结果");
+
+    // 推送翻译结果
+    let _ = emit_translate_result(app, &source_text, &translated_text);
+
+    // TTS 朗读译文
+    let _ = emit_tts_started(app);
+    let app_clone = app.clone();
+    thread::Builder::new()
+        .name("terminalvoice-interpret-tts".to_string())
+        .spawn(move || {
+            if let Err(error) = tts::speak(&translated_text) {
+                emit_toast(&app_clone, "error", format!("朗读失败: {error}"));
+            }
+            let _ = emit_tts_stopped(&app_clone);
+        })
+        .ok();
+}
+
+/// 翻译选中文本（正常翻译模式）
+fn translate_selected_text(app: &AppHandle, selected_text: &str) {
+    let config = match cloud_llm_config(app) {
+        Some(config) => config,
+        None => {
+            emit_toast(app, "error", "LLM 配置不完整，无法翻译");
+            return;
+        }
+    };
+
+    let target_lang = read_config(app, "service.translateTargetLang")
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "英文".to_string());
+
+    match translate::translate(selected_text, &target_lang, &config) {
         Ok(translated_text) => {
-            let _ = emit_translate_result(app, &selected_text, &translated_text);
+            let _ = emit_translate_result(app, selected_text, &translated_text);
         }
         Err(error) => {
             emit_toast(app, "error", format!("翻译失败: {error}"));

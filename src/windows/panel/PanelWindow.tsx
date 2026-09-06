@@ -25,6 +25,7 @@ import { ServiceTab } from "./tabs/ServiceTab";
 import { HelpTab } from "./tabs/HelpTab";
 import type { TabKey } from "../../stores/appStore";
 import { PreviewPopup } from "./PreviewPopup";
+import { StateView } from "./StateView";
 
 /**
  * 极简面板 v6
@@ -46,6 +47,7 @@ export function PanelWindow() {
   const serviceReady = usePanelStore((s) => s.serviceReady);
   const quotaDisplay = usePanelStore((s) => s.quotaDisplay);
   const previewDraft = usePanelStore((s) => s.previewDraft);
+  const llmStreamingText = usePanelStore((s) => s.llmStreamingText);
 
   const toggleDark = usePanelStore((s) => s.toggleDark);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
@@ -117,12 +119,18 @@ export function PanelWindow() {
     }
   }
 
+  const displayDraft = previewDraft
+    ? llmStreamingText !== null
+      ? { ...previewDraft, processedText: llmStreamingText }
+      : previewDraft
+    : null;
+
   return (
     <div
       className={cn("w-full h-full flex items-center justify-center", dark ? "dark" : "theme-light")}
       style={{ background: "transparent" }}
     >
-      <div className="relative w-[380px] flex flex-col rounded-[22px] bg-neutral-900 text-neutral-100 shadow-2xl ring-1 ring-white/10 max-h-[600px]">
+      <div className="relative w-[380px] flex flex-col rounded-[22px] bg-neutral-900 text-neutral-100 shadow-2xl ring-1 ring-white/10 max-h-[600px] my-2">
         {/* ========== 顶部栏 ========== */}
         <header
           className="flex items-center justify-between px-5 pt-[18px] pb-[12px] shrink-0"
@@ -131,7 +139,7 @@ export function PanelWindow() {
           <div className="flex items-center gap-[10px]">
             <span
               data-tip={`服务运行中 · ${appStatus}`}
-              className="relative flex h-[10px] w-[10px] shrink-0 cursor-help"
+              className="tip-below relative flex h-[10px] w-[10px] shrink-0 cursor-help"
             >
               <span
                 className={cn(
@@ -152,6 +160,7 @@ export function PanelWindow() {
               title="通过触发键录音"
               data-tip={`按住 ${pttKey} 录音`}
               accent={recording}
+              className="tip-below"
               onClick={() => {
                 showToast(
                   recording ? "录音进行中，请松开触发键结束" : `请使用 ${pttKey} 触发录音`,
@@ -165,13 +174,13 @@ export function PanelWindow() {
                 <Circle className="w-[18px] h-[18px]" strokeWidth={1.5} />
               )}
             </IconBtn>
-            <IconBtn title="更多" data-tip="更多选项" onClick={handleMore}>
+            <IconBtn title="更多" data-tip="更多选项" className="tip-below" onClick={handleMore}>
               <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
-            <IconBtn title="最小化到托盘" data-tip="最小化到托盘" onClick={handleMinimize}>
+            <IconBtn title="最小化到托盘" data-tip="最小化到托盘" className="tip-below" onClick={handleMinimize}>
               <Minus className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
-            <IconBtn title="关闭面板" data-tip="关闭面板" onClick={handleClose}>
+            <IconBtn title="关闭面板" data-tip="关闭面板" className="tip-below" onClick={handleClose}>
               <X className="w-[18px] h-[18px]" strokeWidth={2} />
             </IconBtn>
             <button
@@ -179,7 +188,7 @@ export function PanelWindow() {
               aria-label={dark ? "切换为浅色主题" : "切换为深色主题"}
               aria-pressed={dark}
               data-tip={dark ? "切换为浅色主题" : "切换为深色主题"}
-              className="ml-[6px] w-7 h-7 rounded-full text-[11px] flex items-center justify-center transition-colors border border-white/10 text-neutral-400 hover:text-neutral-200 hover:border-white/20"
+              className="tip-below ml-[6px] w-7 h-7 rounded-full text-[11px] flex items-center justify-center transition-colors border border-white/10 text-neutral-400 hover:text-neutral-200 hover:border-white/20"
             >
               {dark ? "☀️" : "🌙"}
             </button>
@@ -191,6 +200,7 @@ export function PanelWindow() {
 
         {/* ========== 内容区 ========== */}
         <main className="flex-1 overflow-y-auto px-5 pt-[14px] pb-2 min-h-0">
+          {isHome && <StateView />}
           {isHome ? (
             <HomeView
               recording={recording}
@@ -222,6 +232,7 @@ export function PanelWindow() {
               active={activeTab === "skill"}
               onClick={() => setActiveTab(activeTab === "skill" ? null : "skill")}
               data-tip="语音技能"
+              className="tip-above"
             >
               <Sparkles className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
@@ -229,6 +240,7 @@ export function PanelWindow() {
               active={activeTab === "dict"}
               onClick={() => setActiveTab(activeTab === "dict" ? null : "dict")}
               data-tip="自定义词典"
+              className="tip-above"
             >
               <BookText className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
@@ -236,6 +248,7 @@ export function PanelWindow() {
               active={activeTab === "history"}
               onClick={() => setActiveTab(activeTab === "history" ? null : "history")}
               data-tip="历史记录"
+              className="tip-above"
             >
               <Clock className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
@@ -243,13 +256,14 @@ export function PanelWindow() {
               active={activeTab === "help"}
               onClick={() => setActiveTab(activeTab === "help" ? null : "help")}
               data-tip="帮助与关于"
+              className="tip-above"
             >
               <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
           </div>
         </footer>
         <PreviewPopup
-          draft={previewDraft}
+          draft={displayDraft}
           onConfirm={handleConfirmPreview}
           onCancel={handleCancelPreview}
         />

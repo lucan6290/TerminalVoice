@@ -3,6 +3,7 @@
 /// Manages model files stored in `app_data_dir/models/`. Supports listing
 /// predefined models, downloading, deleting, and verifying integrity.
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
@@ -27,8 +28,9 @@ fn predefined_models() -> Vec<ModelInfo> {
             id: "whisper-tiny".to_string(),
             name: "Whisper Tiny".to_string(),
             size_bytes: 75_000_000,
-            sha256: "placeholder-sha256-tiny".to_string(),
-            download_url: "https://huggingface.co/openai/whisper-tiny/resolve/main/model.bin"
+            sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+                .to_string(),
+            download_url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin"
                 .to_string(),
             installed: false,
         },
@@ -36,8 +38,9 @@ fn predefined_models() -> Vec<ModelInfo> {
             id: "whisper-base".to_string(),
             name: "Whisper Base".to_string(),
             size_bytes: 142_000_000,
-            sha256: "placeholder-sha256-base".to_string(),
-            download_url: "https://huggingface.co/openai/whisper-base/resolve/main/model.bin"
+            sha256: "b9d3ede2ddee084175df8e874d42b0a0d2ad5233e4c8de93b1f23d6c0f4dcf57"
+                .to_string(),
+            download_url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
                 .to_string(),
             installed: false,
         },
@@ -122,16 +125,21 @@ impl ModelManager {
         models_dir.join(format!("{model_id}.bin"))
     }
 
-    /// Verifies model integrity via file existence and size check.
-    ///
-    /// SHA256 verification is not yet implemented; this currently checks
-    /// that the file exists and has non-zero size.
-    pub fn verify_model(path: &Path, _expected_sha256: &str) -> bool {
-        path.exists()
-            && path
-                .metadata()
-                .map(|m| m.len() > 0)
-                .unwrap_or(false)
+    /// Verifies model integrity via SHA256 hash comparison.
+    pub fn verify_model(path: &Path, expected_sha256: &str) -> bool {
+        if !path.exists() {
+            return false;
+        }
+        let mut file = match std::fs::File::open(path) {
+            Ok(f) => f,
+            Err(_) => return false,
+        };
+        let mut hasher = Sha256::new();
+        if std::io::copy(&mut file, &mut hasher).is_err() {
+            return false;
+        }
+        let computed = format!("{:x}", hasher.finalize());
+        computed == expected_sha256
     }
 
     /// Returns the path of the first installed model, if any.
@@ -155,11 +163,17 @@ mod tests {
     }
 
     #[test]
-    fn verify_model_accepts_existing_file() {
+    fn verify_model_accepts_valid_hash() {
         let dir = tempfile::tempdir().expect("creates temp dir");
         let file_path = dir.path().join("model.bin");
-        std::fs::write(&file_path, b"model data").expect("writes file");
-        assert!(ModelManager::verify_model(&file_path, "any-sha256"));
+        let data = b"model data";
+        std::fs::write(&file_path, data).expect("writes file");
+
+        let mut hasher = Sha256::new();
+        hasher.update(data);
+        let expected = format!("{:x}", hasher.finalize());
+
+        assert!(ModelManager::verify_model(&file_path, &expected));
     }
 
     #[test]
@@ -171,10 +185,10 @@ mod tests {
     }
 
     #[test]
-    fn verify_model_rejects_empty_file() {
+    fn verify_model_rejects_hash_mismatch() {
         let dir = tempfile::tempdir().expect("creates temp dir");
-        let file_path = dir.path().join("empty.bin");
-        std::fs::write(&file_path, b"").expect("writes empty file");
-        assert!(!ModelManager::verify_model(&file_path, "any-sha256"));
+        let file_path = dir.path().join("model.bin");
+        std::fs::write(&file_path, b"model data").expect("writes file");
+        assert!(!ModelManager::verify_model(&file_path, "wrong-sha256-hash"));
     }
 }

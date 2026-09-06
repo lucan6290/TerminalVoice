@@ -185,13 +185,14 @@ Zustand store 的 `setRuntimeStatus()` 更新 `panel.appStatus`，触发 BallWin
 
 ## 七之二、前端状态标志（与 Rust 状态机共存）
 
-除了 Rust 端的 5 状态机外，前端 Zustand store 中还有 3 个独立标志位，它们通过 Tauri 事件更新，驱动小球额外的视觉态：
+除了 Rust 端的 5 状态机外，前端 Zustand store 中还有 4 个独立标志位，它们通过 Tauri 事件更新，驱动小球和面板的额外视觉态：
 
 | 标志位 | 类型 | 触发事件 | 小球视觉态 | 说明 |
 | :--- | :--- | :--- | :--- | :--- |
 | `rewriteMode` | `boolean` | `rewrite-started`（→true）/ `rewrite-result`（→false） | `rewrite`（🟣 紫色 + Wand2 图标） | AI 改写进行中 |
 | `ttsSpeaking` | `boolean` | `tts-started`（→true）/ `tts-stopped`（→false） | `tts`（🟦 青色 + Volume2 图标） | TTS 朗读中 |
 | `errorMessage` | `string \| null` | 后端推送错误时设置 | `error`（🔴 红色 + AlertCircle 图标） | 错误状态 |
+| `llmStreamingText` | `string \| null` | `llm-streaming-delta`（→累积文本）/ 改写/预览完成时清空 | 不影响小球 | LLM 流式输出中，面板 StateView 显示 "AI整理中..." + 实时文本 |
 
 `computeBallState()` 函数的优先级（从高到低）：
 1. `errorMessage` 非空 → `error`
@@ -199,7 +200,9 @@ Zustand store 的 `setRuntimeStatus()` 更新 `panel.appStatus`，触发 BallWin
 3. `rewriteMode` → `rewrite`
 4. 否则按 `appStatus` 映射（Idle/Recording/Recognizing+Preview/Paused）
 
-> **设计决策**：TTS、翻译、改写等功能不新增 Rust 状态机状态，而是通过前端 store 标志位实现，避免状态机过度膨胀。这些标志位与 Rust 状态机正交——例如 `rewriteMode` 可以在 `Recording` 或 `Recognizing` 状态下为 `true`。
+> **注意**：`llmStreamingText` 不参与 `computeBallState()` 优先级，不影响小球视觉态。它在面板 [StateView.tsx](../src/windows/panel/StateView.tsx) 中独立渲染——当 `llmStreamingText !== null` 时显示 "AI整理中..." 卡片及实时流式文本。StateView 的显示优先级为：Recording > Recognizing > TTS > LLM streaming > Translate > Idle。
+
+> **设计决策**：TTS、翻译、改写、LLM 流式等功能不新增 Rust 状态机状态，而是通过前端 store 标志位实现，避免状态机过度膨胀。这些标志位与 Rust 状态机正交——例如 `rewriteMode` 可以在 `Recording` 或 `Recognizing` 状态下为 `true`。
 
 ---
 
@@ -249,15 +252,17 @@ cd src-tauri && cargo test state
 
 ## 十、未来扩展（浮球方案规划）
 
-根据 [v0.2/2026-09-05 浮球方案](v0.2/2026-09-05-floating-ball-voice-tool-plan.md)，以下功能原计划新增 Rust 状态，但实际实现中采用了前端 store 标志位方案（见七之二节），**无需扩展 Rust 状态机**：
+根据 [v0.2/2026-09-05 浮球方案](v0.2/2026-09-05-floating-ball-voice-tool-plan.md)，以下功能原计划新增 Rust 状态，但实际实现中采用了前端 store 标志位或管线内部标志方案（见七之二节），**无需扩展 Rust 状态机**：
 
 | 功能 | 原计划状态 | 实际实现 | 说明 |
 | :--- | :--- | :--- | :--- |
 | TTS 朗读 | `Reading`/`TTSPlaying` | 前端 `ttsSpeaking` 标志 | `tts-started`/`tts-stopped` 事件驱动 |
 | 翻译 | `Translating` | 前端 `translateResult` 状态 | `translate-result` 事件驱动，TranslatePopup 组件显示 |
 | AI 改写 | `Rewriting` | 前端 `rewriteMode` 标志 | `rewrite-started`/`rewrite-result` 事件驱动 |
+| LLM 流式输出 | — | 前端 `llmStreamingText` 标志 | `llm-streaming-delta` 事件驱动，StateView 实时渲染。`apply_llm()` 中通过 `emit_llm_streaming_delta()` 逐 chunk 推送 |
+| 口译模式 | — | 管线内部 `interpreting: bool` 标志 | `handle_translate()` 在无选中文本时进入口译模式：首次 Alt+2 开始录音，再次 Alt+2 停止并执行 ASR→翻译→TTS。不经过 Rust 状态机 |
 
-> **结论**：当前 Rust 状态机保持 5 状态（Idle/Recording/Recognizing/Preview/Paused），TTS/翻译/改写等扩展功能通过前端 store 标志位与 Tauri 事件实现，与状态机正交。若未来某功能确实需要状态机层面的约束（如阻止并发录音），再考虑新增 Rust 状态。
+> **结论**：当前 Rust 状态机保持 5 状态（Idle/Recording/Recognizing/Preview/Paused），TTS/翻译/改写/LLM 流式/口译模式等扩展功能通过前端 store 标志位、Tauri 事件和管线内部标志实现，与状态机正交。若未来某功能确实需要状态机层面的约束（如阻止并发录音），再考虑新增 Rust 状态。
 
 如确需新增 Rust 状态：
 1. 在 `RuntimeState` 枚举添加变体

@@ -25,6 +25,9 @@ vi.mock("../lib/commands", () => ({
   listAudioInputDevices: vi.fn().mockResolvedValue([]),
   exportData: vi.fn().mockResolvedValue(new Uint8Array()),
   importData: vi.fn().mockResolvedValue(undefined),
+  listSkills: vi.fn().mockResolvedValue([]),
+  setSkill: vi.fn().mockResolvedValue(undefined),
+  getActiveSkill: vi.fn().mockResolvedValue(null),
 }));
 
 const mockedListConfig = vi.mocked(listConfig);
@@ -52,6 +55,7 @@ beforeEach(() => {
       llmModel: "gpt-4o-mini",
       textMode: "polish",
       handsFree: false,
+      translateTargetLang: "英文",
     },
     historyItems: [],
     filterWords: [],

@@ -22,8 +22,8 @@ src/
 ├── lib/        ← 纯工具层（无 React）：类型、invoke 封装、className 工具
 ├── stores/     ← 状态管理：Zustand（appStore）+ useSyncExternalStore（toastStore）
 ├── windows/    ← 多窗口 UI：ball（悬浮球）、panel（面板 + tabs）
-├── components/ ← 通用组件：ui/ 原子组件 + 遗留组件
-├── pages/      ← 🧹 遗留旧页面（待迁移，不要新增）
+├── components/ ← 通用组件：ui/ 原子组件
+├── pages/      ← 🧹 已清理（空目录，待删除）
 └── test/       ← Vitest 全局 setup
 ```
 
@@ -40,7 +40,7 @@ src/
 ## 当前状态速查
 
 - ✅ 三窗口路由、BallWindow/PanelWindow UI、设计系统、Zustand store、IPC 桥接已实现
-- 🟡 大量交互仍是前端 Mock（录音/热键/托盘/历史增删/模型下载等），后端未接通
-- 🧹 `pages/` 与 `components/PreviewPopup.tsx`、`components/StatusBadge.tsx` 是早期 MVP 遗留，未接入新架构
+- ✅ 后端已接通：录音/ASR/LLM流式/TTS/翻译/口译/技能/日志/自启/单实例/托盘/DPAPI加密
+- 🧹 `pages/` 目录已清理（旧文件已删除），`components/StatusBadge.tsx` 已删除
 
 详细模块状态见 [docs/CODE_MAP.md](../docs/CODE_MAP.md)，设计规范见 [docs/DESIGN_SYSTEM.md](../docs/DESIGN_SYSTEM.md)。

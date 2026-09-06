@@ -61,6 +61,7 @@ export interface ServiceConfig {
   llmModel: string;
   textMode: TextProcessMode;
   handsFree: boolean;
+  translateTargetLang: string;
 }
 
 export interface ModelInfo {
@@ -93,4 +94,18 @@ export interface RecordingTickPayload {
 export interface ToastPayload {
   level: 'info' | 'warn' | 'error' | 'success';
   message: string;
+}
+
+/** 语音技能 */
+export interface VoiceSkill {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+}
+
+/** LLM 流式输出事件 payload */
+export interface LlmStreamingDeltaPayload {
+  delta: string;
+  accumulated: string;
 }

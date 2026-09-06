@@ -9,6 +9,7 @@ import type {
   ToastPayload,
   TranslateResultPayload,
   RewriteResultPayload,
+  LlmStreamingDeltaPayload,
 } from "./lib/types";
 import {
   EVENT_RUNTIME_STATE_CHANGED,
@@ -25,13 +26,16 @@ import {
   EVENT_TRANSLATE_RESULT,
   EVENT_REWRITE_STARTED,
   EVENT_REWRITE_RESULT,
+  EVENT_LLM_STREAMING_DELTA,
 } from "./lib/events";
 import { usePanelStore } from "./stores/appStore";
 import { showToast, type ToastLevel } from "./stores/toastStore";
+import { cn } from "./lib/cn";
 import { BallWindow } from "./windows/ball/BallWindow";
 import { PanelWindow } from "./windows/panel/PanelWindow";
 import { ToastContainer } from "./components/ui/Toast";
 import { ErrorModal } from "./components/ui/ErrorModal";
+import { ToggleSwitch } from "./components/ui/ToggleSwitch";
 
 function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
@@ -50,6 +54,7 @@ function useBackendSync(): void {
   const setRewriteResult = usePanelStore((state) => state.setRewriteResult);
   const setRecordingDuration = usePanelStore((state) => state.setRecordingDuration);
   const setErrorMessage = usePanelStore((state) => state.setErrorMessage);
+  const setLlmStreamingText = usePanelStore((state) => state.setLlmStreamingText);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -145,6 +150,16 @@ function useBackendSync(): void {
           },
         ));
 
+        // LLM streaming
+        unlisteners.push(await listen<LlmStreamingDeltaPayload>(
+          EVENT_LLM_STREAMING_DELTA,
+          (event) => {
+            if (!disposed) {
+              setLlmStreamingText(event.payload.accumulated);
+            }
+          },
+        ));
+
         // Initial load
         await loadAll();
         const status = await getAppStatus();
@@ -163,6 +178,7 @@ function useBackendSync(): void {
     applyConfigEntry, clearPreviewDraft, hydrateFromConfig, loadAll,
     setPreviewDraft, setRuntimeStatus, setTtsSpeaking, setTranslateResult,
     setRewriteMode, setRewriteResult, setRecordingDuration, setErrorMessage,
+    setLlmStreamingText,
   ]);
 }
 
@@ -181,20 +197,18 @@ export default function App() {
   const route = useHashRoute();
 
   useEffect(() => {
-    if (route === "#/ball" || route === "#/panel") {
-      document.body.classList.add("window-transparent");
-      document.body.classList.add("browser-preview-dark");
-    } else {
-      document.body.classList.remove("window-transparent");
-      document.body.classList.remove("browser-preview-dark");
-    }
+    const isTransparent = route === "#/ball" || route === "#/panel";
+    const isTauri = isTauriRuntime();
+    document.body.classList.toggle("window-transparent", isTransparent);
+    // browser-preview-dark 仅用于浏览器中预览透明窗口（模拟桌面深色背景）
+    document.body.classList.toggle("browser-preview-dark", isTransparent && !isTauri);
   }, [route]);
 
   return (
     <>
       {route === "#/ball" && <BallWindow />}
       {route === "#/panel" && <PanelWindow />}
-      {route === "#/main" && <MainWindowPlaceholder />}
+      {route === "#/main" && <MainWindow />}
       {!["#/ball", "#/panel", "#/main"].includes(route) && <DevPreview />}
       <ToastContainer />
       <ErrorModal />
@@ -202,10 +216,89 @@ export default function App() {
   );
 }
 
-function MainWindowPlaceholder() {
+function MainWindow() {
+  const dark = usePanelStore((s) => s.dark);
+  const toggleDark = usePanelStore((s) => s.toggleDark);
+  const autoStart = usePanelStore((s) => s.autoStart);
+  const setAutoStart = usePanelStore((s) => s.setAutoStart);
+  const service = usePanelStore((s) => s.service);
+
   return (
-    <div className="w-full h-full flex items-center justify-center bg-[var(--color-bg-primary)] text-[var(--color-fg-secondary)] text-sm">
-      主窗口（历史/设置）— 待实现
+    <div className={cn(
+      "w-full h-full overflow-y-auto",
+      dark ? "bg-neutral-900 text-neutral-100" : "bg-neutral-100 text-neutral-900"
+    )}>
+      <header className={cn(
+        "px-6 py-4 border-b sticky top-0 z-10",
+        dark ? "border-white/5 bg-neutral-900/95 backdrop-blur" : "border-black/5 bg-neutral-100/95 backdrop-blur"
+      )}>
+        <h1 className="text-[18px] font-semibold">TerminalVoice 设置</h1>
+      </header>
+      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+        {/* 通用设置 */}
+        <section>
+          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>通用设置</h2>
+          <div className={cn(
+            "rounded-xl divide-y",
+            dark ? "bg-neutral-800 divide-white/5" : "bg-white divide-black/5"
+          )}>
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <div className="text-[13px]">开机自启</div>
+                <div className={cn("text-[11px] mt-0.5", dark ? "text-neutral-500" : "text-neutral-400")}>系统启动时自动运行</div>
+              </div>
+              <ToggleSwitch checked={autoStart} onChange={setAutoStart} />
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <div className="text-[13px]">深色模式</div>
+                <div className={cn("text-[11px] mt-0.5", dark ? "text-neutral-500" : "text-neutral-400")}>切换界面主题</div>
+              </div>
+              <ToggleSwitch checked={dark} onChange={toggleDark} />
+            </div>
+          </div>
+        </section>
+
+        {/* 服务状态 */}
+        <section>
+          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>服务状态</h2>
+          <div className={cn(
+            "rounded-xl px-4 py-3 space-y-1.5",
+            dark ? "bg-neutral-800" : "bg-white"
+          )}>
+            <div className="flex items-center justify-between text-[12px]">
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>ASR Provider</span>
+              <span className="font-medium">{service.asrProvider}</span>
+            </div>
+            <div className="flex items-center justify-between text-[12px]">
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>LLM Model</span>
+              <span className="font-medium">{service.llmModel || "未配置"}</span>
+            </div>
+            <div className="flex items-center justify-between text-[12px]">
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>翻译目标语言</span>
+              <span className="font-medium">{service.translateTargetLang}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 关于 */}
+        <section>
+          <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>关于</h2>
+          <div className={cn(
+            "rounded-xl px-4 py-3 space-y-1",
+            dark ? "bg-neutral-800" : "bg-white"
+          )}>
+            <div className="text-[12px] flex items-center justify-between">
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>版本</span>
+              <span className="font-medium">0.1.0</span>
+            </div>
+            <div className="text-[12px] flex items-center justify-between">
+              <span className={dark ? "text-neutral-400" : "text-neutral-500"}>快捷键</span>
+              <span className="font-medium">Right Alt · Shift+Alt · Alt+1 · Alt+2</span>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

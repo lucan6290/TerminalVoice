@@ -150,6 +150,16 @@
   z-index: 50;
   backdrop-filter: blur(6px);
 }
+/* 顶部按钮：tooltip 显示在下方（避免被窗口顶边裁剪） */
+[data-tip].tip-below:hover::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+/* 底部按钮：tooltip 显示在上方（默认方向，避免被窗口底边裁剪） */
+[data-tip].tip-above:hover::after {
+  bottom: calc(100% + 8px);
+  top: auto;
+}
 .dark [data-tip]:hover::after {
   background: rgba(245, 245, 247, 0.92);
   color: #1c1c1e;

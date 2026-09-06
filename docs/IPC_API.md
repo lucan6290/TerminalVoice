@@ -19,7 +19,7 @@
 
 ## 二、Invoke Commands（前端 → Rust）
 
-当前已注册 24 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
+当前已注册 27 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
 
 ### 2.1 `get_app_status`
 
@@ -595,6 +595,63 @@ pub fn import_data(db: tauri::State<Mutex<Database>>, data: Vec<u8>) -> Result<(
 
 ---
 
+### 2.25 `list_skills`
+
+列出所有可用的语音技能（预设 4 个：英文输出/清单模式/汇报格式/听写模板）。
+
+**TS 封装**：`listSkills(): Promise<VoiceSkill[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_skills() -> Vec<VoiceSkill>
+```
+
+**请求参数**：无
+
+**返回**：`VoiceSkill[]`（见 [4.14 VoiceSkill](#414-voiceskill)）
+
+---
+
+### 2.26 `set_skill`
+
+设置当前激活的技能。传入空字符串清除技能。
+
+**TS 封装**：`setSkill(skillId: string): Promise<void>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn set_skill(app: AppHandle, skill_id: String) -> Result<(), String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `skillId` | `string` | 技能 ID（"english"/"list"/"report"/"dictation"），空字符串=清除 |
+
+**返回**：`void`。存入配置键 `service.activeSkill`。
+
+---
+
+### 2.27 `get_active_skill`
+
+获取当前激活的技能 ID。
+
+**TS 封装**：`getActiveSkill(): Promise<string | null>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn get_active_skill(app: AppHandle) -> Result<Option<String>, String>
+```
+
+**请求参数**：无
+
+**返回**：`string | null`（未设置或空时返回 `null`）
+
+---
+
 ## 三、Events（Rust → 前端）
 
 ### 3.1 `runtime-state-changed`
@@ -806,6 +863,24 @@ interface RewriteResultPayload {
 
 ---
 
+### 3.15 `llm-streaming-delta`
+
+LLM 流式输出增量推送。
+
+**发送时机**：LLM 流式响应每个 delta 到达时（由 `emit_llm_streaming_delta()` 发送）。
+
+**Payload**：
+```ts
+interface LlmStreamingDeltaPayload {
+  delta: string;
+  accumulated: string;
+}
+```
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后调用 `setLlmStreamingText(payload.accumulated)` 实时更新流式文本。
+
+---
+
 ## 四、共享类型定义
 
 以下类型在前后端之间传递，两端必须保持一致。
@@ -942,6 +1017,7 @@ interface ServiceConfig {
   llmModel: string;
   textMode: TextProcessMode;
   handsFree: boolean;
+  translateTargetLang: string;
 }
 ```
 
@@ -970,7 +1046,26 @@ interface ToastPayload {
   level: 'info' | 'warn' | 'error' | 'success';
   message: string;
 }
+
+/** LLM 流式输出事件 payload */
+interface LlmStreamingDeltaPayload {
+  delta: string;
+  accumulated: string;
+}
 ```
+
+### 4.14 VoiceSkill
+
+```ts
+interface VoiceSkill {
+  id: string;          // 技能标识（"english"/"list"/"report"/"dictation"）
+  name: string;        // 显示名称
+  description: string; // 简短说明
+  prompt: string;      // LLM system prompt
+}
+```
+
+Rust 端定义为 `services/skills.rs` 中的 `VoiceSkill` 结构体（`#[serde(rename_all = "camelCase")]`），预设 4 个技能，通过 `find_skill(id)` 按 ID 查找。
 
 ---
 
@@ -995,6 +1090,8 @@ interface ToastPayload {
 | `service.llmModel` | string | `"gpt-4o-mini"` | LLM 模型名称 |
 | `service.textMode` | `"off"/"proofread"/"polish"/"structure"` | `"polish"` | AI 文本处理模式 |
 | `service.handsFree` | `"true"/"false"` | `"false"` | 免手动模式 |
+| `service.activeSkill` | string | `""` | 当前激活技能 ID（空=无技能） |
+| `service.translateTargetLang` | string | `"en"` | 翻译目标语言 |
 
 > **注意**：所有配置值统一存为字符串，前端解析为 boolean/其他类型。API Key 变更时后端发送 `config-updated` 事件，payload value 为 `"__terminalvoice_secret_updated__"`，前端收到后重新 `hydrateFromConfig()` 加载完整配置。
 

@@ -1,4 +1,4 @@
-import { ArrowLeft, Wand2, FileText, Sparkles, List, Type } from "lucide-react";
+import { ArrowLeft, Wand2, FileText, Sparkles, List, Type, Languages, ListChecks, Presentation } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { usePanelStore } from "../../../stores/appStore";
 import { ToggleSwitch } from "../../../components/ui/ToggleSwitch";
@@ -15,6 +15,9 @@ export function SkillTab() {
   const service = usePanelStore((s) => s.service);
   const setServiceConfig = usePanelStore((s) => s.setServiceConfig);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
+  const skills = usePanelStore((s) => s.skills);
+  const activeSkillId = usePanelStore((s) => s.activeSkillId);
+  const setActiveSkillId = usePanelStore((s) => s.setActiveSkillId);
 
   return (
     <div className="flex flex-col h-full">
@@ -57,6 +60,39 @@ export function SkillTab() {
                 <div className="text-[11px] text-neutral-500 leading-tight mt-0.5">{m.desc}</div>
               </div>
               {active && <Sparkles className="w-4 h-4 text-green-400 shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 语音输入技能 */}
+      <p className="text-[12px] text-neutral-500 mb-2 px-1 mt-2">语音输入模板</p>
+      <div className="space-y-2 mb-4">
+        {skills.map((skill) => {
+          const active = activeSkillId === skill.id;
+          const Icon = skill.id === 'english' ? Languages : skill.id === 'list' ? ListChecks : skill.id === 'report' ? Presentation : FileText;
+          return (
+            <button
+              key={skill.id}
+              onClick={() => setActiveSkillId(active ? null : skill.id)}
+              className={cn(
+                "w-full bg-neutral-800 rounded-xl px-3 py-2.5 flex items-center gap-3 text-left transition-colors",
+                active ? "ring-1 ring-blue-500/40 bg-blue-500/5" : "hover:bg-neutral-800/80"
+              )}
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                active ? "bg-blue-500/20 text-blue-400" : "bg-neutral-700/60 text-neutral-400"
+              )}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={cn("text-[13px] font-medium", active ? "text-blue-400" : "text-neutral-100")}>
+                  {skill.name}
+                </div>
+                <div className="text-[11px] text-neutral-500 leading-tight mt-0.5">{skill.description}</div>
+              </div>
+              {active && <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />}
             </button>
           );
         })}

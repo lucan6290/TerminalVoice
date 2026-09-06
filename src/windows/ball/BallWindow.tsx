@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Mic, AlertCircle, Loader2, Wand2, Volume2 } from "lucide-react";
 import { Window } from "@tauri-apps/api/window";
 import { cn } from "../../lib/cn";
@@ -8,9 +8,10 @@ import type { AppStatus } from "../../lib/types";
 
 /**
  * 悬浮小球
- * - 48×48 毛玻璃圆盘
+ * - 48×48 毛玻璃圆盘，64×64 透明窗口居中
  * - 状态：idle / recording / thinking / disabled / error / rewrite / tts
  * - 状态由后端 AppRuntime 同步，点击仅打开控制面板
+ * - 使用原生 title 实现 OS 级 tooltip（自动浮于窗口顶层，不受裁剪）
  */
 type BallState = "idle" | "recording" | "thinking" | "disabled" | "error" | "rewrite" | "tts";
 
@@ -102,11 +103,20 @@ export function BallWindow() {
   const errorMessage = usePanelStore((state) => state.errorMessage);
   const recordingDuration = usePanelStore((state) => state.recordingDuration);
   const [hovered, setHovered] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const state = computeBallState(appStatus, rewriteMode, ttsSpeaking, errorMessage);
   const meta = STATE_META[state];
   const isActive = state === "recording" || state === "thinking" || state === "error" || state === "rewrite" || state === "tts";
   const showTimer = state === "recording" && recordingDuration > 0;
+
+  // 动态更新原生 title（包含录音时长等实时信息）
+  const tooltipText = `${meta.label} · 点击打开面板${showTimer ? ` ${formatDuration(recordingDuration)}` : ""}`;
+  useEffect(() => {
+    if (buttonRef.current) {
+      buttonRef.current.title = tooltipText;
+    }
+  }, [tooltipText]);
 
   async function openPanel() {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -129,32 +139,15 @@ export function BallWindow() {
       className="w-full h-full flex items-center justify-center relative"
       style={{ background: "transparent" }}
     >
-      {hovered && (
-        <div
-          className="absolute left-full ml-3 whitespace-nowrap px-2 py-1 rounded-md text-[11px] pointer-events-none z-50"
-          style={{
-            background: "rgba(0,0,0,0.8)",
-            color: "#fff",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          {meta.label} · 点击打开面板
-          {showTimer && (
-            <span className="ml-1.5 tabular-nums text-sky-300">{formatDuration(recordingDuration)}</span>
-          )}
-        </div>
-      )}
-
       <button
+        ref={buttonRef}
         onClick={() => void openPanel()}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        data-tip={meta.label}
         className="relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ease-out outline-none group"
         style={{
           transform: hovered ? "scale(1.08)" : "scale(1)",
         }}
-        title={meta.label}
       >
         <span
           className={cn(

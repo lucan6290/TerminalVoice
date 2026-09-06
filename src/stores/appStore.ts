@@ -13,6 +13,8 @@ import {
   listModels,
   downloadModel as ipcDownloadModel,
   deleteModel as ipcDeleteModel,
+  listSkills as ipcListSkills,
+  setSkill as ipcSetSkill,
 } from "../lib/commands";
 import type {
   AppStatus,
@@ -25,6 +27,8 @@ import type {
   TextProcessMode,
   TranslateResultPayload,
   RewriteResultPayload,
+  VoiceSkill,
+  LlmStreamingDeltaPayload,
 } from "../lib/types";
 
 /** 底部功能 Tab 类型 */
@@ -46,6 +50,8 @@ const CONFIG_KEYS = {
   llmModel: "service.llmModel",
   textMode: "service.textMode",
   handsFree: "service.handsFree",
+  translateTargetLang: "service.translateTargetLang",
+  activeSkill: "service.activeSkill",
 } as const;
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -73,6 +79,7 @@ const DEFAULT_SERVICE: ServiceConfig = {
   llmModel: "gpt-4o-mini",
   textMode: "polish",
   handsFree: false,
+  translateTargetLang: "英文",
 };
 
 // ==================== Panel State ====================
@@ -108,6 +115,12 @@ export interface PanelState {
   rewriteResult: RewriteResultPayload | null;
   recordingDuration: number;
   errorMessage: string | null;
+
+  // Voice skills
+  skills: VoiceSkill[];
+  activeSkillId: string | null;
+  // LLM streaming
+  llmStreamingText: string | null;
 
   // Actions
   toggleDark: () => void;
@@ -154,6 +167,11 @@ export interface PanelState {
   setRewriteResult: (payload: RewriteResultPayload | null) => void;
   setRecordingDuration: (seconds: number) => void;
   setErrorMessage: (msg: string | null) => void;
+
+  setTranslateTargetLang: (lang: string) => void;
+  loadSkills: () => Promise<void>;
+  setActiveSkillId: (id: string | null) => void;
+  setLlmStreamingText: (text: string | null) => void;
 }
 
 export const usePanelStore = create<PanelState>((set, get) => ({
@@ -181,6 +199,10 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   rewriteResult: null,
   recordingDuration: 0,
   errorMessage: null,
+
+  skills: [],
+  activeSkillId: null,
+  llmStreamingText: null,
 
   // ---- UI actions ----
   toggleDark: () => set((state) => {
@@ -226,6 +248,8 @@ export const usePanelStore = create<PanelState>((set, get) => ({
         return state;
       case CONFIG_KEYS.handsFree:
         return { service: { ...state.service, handsFree: parseBoolean(entry.value, state.service.handsFree) } };
+      case CONFIG_KEYS.translateTargetLang: return { service: { ...state.service, translateTargetLang: entry.value } };
+      case CONFIG_KEYS.activeSkill: return { activeSkillId: entry.value || null };
       default: return state;
     }
   }),
@@ -247,6 +271,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       ["llmModel", CONFIG_KEYS.llmModel, String],
       ["textMode", CONFIG_KEYS.textMode, String],
       ["handsFree", CONFIG_KEYS.handsFree, String],
+      ["translateTargetLang", CONFIG_KEYS.translateTargetLang, String],
     ];
     for (const [field, key, serialize] of mappings) {
       const value = partial[field];
@@ -269,6 +294,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       store.loadFilterWords(),
       store.loadModels(),
       store.hydrateFromConfig(),
+      store.loadSkills(),
     ]);
   },
   loadHistory: async () => {
@@ -296,6 +322,15 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       set({ models });
     } catch (error) {
       console.warn("[TerminalVoice] 加载模型列表失败:", error);
+    }
+  },
+  loadSkills: async () => {
+    if (!isTauri()) return;
+    try {
+      const skills = await ipcListSkills();
+      set({ skills });
+    } catch (error) {
+      console.warn("[TerminalVoice] 加载技能列表失败:", error);
     }
   },
 
@@ -418,4 +453,14 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   setRewriteResult: (rewriteResult) => set({ rewriteResult }),
   setRecordingDuration: (recordingDuration) => set({ recordingDuration }),
   setErrorMessage: (errorMessage) => set({ errorMessage }),
+
+  setTranslateTargetLang: (lang) => {
+    persist(CONFIG_KEYS.translateTargetLang, lang);
+    set((state) => ({ service: { ...state.service, translateTargetLang: lang } }));
+  },
+  setActiveSkillId: (id) => {
+    persist(CONFIG_KEYS.activeSkill, id || "");
+    set({ activeSkillId: id });
+  },
+  setLlmStreamingText: (llmStreamingText) => set({ llmStreamingText }),
 }));

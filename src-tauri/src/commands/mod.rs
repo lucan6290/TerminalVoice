@@ -5,3 +5,4 @@ pub mod dictionary;
 pub mod history;
 pub mod model;
 pub mod preview;
+pub mod skills;

@@ -207,18 +207,64 @@ impl LlmClient {
         }
 
         let body = build_request_body(&self.config.model, instruction, input, true)?;
+        self.stream_request(&body, &mut on_delta)
+    }
+
+    /// 使用自定义 system prompt 进行流式 LLM 请求。
+    ///
+    /// 用于技能模块：传入技能的完整 system prompt，流式返回结果。
+    pub fn process_with_prompt_streaming<F>(
+        &self,
+        system_prompt: &str,
+        input: &str,
+        mut on_delta: F,
+    ) -> Result<String, String>
+    where
+        F: FnMut(&str),
+    {
+        if input.trim().is_empty() {
+            return Ok(String::new());
+        }
+
+        let body = serde_json::to_vec(&ChatRequest {
+            model: &self.config.model,
+            messages: [
+                ChatMessage {
+                    role: "system",
+                    content: system_prompt,
+                },
+                ChatMessage {
+                    role: "user",
+                    content: input,
+                },
+            ],
+            temperature: 0.2,
+            stream: true,
+        })
+        .map_err(|error| format!("构建 LLM 请求失败: {error}"))?;
+
+        self.stream_request(&body, &mut on_delta)
+    }
+
+    /// 内部方法：发送流式请求并处理 SSE 响应。
+    fn stream_request<F>(&self, body: &[u8], on_delta: &mut F) -> Result<String, String>
+    where
+        F: FnMut(&str),
+    {
         let headers = self.headers();
         let mut accumulator = SseAccumulator::default();
         let response = post_bytes_with_label_and_callback(
             &self.config.endpoint,
             &headers,
-            &body,
+            body,
             "LLM",
-            |chunk| accumulator.push(chunk, &mut on_delta),
+            |chunk| {
+                accumulator.push(chunk, on_delta)
+            },
         )
         .map_err(|error| error.message)?;
         ensure_success(&response)?;
-        accumulator.finish(&mut on_delta)?;
+        accumulator.finish(on_delta)?;
         if accumulator.output.trim().is_empty() {
             return Err("LLM 流式响应未返回文本".to_string());
         }

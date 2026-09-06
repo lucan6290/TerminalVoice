@@ -17,6 +17,8 @@ pub const EVENT_TTS_STOPPED: &str = "tts-stopped";
 
 pub const EVENT_TRANSLATE_RESULT: &str = "translate-result";
 
+pub const EVENT_LLM_STREAMING_DELTA: &str = "llm-streaming-delta";
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToastPayload {
@@ -122,6 +124,21 @@ pub fn emit_translate_result(
         serde_json::json!({
             "originalText": original_text,
             "translatedText": translated_text
+        }),
+    )
+    .map_err(|error| error.to_string())
+}
+
+pub fn emit_llm_streaming_delta(
+    app: &AppHandle,
+    delta: &str,
+    accumulated: &str,
+) -> Result<(), String> {
+    app.emit(
+        EVENT_LLM_STREAMING_DELTA,
+        serde_json::json!({
+            "delta": delta,
+            "accumulated": accumulated
         }),
     )
     .map_err(|error| error.to_string())
