@@ -3,6 +3,7 @@ import { showToast } from "./toastStore";
 import {
   listConfig,
   setConfig,
+  setHotkeyConfig as ipcSetHotkeyConfig,
   listHistory,
   deleteHistory as ipcDeleteHistory,
   clearHistory as ipcClearHistory,
@@ -23,6 +24,7 @@ import type {
   ConfigEntry,
   FilterWord,
   HistoryItem,
+  HotkeyConfig,
   ModelInfo,
   PreviewDraft,
   ServiceConfig,
@@ -31,8 +33,9 @@ import type {
   RewriteResultPayload,
   UpdateInfo,
   VoiceSkill,
-  LlmStreamingDeltaPayload,
+ LlmStreamingDeltaPayload,
 } from "../lib/types";
+import { DEFAULT_HOTKEY_CONFIG } from "../lib/types";
 
 /** 底部功能 Tab 类型 */
 export type TabKey = "skill" | "dict" | "history" | "help" | "service";
@@ -43,6 +46,8 @@ const CONFIG_KEYS = {
   muteSys: "ui.muteSys",
   autoStart: "ui.autoStart",
   pttKey: "input.pttKey",
+  ttsKey: "input.ttsKey",
+  translateKey: "input.translateKey",
   micDevice: "input.micDevice",
   asrProvider: "service.asrProvider",
   asrEndpoint: "service.asrEndpoint",
@@ -95,6 +100,8 @@ export interface PanelState {
 
   // Quick settings (home view)
   pttKey: string;
+  ttsKey: string;
+  translateKey: string;
   micDevice: string;
   soundOn: boolean;
   muteSys: boolean;
@@ -144,6 +151,9 @@ export interface PanelState {
   setMuteSys: (v: boolean) => void;
   setAutoStart: (v: boolean) => void;
   setPttKey: (v: string) => void;
+  setTtsKey: (v: string) => void;
+  setTranslateKey: (v: string) => void;
+  saveHotkeyConfig: (config: HotkeyConfig) => Promise<void>;
   setMicDevice: (v: string) => void;
 
   // Service config actions
@@ -197,7 +207,9 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   activeTab: null,
   appStatus: "Idle",
   previewDraft: null,
-  pttKey: "Right-Alt",
+  pttKey: DEFAULT_HOTKEY_CONFIG.pttKey,
+  ttsKey: DEFAULT_HOTKEY_CONFIG.ttsKey,
+  translateKey: DEFAULT_HOTKEY_CONFIG.translateKey,
   micDevice: "自动检测",
   soundOn: true,
   muteSys: true,
@@ -252,7 +264,9 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       case CONFIG_KEYS.soundOn: return { soundOn: parseBoolean(entry.value, state.soundOn) };
       case CONFIG_KEYS.muteSys: return { muteSys: parseBoolean(entry.value, state.muteSys) };
       case CONFIG_KEYS.autoStart: return { autoStart: parseBoolean(entry.value, state.autoStart) };
-      case CONFIG_KEYS.pttKey: return { pttKey: entry.value };
+      case CONFIG_KEYS.pttKey: return { pttKey: entry.value || DEFAULT_HOTKEY_CONFIG.pttKey };
+      case CONFIG_KEYS.ttsKey: return { ttsKey: entry.value || DEFAULT_HOTKEY_CONFIG.ttsKey };
+      case CONFIG_KEYS.translateKey: return { translateKey: entry.value || DEFAULT_HOTKEY_CONFIG.translateKey };
       case CONFIG_KEYS.micDevice: return { micDevice: entry.value };
       case CONFIG_KEYS.asrProvider:
         if (["auto", "cloud", "offline"].includes(entry.value)) {
@@ -281,6 +295,25 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   setMuteSys: (muteSys) => { persist(CONFIG_KEYS.muteSys, String(muteSys)); set({ muteSys }); },
   setAutoStart: (autoStart) => { persist(CONFIG_KEYS.autoStart, String(autoStart)); set({ autoStart }); },
   setPttKey: (pttKey) => { persist(CONFIG_KEYS.pttKey, pttKey); set({ pttKey }); },
+  setTtsKey: (ttsKey) => { persist(CONFIG_KEYS.ttsKey, ttsKey); set({ ttsKey }); },
+  setTranslateKey: (translateKey) => { persist(CONFIG_KEYS.translateKey, translateKey); set({ translateKey }); },
+  saveHotkeyConfig: async (config) => {
+    // 乐观更新 UI
+    set({ pttKey: config.pttKey, ttsKey: config.ttsKey, translateKey: config.translateKey });
+    if (!isTauri()) return;
+    try {
+      await ipcSetHotkeyConfig(config);
+      showToast("快捷键已更新", "success");
+    } catch (error) {
+      console.warn("[TerminalVoice] 保存热键配置失败:", error);
+      showToast(
+        error instanceof Error ? error.message : "保存快捷键失败",
+        "error",
+      );
+      // 回滚：重新 hydrate
+      await get().hydrateFromConfig();
+    }
+  },
   setMicDevice: (micDevice) => { persist(CONFIG_KEYS.micDevice, micDevice); set({ micDevice }); },
 
   // ---- Service config ----

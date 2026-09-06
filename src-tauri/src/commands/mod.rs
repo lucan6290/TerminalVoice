@@ -3,6 +3,7 @@ pub mod backup;
 pub mod config;
 pub mod dictionary;
 pub mod history;
+pub mod hotkey;
 pub mod model;
 pub mod preview;
 pub mod skills;

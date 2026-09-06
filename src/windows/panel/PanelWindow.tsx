@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   MoreHorizontal,
@@ -10,12 +10,17 @@ import {
   HelpCircle,
   Minus,
   Square,
+  Download,
+  Upload,
+  RefreshCw,
+  LogOut,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cn } from "../../lib/cn";
-import { cancelPreview, confirmPreview, listAudioInputDevices } from "../../lib/commands";
+import { cancelPreview, confirmPreview, exportData, importData, listAudioInputDevices } from "../../lib/commands";
 import { SettingRow } from "../../components/ui/SettingRow";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
+import { HotkeyRecorder } from "../../components/ui/HotkeyRecorder";
 import { usePanelStore } from "../../stores/appStore";
 import { showToast } from "../../stores/toastStore";
 import { HistoryTab } from "./tabs/HistoryTab";
@@ -40,6 +45,8 @@ export function PanelWindow() {
   const appStatus = usePanelStore((s) => s.appStatus);
   const recording = appStatus === "Recording";
   const pttKey = usePanelStore((s) => s.pttKey);
+  const ttsKey = usePanelStore((s) => s.ttsKey);
+  const translateKey = usePanelStore((s) => s.translateKey);
   const micDevice = usePanelStore((s) => s.micDevice);
   const soundOn = usePanelStore((s) => s.soundOn);
   const muteSys = usePanelStore((s) => s.muteSys);
@@ -56,9 +63,25 @@ export function PanelWindow() {
   const setMuteSys = usePanelStore((s) => s.setMuteSys);
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
   const setMicDevice = usePanelStore((s) => s.setMicDevice);
+  const saveHotkeyConfig = usePanelStore((s) => s.saveHotkeyConfig);
   const clearPreviewDraft = usePanelStore((s) => s.clearPreviewDraft);
   const setShowUpdateModal = usePanelStore((s) => s.setShowUpdateModal);
   const [micDevices, setMicDevices] = useState<string[]>([micDevice]);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    if (moreOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [moreOpen]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -94,7 +117,83 @@ export function PanelWindow() {
   }
 
   function handleMore() {
-    showToast("更多选项（开发中）", "info");
+    setMoreOpen((v) => !v);
+  }
+
+  async function handleExportData() {
+    setMoreOpen(false);
+    if (!("__TAURI_INTERNALS__" in window)) {
+      showToast("浏览器模式不支持数据导出", "info");
+      return;
+    }
+    try {
+      showToast("正在导出数据...", "info");
+      const data = await exportData();
+      const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const date = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `terminalvoice-backup-${date}.db`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("数据导出成功", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "导出失败", "error");
+    }
+  }
+
+  function handleImportClick() {
+    setMoreOpen(false);
+    fileInputRef.current?.click();
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!("__TAURI_INTERNALS__" in window)) {
+      showToast("浏览器模式不支持数据导入", "info");
+      return;
+    }
+    try {
+      const buf = await file.arrayBuffer();
+      const data = Array.from(new Uint8Array(buf));
+      await importData(data);
+      showToast("数据导入成功，正在刷新...", "success");
+      await usePanelStore.getState().loadAll();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "导入失败", "error");
+    }
+  }
+
+  async function handleCheckUpdate() {
+    setMoreOpen(false);
+    const { checkForUpdate } = usePanelStore.getState();
+    showToast("正在检查更新...", "info");
+    await checkForUpdate();
+    const info = usePanelStore.getState().updateInfo;
+    if (info?.hasUpdate) {
+      usePanelStore.getState().setShowUpdateModal(true);
+    } else {
+      showToast("当前已是最新版本", "success");
+    }
+  }
+
+  async function handleQuit() {
+    setMoreOpen(false);
+    if (!("__TAURI_INTERNALS__" in window)) {
+      showToast("浏览器模式不支持退出", "info");
+      return;
+    }
+    try {
+      const { exit } = await import("@tauri-apps/plugin-process");
+      await exit(0);
+    } catch {
+      showToast("退出失败", "error");
+    }
   }
 
   async function handleConfirmPreview(input: Parameters<typeof confirmPreview>[0]) {
@@ -213,6 +312,8 @@ export function PanelWindow() {
             <HomeView
               recording={recording}
               pttKey={pttKey}
+              ttsKey={ttsKey}
+              translateKey={translateKey}
               micDevice={micDevice}
               micDevices={micDevices}
               soundOn={soundOn}
@@ -224,6 +325,7 @@ export function PanelWindow() {
               setMuteSys={setMuteSys}
               setAutoStart={setAutoStart}
               setMicDevice={setMicDevice}
+              onSaveHotkey={saveHotkeyConfig}
               onOpenService={() => setActiveTab("service")}
             />
           ) : (
@@ -233,7 +335,7 @@ export function PanelWindow() {
 
         {/* ========== 底部 Tab 栏 ========== */}
         <footer
-          className="flex items-center justify-center px-[12px] py-[8px] border-t border-neutral-800 shrink-0"
+          className="flex items-center justify-center px-[12px] py-[8px] border-t border-neutral-800 shrink-0 relative"
         >
           <div className="flex items-center gap-[2px]">
             <TabBtn
@@ -269,16 +371,36 @@ export function PanelWindow() {
               <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </TabBtn>
             <div className="w-px h-5 bg-neutral-700 mx-1 shrink-0" />
-            <TabBtn
-              active={false}
-              onClick={handleMore}
-              title="更多选项"
-              data-tip="更多选项"
-              className="tip-above"
-            >
-              <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.8} />
-            </TabBtn>
+            <div ref={moreMenuRef} className="relative">
+              <TabBtn
+                active={moreOpen}
+                onClick={handleMore}
+                title="更多选项"
+                data-tip="更多选项"
+                className="tip-above"
+              >
+                <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.8} />
+              </TabBtn>
+              {moreOpen && (
+                <div
+                  className="absolute bottom-[calc(100%+8px)] right-0 w-48 rounded-xl bg-neutral-800 shadow-2xl ring-1 ring-white/10 overflow-hidden animate-fade-in z-50"
+                >
+                  <MenuItem icon={Download} label="备份数据" onClick={handleExportData} />
+                  <MenuItem icon={Upload} label="恢复数据" onClick={handleImportClick} />
+                  <MenuItem icon={RefreshCw} label="检查更新" onClick={handleCheckUpdate} />
+                  <div className="h-px bg-white/5" />
+                  <MenuItem icon={LogOut} label="退出应用" onClick={handleQuit} danger />
+                </div>
+              )}
+            </div>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".db,.bin,application/octet-stream"
+            className="hidden"
+            onChange={handleImportFile}
+          />
         </footer>
         <PreviewPopup
           draft={displayDraft}
@@ -293,6 +415,8 @@ export function PanelWindow() {
 /* ========== 主页视图 ========== */
 function HomeView({
   pttKey,
+  ttsKey,
+  translateKey,
   micDevice,
   micDevices,
   soundOn,
@@ -304,10 +428,13 @@ function HomeView({
   setMuteSys,
   setAutoStart,
   setMicDevice,
+  onSaveHotkey,
   onOpenService,
 }: {
   recording: boolean;
   pttKey: string;
+  ttsKey: string;
+  translateKey: string;
   micDevice: string;
   micDevices: string[];
   soundOn: boolean;
@@ -319,6 +446,7 @@ function HomeView({
   setMuteSys: (v: boolean) => void;
   setAutoStart: (v: boolean) => void;
   setMicDevice: (value: string) => void;
+  onSaveHotkey: (config: { pttKey: string; ttsKey: string; translateKey: string }) => Promise<void>;
   onOpenService: () => void;
 }) {
   return (
@@ -342,21 +470,38 @@ function HomeView({
         </div>
       </button>
 
-      {/* 触发按键 */}
-      <SettingRow
-        label="设置触发键"
-        helpIcon
-        helpTip="按住此键开始录音，松开上屏。可单击切换免提模式。"
-        childrenLeft={
-          <input
-            aria-label="设置触发键"
-            type="text"
+      {/* 快捷键设置 */}
+      <div className="bg-neutral-800 rounded-xl p-3 mb-3 space-y-2">
+        <div className="text-[12px] text-neutral-500 px-1 pb-1">快捷键 · 点击按键可重新录制</div>
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="text-[13px] text-neutral-200 shrink-0">按住说话</span>
+          <HotkeyRecorder
             value={pttKey}
-            readOnly
-            className="w-full min-w-0 bg-neutral-900 rounded-lg px-3 py-2 text-[15px] font-mono tracking-wider text-neutral-100 border border-white/5 text-center outline-none"
+            onChange={(v) => onSaveHotkey({ pttKey: v, ttsKey, translateKey })}
+            widthClass="min-w-[110px]"
           />
-        }
-      />
+        </div>
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="text-[13px] text-neutral-200 shrink-0">
+            朗读 <span className="text-neutral-500">(Alt+)</span>
+          </span>
+          <HotkeyRecorder
+            value={ttsKey}
+            onChange={(v) => onSaveHotkey({ pttKey, ttsKey: v, translateKey })}
+            widthClass="min-w-[80px]"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="text-[13px] text-neutral-200 shrink-0">
+            翻译 <span className="text-neutral-500">(Alt+)</span>
+          </span>
+          <HotkeyRecorder
+            value={translateKey}
+            onChange={(v) => onSaveHotkey({ pttKey, ttsKey, translateKey: v })}
+            widthClass="min-w-[80px]"
+          />
+        </div>
+      </div>
 
       {/* 麦克风 */}
       <SettingRow
@@ -473,6 +618,31 @@ function TabBtn({
       }}
     >
       {children}
+    </button>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  onClick,
+  danger,
+}: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] transition-colors text-left",
+        danger ? "text-red-400 hover:bg-red-500/10" : "text-neutral-200 hover:bg-white/5",
+      )}
+    >
+      <Icon className="w-[16px] h-[16px] shrink-0" strokeWidth={1.8} />
+      <span>{label}</span>
     </button>
   );
 }

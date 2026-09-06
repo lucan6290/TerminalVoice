@@ -124,6 +124,7 @@ pub fn run() {
             commands::skills::list_skills,
             commands::skills::set_skill,
             commands::skills::get_active_skill,
+            commands::hotkey::set_hotkey_config,
             commands::updater::get_app_version,
         ])
         .run(tauri::generate_context!())

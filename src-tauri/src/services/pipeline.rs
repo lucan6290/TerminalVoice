@@ -7,7 +7,9 @@ use crate::services::events::{
     emit_recording_stopped, emit_recording_tick, emit_rewrite_result, emit_rewrite_started,
     emit_toast, emit_translate_result, emit_tts_started, emit_tts_stopped, transition_runtime,
 };
-use crate::services::hotkey::{spawn_listener, HotkeyEvent};
+use crate::services::hotkey::{
+    format_hotkey, parse_hotkey, HotkeyConfig, HotkeyEdgeState, HotkeyEvent,
+};
 use crate::services::llm::{LlmClient, LlmConfig, TextProcessMode};
 use crate::services::preprocess::{process_text, PreprocessConfig, TextMode};
 use crate::services::recorder::Recorder;
@@ -19,7 +21,7 @@ use crate::services::tts;
 use crate::state::{AppRuntime, RuntimeEvent, RuntimeState};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    mpsc, Arc, Mutex,
+    mpsc, Arc, Mutex, RwLock,
 };
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -34,9 +36,11 @@ pub enum PipelineControl {
     Pause,
     /// 恢复监听
     Resume,
+    /// 重新加载热键配置（从 DB 读取 input.pttKey/input.ttsKey/input.translateKey）
+    ReloadHotkeys,
 }
 
-/// 管线句柄：提供给外部（如托盘菜单）发送控制指令，并查询当前暂停状态。
+/// 管线句柄：提供给外部（如托盘菜单/设置界面）发送控制指令，并查询当前暂停状态。
 pub struct PipelineHandle {
     control_tx: mpsc::Sender<PipelineControl>,
     paused: Arc<AtomicBool>,
@@ -106,9 +110,17 @@ enum PipelineEvent {
 }
 
 pub fn start_hotkey_pipeline(app: AppHandle) -> Result<PipelineHandle, String> {
+    // 初始热键配置：从 DB 读取；若未配置使用默认值
+    let initial_config = load_hotkey_config(&app);
+    let config_arc = Arc::new(RwLock::new(initial_config.clone()));
+    info!(?initial_config, "初始热键配置");
+
     let (hotkey_tx, hotkey_rx) = mpsc::channel();
     let (control_tx, control_rx) = mpsc::channel::<PipelineControl>();
     let paused = Arc::new(AtomicBool::new(false));
+
+    // 启动热键监听（回调内持有 config_arc，可通过 reload 热更新）
+    spawn_listener_with_config(config_arc.clone(), hotkey_tx.clone())?;
 
     // 合并热键事件与控制指令到统一事件流
     let event_rx: mpsc::Receiver<PipelineEvent> = {
@@ -118,18 +130,102 @@ pub fn start_hotkey_pipeline(app: AppHandle) -> Result<PipelineHandle, String> {
         rx
     };
 
-    spawn_listener(hotkey_tx)?;
     let pipeline_paused = paused.clone();
+    let app_clone = app.clone();
+    let config_for_pipeline = config_arc.clone();
     thread::Builder::new()
         .name("terminalvoice-voice-pipeline".to_string())
         .spawn(move || {
             info!("语音管线线程已启动");
-            run_pipeline(app, event_rx, pipeline_paused);
+            run_pipeline(app_clone, event_rx, pipeline_paused, config_for_pipeline);
             info!("语音管线线程已退出");
         })
         .map_err(|error| format!("failed to spawn voice pipeline: {error}"))?;
     info!("热键监听 + 语音管线已启动");
     Ok(PipelineHandle { control_tx, paused })
+}
+
+/// 从 DB 读取热键配置（容错：任何键缺失/非法都回退到默认）。
+pub fn load_hotkey_config(app: &AppHandle) -> HotkeyConfig {
+    let mut cfg = HotkeyConfig::default();
+    if let Some(v) = read_config_raw(app, "input.pttKey") {
+        if let Some(k) = parse_hotkey(&v) {
+            cfg.ptt = k;
+        }
+    }
+    if let Some(v) = read_config_raw(app, "input.ttsKey") {
+        if let Some(k) = parse_hotkey(&v) {
+            cfg.tts = k;
+        }
+    }
+    if let Some(v) = read_config_raw(app, "input.translateKey") {
+        if let Some(k) = parse_hotkey(&v) {
+            cfg.translate = k;
+        }
+    }
+    cfg
+}
+
+/// 启动热键监听线程。回调内通过 Arc<RwLock<HotkeyConfig>> 读取最新配置，
+/// 因此无需停止/重建线程即可动态切换按键。
+fn spawn_listener_with_config(
+    config: Arc<RwLock<HotkeyConfig>>,
+    sender: mpsc::Sender<HotkeyEvent>,
+) -> Result<JoinHandle<()>, String> {
+    let handle = thread::Builder::new()
+        .name("terminalvoice-hotkey".to_string())
+        .spawn(move || {
+            info!("全局热键监听线程已启动（支持运行时重载配置）");
+            let failure_sender = sender.clone();
+            // edge state 本身不存储 config——每次回调时从 Arc 中读取最新 config 并构造一个临时 state。
+            // 但 state 有 pressed/shift_held/alt_held 等可变状态，所以用 Mutex 包裹 edge。
+            let edge: Mutex<HotkeyEdgeState> = {
+                let cfg = config.read().map(|g| g.clone()).unwrap_or_default();
+                Mutex::new(HotkeyEdgeState::new(cfg))
+            };
+            let callback = move |event: rdev::Event| {
+                // 每次回调都检查配置是否更新；如果配置的 key 集合变化了，则重建 edge state 但保留按下状态？
+                // 为简单起见，配置变化后让 edge 使用新配置，但按下态保持稳定需要特别处理。
+                // 这里选择：每次按键事件都使用最新配置，HotkeyEdgeState 在构造后 config 字段不变，
+                // 所以当配置变化时我们重建 edge（丢弃按下态——用户改配置时不会在按着键，所以没问题）。
+                // 使用一个简单策略：edge 内部持有 config 引用，我们每次回调都 clone 最新 config 给它。
+                // 但 HotkeyEdgeState 目前在 new 时把 config 放入 struct，我们改为每次事件前检查：
+                // ——为了减少改动，下面每次回调都直接拿锁、用当前 edge 处理。
+                // 当 config 变化（通过 generation 计数检测）时再重建 edge。
+                // 更简单的方案：给 edge 增加 replace_config 方法。
+                // 这里我们采用最简单的做法：回调内使用一个最新 config 的 shadow edge state（通过 Mutex 保护）。
+
+                if let Ok(mut e) = edge.lock() {
+                    // 将 edge 的 config 更新为最新值
+                    if let Ok(cfg) = config.read() {
+                        e.replace_config(cfg.clone());
+                    }
+                    if let Some(mapped) = e.handle(&event.event_type) {
+                        match &mapped {
+                            HotkeyEvent::Pressed => info!("热键按下：开始语音输入"),
+                            HotkeyEvent::Released => info!("热键释放：结束语音输入"),
+                            HotkeyEvent::Cancelled => info!("热键取消：Esc 按下"),
+                            HotkeyEvent::RewritePressed => debug!("热键按下（润色模式）"),
+                            HotkeyEvent::RewriteReleased => debug!("热键释放（润色模式）"),
+                            HotkeyEvent::TtsToggle => info!("热键：朗读切换"),
+                            HotkeyEvent::Translate => info!("热键：翻译"),
+                            HotkeyEvent::ListenerFailed(_) => {}
+                        }
+                        let _ = sender.send(mapped);
+                    }
+                }
+            };
+            if let Err(error) = rdev::listen(callback) {
+                let message = format!("{error:?}");
+                error!("全局热键监听失败: {}", message);
+                let _ = failure_sender.send(HotkeyEvent::ListenerFailed(message));
+            }
+        })
+        .map_err(|error| {
+            error!("无法启动全局热键监听线程: {}", error);
+            format!("failed to spawn hotkey listener: {error}")
+        })?;
+    Ok(handle)
 }
 
 /// 启动一个转发线程，把源 channel 的消息包装后送入目标 channel。
@@ -150,7 +246,12 @@ fn spawn_forwarder<T: Send + 'static>(
         .ok();
 }
 
-fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<PipelineEvent>, paused: Arc<AtomicBool>) {
+fn run_pipeline(
+    app: AppHandle,
+    receiver: mpsc::Receiver<PipelineEvent>,
+    paused: Arc<AtomicBool>,
+    config: Arc<RwLock<HotkeyConfig>>,
+) {
     let mut recorder = Recorder::new();
     let mut ticker: Option<RecordingTicker> = None;
     let mut rewrite_selected_text: Option<String> = None;
@@ -164,7 +265,6 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<PipelineEvent>, paused:
                     }
                     info!("语音管线已暂停（托盘菜单）");
                     paused.store(true, Ordering::SeqCst);
-                    // 暂停时若正在录音/口译，取消录音并复位状态
                     if recorder.is_recording() {
                         if let Some(mut t) = ticker.take() {
                             t.stop();
@@ -188,9 +288,26 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<PipelineEvent>, paused:
                     let _ = transition_runtime(&app, runtime.inner(), RuntimeEvent::TogglePause);
                     emit_toast(&app, "info", "语音监听已恢复");
                 }
+                PipelineControl::ReloadHotkeys => {
+                    let new_cfg = load_hotkey_config(&app);
+                    let ptt_name = format_hotkey(new_cfg.ptt);
+                    let tts_name = format_hotkey(new_cfg.tts);
+                    let tr_name = format_hotkey(new_cfg.translate);
+                    if let Ok(mut cfg) = config.write() {
+                        *cfg = new_cfg.clone();
+                    }
+                    info!(?new_cfg, "热键配置已重新加载");
+                    emit_toast(
+                        &app,
+                        "info",
+                        format!(
+                            "热键已更新：说话={}，朗读=Alt+{}，翻译=Alt+{}",
+                            ptt_name, tts_name, tr_name
+                        ),
+                    );
+                }
             },
             PipelineEvent::Hotkey(hotkey) => {
-                // 暂停期间忽略除 Cancelled 之外的所有热键（Cancelled 用于兜底清理）
                 if paused.load(Ordering::SeqCst) && !matches!(hotkey, HotkeyEvent::Cancelled) {
                     debug!(event = ?hotkey, "管线已暂停，忽略热键");
                     continue;
@@ -214,9 +331,12 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<PipelineEvent>, paused:
                             handle_cancelled(&app, &mut recorder, &mut ticker);
                         }
                     }
-                    HotkeyEvent::RewritePressed => {
-                        handle_rewrite_pressed(&app, &mut recorder, &mut ticker, &mut rewrite_selected_text)
-                    }
+                    HotkeyEvent::RewritePressed => handle_rewrite_pressed(
+                        &app,
+                        &mut recorder,
+                        &mut ticker,
+                        &mut rewrite_selected_text,
+                    ),
                     HotkeyEvent::RewriteReleased => handle_rewrite_released(
                         &app,
                         &mut recorder,
@@ -238,7 +358,6 @@ fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<PipelineEvent>, paused:
 }
 
 fn handle_pressed(app: &AppHandle, recorder: &mut Recorder, ticker: &mut Option<RecordingTicker>) {
-    // Hands-free (toggle) mode: if currently recording, stop and transcribe
     if is_hands_free(app) && recorder.is_recording() {
         stop_recording_and_transcribe(app, recorder, ticker);
         return;
@@ -260,16 +379,9 @@ fn handle_pressed(app: &AppHandle, recorder: &mut Recorder, ticker: &mut Option<
     info!("录音已开始");
     let _ = emit_recording_started(app);
     *ticker = Some(RecordingTicker::start(app.clone()));
-
-    // TODO: VAD integration — in hands-free mode, spawn a VAD monitor thread that
-    // reads real-time audio frames via `VoiceActivityDetector::process_frame` and
-    // calls `stop_recording_and_transcribe` when `VadState::SilenceTimeout` is
-    // detected, enabling automatic stop-after-silence without a second key press.
 }
 
 fn handle_released(app: &AppHandle, recorder: &mut Recorder, ticker: &mut Option<RecordingTicker>) {
-    // In hands-free (toggle) mode, release events are ignored — recording
-    // is stopped by pressing the hotkey again, not by releasing it.
     if is_hands_free(app) {
         return;
     }
@@ -369,12 +481,10 @@ fn stop_recording_and_transcribe(
 }
 
 fn apply_llm(app: &AppHandle, input: &str) -> String {
-    // 检查是否有激活的语音技能
     let active_skill = read_config(app, "service.activeSkill")
         .filter(|v| !v.trim().is_empty())
         .and_then(|id| skills::find_skill(&id));
 
-    // 如果有激活的技能，使用技能的 system prompt
     if let Some(skill) = &active_skill {
         info!(skill_id = %skill.id, "使用语音技能");
         let result = cloud_llm_config(app)
@@ -398,7 +508,6 @@ fn apply_llm(app: &AppHandle, input: &str) -> String {
         };
     }
 
-    // 正常路径：使用 organize_streaming
     let mode_value = read_config(app, "service.textMode");
     let mode = TextProcessMode::parse(mode_value.as_deref());
     if mode == TextProcessMode::Off {
@@ -579,7 +688,6 @@ fn reset_rewrite_mode(runtime: &Mutex<AppRuntime>) {
     }
 }
 
-/// Alt+1: TTS 朗读切换。正在朗读时停止；未朗读时捕获选中文本并开始朗读。
 fn handle_tts_toggle(app: &AppHandle) {
     if tts::is_speaking() {
         info!("停止 TTS 朗读");
@@ -612,34 +720,25 @@ fn handle_tts_toggle(app: &AppHandle) {
         .ok();
 }
 
-/// Alt+2: 翻译/口译模式。
-///
-/// - 有选中文本时：翻译选中文本并推送结果。
-/// - 无选中文本时：进入口译模式（录音→ASR→翻译→TTS）。
-///   首次 Alt+2 开始录音，再次 Alt+2 停止录音并执行翻译+TTS。
 fn handle_translate(
     app: &AppHandle,
     recorder: &mut Recorder,
     ticker: &mut Option<RecordingTicker>,
     interpreting: &mut bool,
 ) {
-    // 如果正在口译，停止录音并执行翻译+TTS
     if *interpreting {
         *interpreting = false;
         stop_interpretation(app, recorder, ticker);
         return;
     }
 
-    // 检查是否有选中文本
     let selected_text = rewrite::capture_selected_text();
     if !selected_text.trim().is_empty() {
-        // 正常翻译模式
         info!(text_len = selected_text.trim().len(), "翻译选中文本");
         translate_selected_text(app, &selected_text);
         return;
     }
 
-    // 无选中文本 → 进入口译模式，开始录音
     *interpreting = true;
     info!("进入口译模式，开始录音");
 
@@ -654,7 +753,6 @@ fn handle_translate(
     *ticker = Some(RecordingTicker::start(app.clone()));
 }
 
-/// 口译模式：停止录音 → ASR → 翻译 → TTS
 fn stop_interpretation(
     app: &AppHandle,
     recorder: &mut Recorder,
@@ -680,7 +778,6 @@ fn stop_interpretation(
         return;
     }
 
-    // ASR 识别
     let mode_value = read_config(app, "service.asrProvider");
     let mode = AsrMode::parse(mode_value.as_deref());
     let cloud_config = cloud_asr_config(app);
@@ -700,7 +797,6 @@ fn stop_interpretation(
 
     info!(text = %source_text, "口译 ASR 结果");
 
-    // 翻译
     let config = match cloud_llm_config(app) {
         Some(config) => config,
         None => {
@@ -723,10 +819,8 @@ fn stop_interpretation(
 
     info!(translated = %translated_text, "口译翻译结果");
 
-    // 推送翻译结果
     let _ = emit_translate_result(app, &source_text, &translated_text);
 
-    // TTS 朗读译文
     let _ = emit_tts_started(app);
     let app_clone = app.clone();
     thread::Builder::new()
@@ -740,7 +834,6 @@ fn stop_interpretation(
         .ok();
 }
 
-/// 翻译选中文本（正常翻译模式）
 fn translate_selected_text(app: &AppHandle, selected_text: &str) {
     let config = match cloud_llm_config(app) {
         Some(config) => config,
@@ -783,9 +876,18 @@ fn handle_cancelled(app: &AppHandle, recorder: &mut Recorder, ticker: &mut Optio
     }
 }
 
+/// 直接读取 DB 原始字符串（不解密、不解码）；热键不是 secret 键，所以直接返回 get_config 结果。
+fn read_config_raw(app: &AppHandle, key: &str) -> Option<String> {
+    let db_state = app.state::<Mutex<Database>>();
+    let db = match db_state.lock() {
+        Ok(guard) => guard,
+        Err(_) => return None,
+    };
+    db.get_config(key).ok().flatten()
+}
+
 fn read_config(app: &AppHandle, key: &str) -> Option<String> {
-    let db = app.state::<Mutex<Database>>();
-    let stored = db.lock().ok()?.get_config(key).ok().flatten()?;
+    let stored = read_config_raw(app, key)?;
     decode_config_value(key, &stored).ok()
 }
 

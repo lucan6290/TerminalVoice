@@ -123,3 +123,17 @@ export interface UpdateInfo {
 export interface UpdateProgressPayload {
   percent: number;
 }
+
+/** 热键配置（字符串按键名，与后端 parse_hotkey 对应） */
+export interface HotkeyConfig {
+  pttKey: string;
+  ttsKey: string;
+  translateKey: string;
+}
+
+/** 默认热键配置 */
+export const DEFAULT_HOTKEY_CONFIG: HotkeyConfig = {
+  pttKey: "RightAlt",
+  ttsKey: "1",
+  translateKey: "2",
+};

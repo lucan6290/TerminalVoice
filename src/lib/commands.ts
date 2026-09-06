@@ -6,6 +6,7 @@ import type {
   ConfirmPreviewInput,
   FilterWord,
   HistoryItem,
+  HotkeyConfig,
   ModelInfo,
   PreviewDraft,
   UpdateInfo,
@@ -40,6 +41,7 @@ const COMMANDS = {
   listSkills: "list_skills",
   setSkill: "set_skill",
   getActiveSkill: "get_active_skill",
+  setHotkeyConfig: "set_hotkey_config",
   getAppVersion: "get_app_version",
 } as const;
 
@@ -149,6 +151,10 @@ export async function setSkill(skillId: string): Promise<void> {
 
 export async function getActiveSkill(): Promise<string | null> {
   return invoke<string | null>(COMMANDS.getActiveSkill);
+}
+
+export async function setHotkeyConfig(config: HotkeyConfig): Promise<void> {
+  await invoke<void>(COMMANDS.setHotkeyConfig, { payload: config });
 }
 
 export async function getAppVersion(): Promise<string> {
