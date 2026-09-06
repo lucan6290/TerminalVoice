@@ -114,7 +114,7 @@ TerminalVoice/
     │   ├── TerminalVoice_PRD_V1.0.md ← PRD V1.1（产品需求+验收标准）
     │   ├── UNIMPLEMENTED_FEATURES.md ← 9 子系统缺口分析
     │   └── 2026-08-09-*.md       ← 11 份 V1.1 实施计划
-    └── v0.2/                     ← v0.2 浮球方案文档（当前版本规划）
+    └── v0.2/                     ← v0.2 浮球方案规划文档（已归档）
         ├── 2026-09-05-floating-ball-voice-tool-plan.md ← 浮球方案总计划
         ├── ui-requirements-floating-voice-tool.md      ← 浮球 UI 需求
         └── prior-art-research-floating-voice-tool.md   ← Handy/Pot 复用调研
@@ -212,7 +212,7 @@ TerminalVoice/
 
 每个版本一个目录，存放该版本的**需求/计划/方案/调研**等规划类文档，版本发布后归档不再修改：
 - `docs/v0.1/` — V1.1 单窗口方案（已归档）
-- `docs/v0.2/` — 当前浮球方案
+- `docs/v0.2/` — 浮球方案规划文档（已归档）
 - 未来版本（v0.3、v1.0 等）：直接新建 `docs/vX.X/` 目录，放入该版本的增量/变更文档即可
 - 版本文档之间相互引用时使用相对路径（同目录内直接引用），全局文档引用版本文档时使用 `docs/vX.X/xxx.md` 路径
 
@@ -260,7 +260,7 @@ TerminalVoice/
 | [docs/STATE_MACHINE.md](docs/STATE_MACHINE.md) | 状态机定义、转移规则、测试 | 修改 state.rs 或状态相关逻辑时 |
 | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | 颜色/圆角/字体/阴影 tokens + 组件规范 | 写 UI 组件时 |
 | [docs/v0.3/](docs/v0.3/) | v0.3（使用统计）规划文档 | 开发 v0.3 新功能时 |
-| [docs/v0.2/](docs/v0.2/) | v0.2（浮球方案）规划文档 | 参考浮球方案设计决策时 |
+| [docs/v0.2/](docs/v0.2/) | 浮球方案规划文档（已归档） | 参考浮球方案设计决策时 |
 | [docs/v0.1/](docs/v0.1/) | **历史版本文档**（V1.1 单窗口方案，已归档） | 参考历史设计决策时 |
 | [CLAUDE.md](CLAUDE.md) | Git 工作流与提交规范 | 提交代码前 |
 

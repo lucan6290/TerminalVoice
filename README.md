@@ -2,7 +2,7 @@
 
 > Windows 平台常驻全局语音输入桌面工具 — 桌面悬浮小球 + 极简面板，按住说话，松开上屏。
 
-![Status](https://img.shields.io/badge/status-v0.2.0-blue)
+![Status](https://img.shields.io/badge/status-v0.1.0-blue)
 ![Tauri](https://img.shields.io/badge/Tauri-v2-blue)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![Rust](https://img.shields.io/badge/Rust-1.85+-dea584)
@@ -68,7 +68,7 @@ TerminalVoice 是一款 Windows 桌面端的全局语音输入工具。以一个
 
 ## 当前状态
 
-项目处于 **v0.2.0** 阶段，浮球方案三窗口体系已完整实现：
+项目处于 **v0.1.0** 阶段，浮球方案三窗口体系已完整实现：
 
 - ✅ 前端三窗口 UI 完整（悬浮球 + 面板 + 主设置窗口）+ 设计系统（Tailwind v4）
 - ✅ 后端核心功能已实现：全局热键（运行时可配、热重载）、麦克风录音（cpal 16kHz/16bit/mono + rubato 重采样）、云端 ASR（WinHTTP multipart / OpenAI Whisper 兼容）、LLM 流式改写/翻译/技能（SSE）、TTS 朗读（Windows SAPI）、文本注入（enigo + 剪贴板回退）、选中文本捕获、系统托盘、自动更新、DPAPI 密钥加密、SQLite 持久化、VAD 能量静音检测、模型管理（HuggingFace 下载 + SHA256 校验）、开机自启、单实例、数据备份/恢复、热键自定义
@@ -251,7 +251,7 @@ docs/                   # 项目文档（见下方）
 | 目录 | 说明 |
 | :--- | :--- |
 | [docs/v0.3/](docs/v0.3/) | **v0.3（使用统计）** 规划文档：计划、数据模型、复用调研 |
-| [docs/v0.2/](docs/v0.2/) | **v0.2（浮球方案）** 规划文档：总计划、UI 需求、复用调研 |
+| [docs/v0.2/](docs/v0.2/) | **浮球方案** 规划文档（已归档）：总计划、UI 需求、复用调研 |
 | [docs/v0.1/](docs/v0.1/) | **v0.1（V1.1 单窗口方案）** 历史归档：PRD、架构、实施方案 |
 
 ---

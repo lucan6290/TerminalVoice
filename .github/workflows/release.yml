@@ -36,6 +36,26 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Extract changelog for this version
+        id: changelog
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart("v")
+          $content = Get-Content -Raw -Path "CHANGELOG.md" -Encoding UTF8
+          # 匹配 ## [X.Y.Z] ... 到下一个 ## [ 或链接锚点区
+          $pattern = "(?ms)^## \[$tag\].*?\r?\n(.*?)(?=\r?\n## \[|\r?\n\[Unreleased\]:|\z)"
+          $m = [regex]::Match($content, $pattern)
+          if ($m.Success) {
+            $body = $m.Groups[1].Value.Trim()
+          } else {
+            $body = "> 本次发布未在 CHANGELOG.md 中找到对应条目，请查看提交记录。"
+          }
+          $header = "请下载下方对应的安装包进行安装/更新：`n- Windows: ``.msi`` 安装包（推荐）`n- Windows: ``.nsis.zip`` 便携版（可选）`n`n---`n`n"
+          $full = $header + $body
+          $outPath = Join-Path $env:GITHUB_WORKSPACE "release-body.md"
+          [System.IO.File]::WriteAllText($outPath, $full, (New-Object System.Text.UTF8Encoding $false))
+          Write-Host "Extracted changelog body length: $($body.Length)"
+
       - name: Build & release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -45,14 +65,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "TerminalVoice ${{ github.ref_name }}"
-          releaseBody: |
-            ## TerminalVoice ${{ github.ref_name }}
-
-            请下载下方对应的安装包进行安装/更新。
-            - Windows: `.msi` 安装包（推荐）
-            - Windows: `.nsis.zip` 便携版（可选）
-
-            > 更新说明请查看 [CHANGELOG] 或 Release Notes。
+          releaseBodyPath: "release-body.md"
           releaseDraft: true
           prerelease: false
           args: "--target x86_64-pc-windows-msvc"

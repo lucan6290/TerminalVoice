@@ -67,7 +67,7 @@
 | [windows/panel/tabs/DictTab.tsx](../src/windows/panel/tabs/DictTab.tsx) | ✅ | 过滤词（个人词典）页：两栏布局，增删改查均为 async store action（乐观更新+回滚）+ showToast 反馈，支持行内编辑 |
 | [windows/panel/tabs/ServiceTab.tsx](../src/windows/panel/tabs/ServiceTab.tsx) | ✅ | 服务配置页：ASR 提供商选择（auto/cloud/offline）、ASR/LLM 端点/密钥/模型配置、ASR 连接测试按钮（`testAsrConnection()`）、离线模型管理（`ModelInfo` 类型 + `formatSize` 辅助函数 + 下载/删除 + 下载中状态指示）、翻译目标语言选择器 |
 | [windows/panel/tabs/SkillTab.tsx](../src/windows/panel/tabs/SkillTab.tsx) | ✅ | 技能页：4 个语音技能卡片（英文输出/清单模式/汇报格式/听写模板），通过 `listSkills`/`setSkill`/`getActiveSkill` IPC 调用后端，卡片点击激活/取消技能 |
-| [windows/panel/tabs/HelpTab.tsx](../src/windows/panel/tabs/HelpTab.tsx) | ✅ | 帮助页：版本 v0.2.0、快捷键说明（含 Alt+1 朗读/Alt+2 翻译行）、使用指南（4 步）、AI 整理模式说明（4 种）、底部链接按钮 |
+| [windows/panel/tabs/HelpTab.tsx](../src/windows/panel/tabs/HelpTab.tsx) | ✅ | 帮助页：版本 v0.1.0、快捷键说明（含 Alt+1 朗读/Alt+2 翻译行）、使用指南（4 步）、AI 整理模式说明（4 种）、底部链接按钮 |
 | [windows/panel/tabs/SettingsTab.tsx](../src/windows/panel/tabs/SettingsTab.tsx) | ✅ | 设置页：偏好设置 / 数据管理（备份/恢复）/ 关于与更新（检查更新/退出）三区块，通过 `exportData`/`importData`/`checkUpdate`/退出 等 store action 驱动 |
 | [windows/panel/PreviewPopup.tsx](../src/windows/panel/PreviewPopup.tsx) | ✅ | 预览弹窗组件（已从 `components/` 迁移至此并重构）：支持 `recognition` 模式（绿色 accent）和 `rewrite` 模式（紫色 accent），不同模式不同标签（"确认语音输入"/"确认改写结果"、"识别原文"/"改写原文"、"整理结果"/"改写结果"），使用 `cn()` 条件 className，传入 `mode` 到 confirm 调用。由 PanelWindow 内嵌，`previewDraft` 驱动 |
 | [windows/panel/PreviewPopup.test.tsx](../src/windows/panel/PreviewPopup.test.tsx) | ✅ | 预览弹窗测试 |

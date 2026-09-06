@@ -52,7 +52,7 @@ export function XxxTab() {
 - **HistoryTab**：`listHistory` / `searchHistory` / `deleteHistory` / `clearHistory` / `reinjectHistory`
 - **DictTab**：`listFilterWords` / `addFilterWord` / `deleteFilterWord` / `toggleFilterWord`
 - **ServiceTab**：`listAudioInputDevices` / `listModels` / `downloadModel` / `deleteModel` / `testAsrConnection` / `testLlmConnection` + `service.*` 配置持久化
-- **HelpTab**：静态内容（版本 v0.2.0，快捷键 Right Alt/Alt+1/Alt+2）
+- **HelpTab**：静态内容（版本 v0.1.0，快捷键 Right Alt/Alt+1/Alt+2）
 - 浏览器环境下所有命令 catch 静默降级
 
 ## 新增 Tab

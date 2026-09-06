@@ -78,9 +78,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;}
 .nav-cta{
   font-size:14px;padding:9px 20px;border-radius:12px;
   background:var(--ink);color:var(--bg);font-weight:500;
-  transition:all .15s;
+  transition:all .15s;text-decoration:none;cursor:pointer;display:inline-block;
 }
-.nav-cta:hover{background:var(--accent);}
+.nav-cta:hover{background:var(--accent);color:#fff;}
 
 /* ============ Hero ============ */
 .hero{padding:60px 0 80px;position:relative;overflow:hidden;}
@@ -108,16 +108,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;}
   font-size:15px;padding:13px 28px;border-radius:14px;
   background:var(--accent);color:#fff;font-weight:600;
   box-shadow:0 8px 20px -6px var(--accent-glow);
-  transition:all .15s;
+  transition:all .15s;text-decoration:none;border:none;cursor:pointer;display:inline-block;
 }
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px -6px var(--accent-glow);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px -6px var(--accent-glow);color:#fff;}
 .btn-ghost{
   font-size:15px;padding:13px 24px;border-radius:14px;
   background:var(--card);color:var(--ink);font-weight:500;
   border:1px solid var(--card-border);
-  transition:all .15s;
+  transition:all .15s;text-decoration:none;cursor:pointer;display:inline-block;
 }
-.btn-ghost:hover{background:#fff;}
+.btn-ghost:hover{background:#fff;color:var(--ink);}
 .hero-stats{display:flex;gap:32px;}
 .hero-stat .num{font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.02em;}
 .hero-stat .label{font-size:13px;color:var(--ink-3);}
@@ -499,6 +499,39 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;}
 }
 .cta .btn-white:hover{transform:translateY(-2px);box-shadow:0 12px 28px -6px rgba(0,0,0,.3);}
 
+/* ============ Contribute ============ */
+.contribute-section{margin-top:100px;}
+.contribute-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px;
+}
+.contrib-card{
+  display:block;padding:28px 24px;
+  background:#fff;border:1px solid var(--line);border-radius:20px;
+  transition:all .2s;text-decoration:none;color:inherit;
+}
+.contrib-card:hover{
+  transform:translateY(-4px);
+  border-color:var(--accent);
+  box-shadow:0 20px 40px -20px rgba(124,92,255,.25);
+}
+.contrib-icon{
+  width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(124,92,255,.1),rgba(255,107,107,.1));
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin-bottom:16px;
+}
+.contrib-card h4{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px;letter-spacing:-.01em;}
+.contrib-card p{font-size:14px;color:var(--ink-2);line-height:1.65;margin:0;}
+.contribute-note{
+  text-align:center;margin-top:28px;font-size:15px;color:var(--ink-2);
+}
+@media (max-width:860px){
+  .contribute-grid{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:560px){
+  .contribute-grid{grid-template-columns:1fr;}
+}
+
 /* ============ Footer ============ */
 footer{
   background:var(--ink);color:var(--ink-4);
@@ -543,7 +576,7 @@ svg{display:block;}
       <a href="#tech">技术栈</a>
       <a href="https://github.com/lucan6290/TerminalVoice" target="_blank">GitHub</a>
     </div>
-    <button class="nav-cta" onclick="window.open('https://github.com/lucan6290/TerminalVoice','_blank')">↓ 免费下载</button>
+    <a class="nav-cta" href="https://github.com/lucan6290/TerminalVoice/releases/latest" target="_blank" rel="noopener">↓ 免费下载</a>
   </div>
 </nav>
 
@@ -551,12 +584,12 @@ svg{display:block;}
 <section class="hero bg-grid">
   <div class="container hero-inner">
     <div>
-      <div class="hero-eyebrow"><span class="dot"></span>Windows 全局语音输入 · v0.2.0</div>
+      <div class="hero-eyebrow"><span class="dot"></span>Windows 全局语音输入 · v0.1.0</div>
       <h1>常驻桌面<br><em>按住就说</em></h1>
       <p class="hero-sub">一个始终置顶的悬浮小球。按住 Right Alt 说话，松开即上屏到任何输入框。ASR 识别、AI 整理、朗读、翻译，一颗小球，全状态可视。</p>
       <div class="hero-actions">
-        <button class="btn-primary" onclick="window.open('https://github.com/lucan6290/TerminalVoice','_blank')">↓ 下载 v0.2.0 (Windows)</button>
-        <button class="btn-ghost">📖 查看文档</button>
+        <a class="btn-primary" href="https://github.com/lucan6290/TerminalVoice/releases/latest" target="_blank" rel="noopener">↓ 下载 v0.1.0 (Windows)</a>
+        <a class="btn-ghost" href="https://github.com/lucan6290/TerminalVoice#readme" target="_blank" rel="noopener">📖 查看文档</a>
       </div>
       <div class="hero-stats">
         <div class="hero-stat"><div class="num">3</div><div class="label">核心动作</div></div>
@@ -935,7 +968,7 @@ svg{display:block;}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
               </div>
               <div class="mm-name">TerminalVoice</div>
-              <div class="mm-ver">v0.2.0 · Tauri v2</div>
+              <div class="mm-ver">v0.1.0 · Tauri v2</div>
               <div class="mm-sec">偏好</div>
               <div class="pm-row" style="background:transparent;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0;"><div class="lbl" style="font-size:12px;">开机自启</div><div class="pm-toggle on"></div></div>
               <div class="pm-row" style="background:transparent;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0;"><div class="lbl" style="font-size:12px;">深色模式</div><div class="pm-toggle on"></div></div>
@@ -983,10 +1016,51 @@ svg{display:block;}
   <div class="cta">
     <h2>开始用声音解放双手</h2>
     <p>免费、开源、Windows 原生。下载即用，无需注册登录。</p>
-    <a class="btn-white" href="https://github.com/lucan6290/TerminalVoice" target="_blank">
-      ↓ 从 GitHub 下载 v0.2.0
+    <a class="btn-white" href="https://github.com/lucan6290/TerminalVoice/releases/latest" target="_blank" rel="noopener">
+      ↓ 从 GitHub 下载 v0.1.0
     </a>
   </div>
+</section>
+
+<!-- ============ CONTRIBUTE ============ -->
+<section class="container contribute-section" id="contribute">
+  <div class="section-head">
+    <h2>参与贡献</h2>
+    <p>欢迎所有形式的贡献！无论你是想提出一个好想法、反馈 Bug、改善 UI/交互、补充文档，还是直接提交代码，都非常欢迎。</p>
+  </div>
+  <div class="contribute-grid">
+    <a class="contrib-card" href="https://github.com/lucan6290/TerminalVoice/discussions" target="_blank" rel="noopener">
+      <div class="contrib-icon">💡</div>
+      <h4>想法 / 建议</h4>
+      <p>到 Discussions 开帖讨论，任何点子都欢迎——新功能、交互优化、体验细节……</p>
+    </a>
+    <a class="contrib-card" href="https://github.com/lucan6290/TerminalVoice/issues" target="_blank" rel="noopener">
+      <div class="contrib-icon">🐛</div>
+      <h4>Bug 反馈</h4>
+      <p>在 Issues 提交问题，请尽量附上复现步骤和系统版本，帮助我们快速定位。</p>
+    </a>
+    <a class="contrib-card" href="https://github.com/lucan6290/TerminalVoice/pulls" target="_blank" rel="noopener">
+      <div class="contrib-icon">🧑‍💻</div>
+      <h4>提交代码</h4>
+      <p>Fork 仓库 → 从 main 创建功能分支 → 提交 PR。大改动建议先在 Issue 沟通方向。</p>
+    </a>
+    <a class="contrib-card" href="https://github.com/lucan6290/TerminalVoice/tree/main/docs" target="_blank" rel="noopener">
+      <div class="contrib-icon">📝</div>
+      <h4>文档 / 翻译</h4>
+      <p>错别字、表述优化、多语言支持——文档是产品的一部分，同样欢迎 PR。</p>
+    </a>
+    <a class="contrib-card" href="https://github.com/lucan6290/TerminalVoice/discussions" target="_blank" rel="noopener">
+      <div class="contrib-icon">🎨</div>
+      <h4>UI / 设计</h4>
+      <p>悬浮球/面板的视觉改进、动画细节、配色建议——好的设计值得被打磨。</p>
+    </a>
+    <a class="contrib-card" href="https://github.com/lucan6290/TerminalVoice/blob/main/AGENTS.md" target="_blank" rel="noopener">
+      <div class="contrib-icon">📖</div>
+      <h4>开始之前</h4>
+      <p>建议先读 AGENTS.md（项目结构与约定）和 docs/CODE_MAP.md（模块状态），快速熟悉代码。</p>
+    </a>
+  </div>
+  <p class="contribute-note">每一份 PR 都会被认真 review 和合并，期待你的想法！</p>
 </section>
 
 <!-- ============ FOOTER ============ -->
@@ -1011,17 +1085,17 @@ svg{display:block;}
       </div>
       <div class="footer-col">
         <h4>资源</h4>
-        <a href="https://github.com/lucan6290/TerminalVoice" target="_blank">GitHub 仓库</a>
-        <a href="#">使用文档</a>
-        <a href="#">更新日志</a>
-        <a href="#">问题反馈</a>
+        <a href="https://github.com/lucan6290/TerminalVoice" target="_blank" rel="noopener">GitHub 仓库</a>
+        <a href="https://github.com/lucan6290/TerminalVoice#readme" target="_blank" rel="noopener">使用文档</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/releases" target="_blank" rel="noopener">更新日志</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/issues" target="_blank" rel="noopener">问题反馈</a>
       </div>
       <div class="footer-col">
         <h4>社区</h4>
-        <a href="#">Issues</a>
-        <a href="#">Discussions</a>
-        <a href="#">贡献指南</a>
-        <a href="#">许可证 (GPL-3.0)</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/discussions" target="_blank" rel="noopener">Discussions</a>
+        <a href="#contribute">贡献指南</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/blob/main/LICENSE" target="_blank" rel="noopener">许可证 (GPL-3.0)</a>
       </div>
     </div>
     <div class="footer-bottom">
