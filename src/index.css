@@ -160,6 +160,17 @@
   bottom: calc(100% + 8px);
   top: auto;
 }
+/* 贴左对齐：tooltip 左边缘与锚点对齐（避免靠近窗口左边缘被裁剪） */
+[data-tip].tip-left:hover::after {
+  left: 0;
+  transform: none;
+}
+/* 贴右对齐：tooltip 右边缘与锚点对齐（避免靠近窗口右边缘被裁剪） */
+[data-tip].tip-right:hover::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
 .dark [data-tip]:hover::after {
   background: rgba(245, 245, 247, 0.92);
   color: #1c1c1e;

@@ -14,7 +14,6 @@ import {
   Upload,
   RefreshCw,
   LogOut,
-  Globe,
   Moon,
   Sun,
   Github,
@@ -251,7 +250,7 @@ export function PanelWindow() {
           <div className="flex items-center gap-[10px] min-w-0">
             <span
               data-tip={`服务运行中 · ${appStatus}`}
-              className="tip-below relative flex h-[10px] w-[10px] shrink-0 cursor-help"
+              className="tip-below tip-left relative flex h-[10px] w-[10px] shrink-0 cursor-help"
             >
               <span
                 className={cn(
@@ -339,50 +338,58 @@ export function PanelWindow() {
         <footer
           className="flex items-center justify-between px-[12px] py-[8px] border-t border-neutral-800 shrink-0 relative gap-2"
         >
-          {/* 左侧：快捷按钮 */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <QuickPill
+          {/* 左侧：快捷按钮（与右侧 TabBtn 同样大小 w-9 h-9，同样间距 gap-[2px]） */}
+          <div className="flex items-center gap-[2px]">
+            <FooterBtn
               onClick={() => {
-                const next = service.translateTargetLang === "中文" ? "英文" : "中文";
-                setServiceConfig({ translateTargetLang: next });
-                showToast(`翻译目标语言已切换为${next}`, "info");
+                const next = uiLang === "zh-CN" ? "en" : "zh-CN";
+                setUiLang(next);
+                showToast(t("toast.langSwitched", { lang: t(`panel.footer.langLabel.${next === "zh-CN" ? "cn" : "en"}`) }), "info");
               }}
-              title={`翻译目标语言：${service.translateTargetLang}（点击切换）`}
-              wide
+              title={uiLang === "zh-CN" ? t("panel.footer.uiLang.title") : "UI language: English (click to switch)"}
             >
-              <Globe className="w-[14px] h-[14px] shrink-0" />
-              <span className="text-[12px] font-medium leading-none">
-                {service.translateTargetLang === "中文" ? "CN" : service.translateTargetLang === "英文" ? "EN" : service.translateTargetLang.slice(0, 2).toUpperCase()}
+              <span className="text-[11px] font-semibold leading-none tracking-wide">
+                {uiLang === "zh-CN" ? "CN" : "EN"}
               </span>
-            </QuickPill>
-            <QuickPill
+            </FooterBtn>
+            <FooterBtn
               onClick={toggleDark}
-              title={dark ? "切换为浅色主题" : "切换为深色主题"}
+              title={dark ? t("panel.footer.dark.light") : t("panel.footer.dark.dark")}
             >
-              {dark ? <Sun className="w-[14px] h-[14px] shrink-0" /> : <Moon className="w-[14px] h-[14px] shrink-0" />}
-            </QuickPill>
-            <QuickPill
+              {dark ? <Sun className="w-[18px] h-[18px]" strokeWidth={1.8} /> : <Moon className="w-[18px] h-[18px]" strokeWidth={1.8} />}
+            </FooterBtn>
+            <FooterBtn
               onClick={() => {
                 open("https://github.com").catch(() => {
                   if ("__TAURI_INTERNALS__" in window) {
-                    showToast("无法打开浏览器", "error");
+                    showToast(t("toast.githubOpenFail"), "error");
                   } else {
                     window.open("https://github.com", "_blank");
                   }
                 });
               }}
-              title="访问 GitHub"
+              title={t("panel.footer.github")}
             >
-              <Github className="w-[14px] h-[14px] shrink-0" />
-            </QuickPill>
+              <Github className="w-[18px] h-[18px]" strokeWidth={1.8} />
+            </FooterBtn>
           </div>
 
           {/* 右侧：Tab 按钮组 */}
           <div className="flex items-center gap-[2px]">
             <TabBtn
+              active={activeTab === "service"}
+              onClick={() => setActiveTab(activeTab === "service" ? null : "service")}
+              title={t("panel.footer.tab.service")}
+              data-tip={t("panel.footer.tab.service")}
+              className="tip-above"
+            >
+              <Square className="w-[18px] h-[18px]" strokeWidth={1.8} />
+            </TabBtn>
+            <TabBtn
               active={activeTab === "skill"}
               onClick={() => setActiveTab(activeTab === "skill" ? null : "skill")}
-              data-tip="语音技能"
+              title={t("panel.footer.tab.skill")}
+              data-tip={t("panel.footer.tab.skill")}
               className="tip-above"
             >
               <Sparkles className="w-[18px] h-[18px]" strokeWidth={1.8} />
@@ -390,7 +397,8 @@ export function PanelWindow() {
             <TabBtn
               active={activeTab === "dict"}
               onClick={() => setActiveTab(activeTab === "dict" ? null : "dict")}
-              data-tip="自定义词典"
+              title={t("panel.footer.tab.dict")}
+              data-tip={t("panel.footer.tab.dict")}
               className="tip-above"
             >
               <BookText className="w-[18px] h-[18px]" strokeWidth={1.8} />
@@ -398,7 +406,8 @@ export function PanelWindow() {
             <TabBtn
               active={activeTab === "history"}
               onClick={() => setActiveTab(activeTab === "history" ? null : "history")}
-              data-tip="历史记录"
+              title={t("panel.footer.tab.history")}
+              data-tip={t("panel.footer.tab.history")}
               className="tip-above"
             >
               <Clock className="w-[18px] h-[18px]" strokeWidth={1.8} />
@@ -406,7 +415,8 @@ export function PanelWindow() {
             <TabBtn
               active={activeTab === "help"}
               onClick={() => setActiveTab(activeTab === "help" ? null : "help")}
-              data-tip="帮助与关于"
+              title={t("panel.footer.tab.help")}
+              data-tip={t("panel.footer.tab.help")}
               className="tip-above"
             >
               <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
@@ -416,8 +426,8 @@ export function PanelWindow() {
               <TabBtn
                 active={moreOpen}
                 onClick={handleMore}
-                title="更多选项"
-                data-tip="更多选项"
+                title={t("panel.footer.more")}
+                data-tip={t("panel.footer.more")}
                 className="tip-above"
               >
                 <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.8} />
@@ -426,11 +436,11 @@ export function PanelWindow() {
                 <div
                   className="absolute bottom-[calc(100%+8px)] right-0 w-48 rounded-xl bg-neutral-800 shadow-2xl ring-1 ring-white/10 overflow-hidden animate-fade-in z-50"
                 >
-                  <MenuItem icon={Download} label="备份数据" onClick={handleExportData} />
-                  <MenuItem icon={Upload} label="恢复数据" onClick={handleImportClick} />
-                  <MenuItem icon={RefreshCw} label="检查更新" onClick={handleCheckUpdate} />
+                  <MenuItem icon={Download} label={t("panel.footer.menu.backup")} onClick={handleExportData} />
+                  <MenuItem icon={Upload} label={t("panel.footer.menu.restore")} onClick={handleImportClick} />
+                  <MenuItem icon={RefreshCw} label={t("panel.footer.menu.checkUpdate")} onClick={handleCheckUpdate} />
                   <div className="h-px bg-white/5" />
-                  <MenuItem icon={LogOut} label="退出应用" onClick={handleQuit} danger />
+                  <MenuItem icon={LogOut} label={t("panel.footer.menu.quit")} onClick={handleQuit} danger />
                 </div>
               )}
             </div>
@@ -663,26 +673,30 @@ function TabBtn({
   );
 }
 
-/* 底部快捷药丸按钮 */
-function QuickPill({
+/* 底部快捷按钮（与 TabBtn 同尺寸 w-9 h-9 圆形，图标统一 18px） */
+function FooterBtn({
   children,
   onClick,
   title,
-  wide,
+  className,
+  ...rest
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   title?: string;
-  wide?: boolean;
-}) {
+} & React.HTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       onClick={onClick}
       title={title}
+      {...rest}
       className={cn(
-        "flex items-center justify-center gap-1 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-neutral-100 transition-colors",
-        wide ? "px-3 min-w-[64px]" : "w-8",
+        "w-9 h-9 rounded-full flex items-center justify-center transition-colors text-neutral-400 hover:text-neutral-100",
+        className,
       )}
+      style={{ background: "transparent" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
       {children}
     </button>
