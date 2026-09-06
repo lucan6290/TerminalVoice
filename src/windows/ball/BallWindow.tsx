@@ -103,7 +103,7 @@ export function BallWindow() {
   const errorMessage = usePanelStore((state) => state.errorMessage);
   const recordingDuration = usePanelStore((state) => state.recordingDuration);
   const [hovered, setHovered] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   const state = computeBallState(appStatus, rewriteMode, ttsSpeaking, errorMessage);
   const meta = STATE_META[state];
@@ -136,15 +136,21 @@ export function BallWindow() {
 
   return (
     <div
-      className="w-full h-full flex items-center justify-center relative"
+      className="w-full h-full flex items-center justify-center relative cursor-default"
       style={{ background: "transparent" }}
       data-tauri-drag-region
+      onClick={(e) => {
+        // Tauri drag-region: 如果发生了拖动则不会触发 click；
+        // 如果是短按点击，则在这里打开面板
+        void openPanel();
+        e.stopPropagation();
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <button
+      {/* 球：用 div 而非 button，避免交互元素阻断 data-tauri-drag-region */}
+      <div
         ref={buttonRef}
-        onClick={() => void openPanel()}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         className="relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ease-out outline-none group"
         data-tauri-drag-region
         style={{
@@ -227,7 +233,7 @@ export function BallWindow() {
             )}
           />
         )}
-      </button>
+      </div>
 
       <TranslatePopup />
     </div>
