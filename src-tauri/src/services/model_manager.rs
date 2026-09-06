@@ -119,9 +119,8 @@ impl ModelManager {
     }
 
     /// Returns the expected model file path.
-    pub fn get_model_path(app: &AppHandle, model_id: &str) -> PathBuf {
-        let models_dir = get_models_dir(app).unwrap_or_else(|_| PathBuf::from("."));
-        models_dir.join(format!("{model_id}.bin"))
+    pub fn get_model_path(_app: &AppHandle, model_id: &str) -> PathBuf {
+        paths::models_dir().join(format!("{model_id}.bin"))
     }
 
     /// Verifies model integrity via SHA256 hash comparison.
