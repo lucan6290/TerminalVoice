@@ -16,10 +16,8 @@ import {
   LogOut,
   Moon,
   Sun,
-  Github,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open } from "@tauri-apps/plugin-shell";
 import { cn } from "../../lib/cn";
 import { useT } from "../../lib/i18n";
 import { cancelPreview, confirmPreview, exportData, importData, listAudioInputDevices } from "../../lib/commands";
@@ -357,20 +355,6 @@ export function PanelWindow() {
               title={dark ? t("panel.footer.dark.light") : t("panel.footer.dark.dark")}
             >
               {dark ? <Sun className="w-[18px] h-[18px]" strokeWidth={1.8} /> : <Moon className="w-[18px] h-[18px]" strokeWidth={1.8} />}
-            </FooterBtn>
-            <FooterBtn
-              onClick={() => {
-                open("https://github.com").catch(() => {
-                  if ("__TAURI_INTERNALS__" in window) {
-                    showToast(t("toast.githubOpenFail"), "error");
-                  } else {
-                    window.open("https://github.com", "_blank");
-                  }
-                });
-              }}
-              title={t("panel.footer.github")}
-            >
-              <Github className="w-[18px] h-[18px]" strokeWidth={1.8} />
             </FooterBtn>
           </div>
 

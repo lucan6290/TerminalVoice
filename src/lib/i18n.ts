@@ -47,7 +47,6 @@ const zh: Record<string, string> = {
   "panel.footer.uiLang.title": "界面语言：中文（点击切换）",
   "panel.footer.dark.light": "切换为浅色主题",
   "panel.footer.dark.dark": "切换为深色主题",
-  "panel.footer.github": "访问 GitHub",
   "panel.footer.tab.skill": "语音技能",
   "panel.footer.tab.dict": "自定义词典",
   "panel.footer.tab.history": "历史记录",
@@ -101,7 +100,6 @@ const zh: Record<string, string> = {
   "toast.browserNoExport": "浏览器模式不支持数据导出",
   "toast.browserNoImport": "浏览器模式不支持数据导入",
   "toast.langSwitched": "界面语言已切换为{lang}",
-  "toast.githubOpenFail": "无法打开浏览器",
 
   // ---- Tabs: Skill ----
   "tab.skill.title": "语音技能",
@@ -242,7 +240,6 @@ const en: Record<string, string> = {
   "panel.footer.uiLang.title": "UI Language: English (click to switch)",
   "panel.footer.dark.light": "Switch to light theme",
   "panel.footer.dark.dark": "Switch to dark theme",
-  "panel.footer.github": "Visit GitHub",
   "panel.footer.tab.skill": "Voice skills",
   "panel.footer.tab.dict": "Dictionary",
   "panel.footer.tab.history": "History",
@@ -296,7 +293,6 @@ const en: Record<string, string> = {
   "toast.browserNoExport": "Export not supported in browser mode",
   "toast.browserNoImport": "Import not supported in browser mode",
   "toast.langSwitched": "UI language switched to {lang}",
-  "toast.githubOpenFail": "Unable to open browser",
 
   // ---- Tabs: Skill ----
   "tab.skill.title": "Voice skills",
