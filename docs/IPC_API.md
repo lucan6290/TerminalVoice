@@ -19,7 +19,7 @@
 
 ## 二、Invoke Commands（前端 → Rust）
 
-当前已注册 27 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
+当前已注册 32 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
 
 ### 2.1 `get_app_status`
 
@@ -701,6 +701,66 @@ pub fn set_hotkey_config(payload: HotkeyConfigPayload, db: State<'_, DbState>, a
 
 ---
 
+### 2.30 `fetch_asr_models`
+
+获取 ASR 服务商提供的模型列表。
+
+**TS 封装**：`fetchAsrModels(): Promise<FetchedModel[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn fetch_asr_models() -> Result<Vec<FetchedModel>, String>
+```
+
+**请求参数**：无（从 DB 读取 `service.asrEndpoint`/`service.asrApiKey`）
+
+**返回**：
+```ts
+interface FetchedModel {
+  id: string;
+  ownedBy: string | null;
+}
+```
+
+---
+
+### 2.31 `fetch_llm_models`
+
+获取 LLM 服务商提供的模型列表。
+
+**TS 封装**：`fetchLlmModels(): Promise<FetchedModel[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn fetch_llm_models() -> Result<Vec<FetchedModel>, String>
+```
+
+**请求参数**：无（从 DB 读取 `service.llmEndpoint`/`service.llmApiKey`）
+
+**返回**：`FetchedModel[]`（同 2.30）
+
+---
+
+### 2.32 `get_app_version`
+
+获取当前应用版本号。
+
+**TS 封装**：`getAppVersion(): Promise<string>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn get_app_version() -> String
+```
+
+**请求参数**：无
+
+**返回**：`string`（如 `"0.1.0"`）
+
+---
+
 ## 三、Events（Rust → 前端）
 
 ### 3.1 `runtime-state-changed`
@@ -930,6 +990,36 @@ interface LlmStreamingDeltaPayload {
 
 ---
 
+### 3.16 `tray-navigate`
+
+托盘菜单触发前端跳转（打开指定 Tab 或高亮区块）。
+
+**发送时机**：用户在系统托盘菜单点击「历史记录」「设置」等需要前端导航的项。
+
+**Payload**：
+```ts
+{ tab?: string } | { section?: string }
+```
+
+- `{ tab: "history" }`：跳转到面板对应 Tab
+- `{ section: "about" }`：主窗口高亮对应区块
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook。
+
+---
+
+### 3.17 `tray-check-update`
+
+托盘菜单触发「检查更新」。
+
+**发送时机**：用户在系统托盘菜单点击「检查更新」。
+
+**Payload**：无
+
+**前端监听位置**：[App.tsx](../src/App.tsx) 的 `useBackendSync()` hook，收到后触发更新检查流程。
+
+---
+
 ## 四、共享类型定义
 
 以下类型在前后端之间传递，两端必须保持一致。
@@ -966,6 +1056,11 @@ interface HistoryItem {
   finalText: string;
   textMode: TextMode;
   asrProvider: string;
+  durationMs?: number | null;      // 录音时长（毫秒）
+  audioFilePath?: string | null;   // 录音文件路径
+  llmRewritten?: boolean | null;   // 是否经 AI 整理
+  skillId?: string | null;         // 使用的技能 ID
+  appContext?: string | null;      // 录入时的前台应用上下文
 }
 ```
 
@@ -982,19 +1077,25 @@ type PreviewMode = "recognition" | "rewrite";
 
 ```ts
 interface PreviewDraft {
-  mode?: PreviewMode;       // 预览模式，默认 "recognition"
+  mode: PreviewMode;         // 预览模式（"recognition" / "rewrite"）
   sourceText: string;
   processedText: string;
   textMode: TextMode;
   asrProvider: string;
+  durationMs?: number | null;
+  llmRewritten?: boolean | null;
+  skillId?: string | null;
 }
 
 interface ConfirmPreviewInput {
-  mode?: PreviewMode;       // 预览模式
+  mode: PreviewMode;         // 预览模式
   sourceText: string;
-  finalText: string;       // 用户编辑后（注意是 finalText 不是 processedText）
+  finalText: string;        // 用户编辑后（注意是 finalText 不是 processedText）
   textMode: TextMode;
   asrProvider: string;
+  durationMs?: number | null;
+  llmRewritten?: boolean | null;
+  skillId?: string | null;
 }
 ```
 
@@ -1059,14 +1160,17 @@ type ASRProvider = "cloud" | "offline" | "auto";
 interface ServiceConfig {
   asrProvider: ASRProvider;
   asrEndpoint: string;
+  asrFullUrl: boolean;         // true=直接使用完整 URL，不拼接路径
   asrApiKey: string;
   asrModel: string;
   llmEndpoint: string;
+  llmFullUrl: boolean;         // true=直接使用完整 URL，不拼接路径
   llmApiKey: string;
   llmModel: string;
   textMode: TextProcessMode;
   handsFree: boolean;
   translateTargetLang: string;
+  skipPreview: boolean;        // 识别后跳过预览窗口直接上屏
 }
 ```
 
@@ -1140,6 +1244,8 @@ Rust 端对应 `services/hotkey.rs::HotkeyConfig`（字段为 `rdev::Key` 枚举
 | `ui.soundOn` | `"true"/"false"` | `"true"` | 交互声音 |
 | `ui.muteSys` | `"true"/"false"` | `"false"` | 使用时静音系统声音 |
 | `ui.autoStart` | `"true"/"false"` | `"false"` | 开机自启 |
+| `ui.lang` | `"zh-CN"/"en"` | `"zh-CN"` | 界面语言（i18n 双语） |
+| `ui.ballVisible` | `"true"/"false"` | `"true"` | 悬浮球显隐（启动时还原） |
 | `input.pttKey` | string | `"RightAlt"` | 按住说话键名 |
 | `input.ttsKey` | string | `"1"` | 朗读键（Alt+此键触发） |
 | `input.translateKey` | string | `"2"` | 翻译键（Alt+此键触发） |
@@ -1206,13 +1312,13 @@ const unlisten = await listen<{ state: AppStatus }>(EVENT_RUNTIME_STATE_CHANGED,
 });
 ```
 
-前端在 [App.tsx](../src/App.tsx) 的 `useBackendSync()` hook 中集中监听全部 14 个事件，使用 `unlisteners` 数组统一管理清理：
+前端在 [App.tsx](../src/App.tsx) 的 `useBackendSync()` hook 中集中监听全部 17 个事件，使用 `unlisteners` 数组统一管理清理：
 
 ```ts
 const unlisteners: (() => void)[] = [];
 unlisteners.push(await listen(EVENT_RUNTIME_STATE_CHANGED, (e) => { ... }));
 unlisteners.push(await listen(EVENT_RECORDING_TICK, (e) => { ... }));
-// ... 共 14 个事件监听器
+// ... 共 17 个事件监听器
 return () => unlisteners.forEach((fn) => fn());
 ```
 

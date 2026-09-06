@@ -47,10 +47,12 @@ TerminalVoice/
 │   ├── App.tsx                   ← 路由 + Tauri 事件桥接 + 环境检测
 │   ├── index.css                 ← Tailwind v4 主题 tokens + 全局样式
 │   ├── lib/
-│   │   ├── commands.ts           ← Tauri invoke 封装（29 个命令）
-│   │   ├── events.ts             ← Tauri 事件名称常量（15 个事件）
+│   │   ├── commands.ts           ← Tauri invoke 封装（32 个命令）
+│   │   ├── events.ts             ← Tauri 事件名称常量（17 个事件）
 │   │   ├── types.ts              ← 共享 TS 类型（与 Rust serde 对齐）
-│   │   └── cn.ts                 ← className 合并工具（极简 join）
+│   │   ├── cn.ts                 ← className 合并工具（极简 join）
+│   │   ├── i18n.ts               ← 中英双语字典 + useT() hook（全 UI 文案走 t()）
+│   │   └── utils.ts              ← isTauriRuntime() 环境检测
 │   ├── stores/
 │   │   ├── appStore.ts           ← Zustand: usePanelStore（核心状态 + loadAll() + 异步 action）
 │   │   └── toastStore.ts         ← Toast 外部 store
@@ -60,9 +62,9 @@ TerminalVoice/
 │   │       ├── PanelWindow.tsx   ← 面板主组件（顶部栏+首页+Tab+底栏）
 │   │       ├── PreviewPopup.tsx  ← 双模式预览弹窗（recognition/rewrite）
 │   │       ├── StateView.tsx     ← 面板状态卡片（录音/识别/TTS/LLM流式/翻译）
-│   │       └── tabs/             ← 5 个 Tab：Skill/Dict/History/Help/Service（IPC 驱动）
+│   │       └── tabs/             ← 6 个 Tab：Skill/Dict/History/Help/Service/Settings（IPC 驱动）
 │   ├── components/               ← 通用组件
-│   │   └── ui/                   ← 原子组件：Toast/ToggleSwitch/SettingRow/ErrorModal/TranslatePopup/HotkeyRecorder
+│   │   └── ui/                   ← 原子组件：Toast/ToggleSwitch/SettingRow/ErrorModal/TranslatePopup/HotkeyRecorder/UpdateModal
 │   ├── pages/                    ← 已清理（旧文件已删除）
 │   └── test/setup.ts             ← Vitest setup（jest-dom）
 │
@@ -73,8 +75,8 @@ TerminalVoice/
 │   ├── build.rs
 │   └── src/
 │       ├── main.rs               ← 入口：调用 terminalvoice_lib::run()
-│       ├── lib.rs                ← setup：DB + Runtime + 29 个 invoke handler + 插件 + 日志 + 托盘
-│       ├── state.rs              ← 5 状态机（Idle/Recording/Recognizing/Preview/Paused）+ 8 事件
+│       ├── lib.rs                ← setup：DB + Runtime + 32 个 invoke handler + 插件 + 日志 + 托盘
+│       ├── state.rs              ← 5 状态机（Idle/Recording/Recognizing/Preview/Paused）+ 9 事件
 │       ├── commands/
 │       │   ├── mod.rs
 │       │   ├── config.rs         ← 配置 CRUD + config-updated 事件
@@ -85,16 +87,19 @@ TerminalVoice/
 │       │   ├── audio.rs          ← 音频设备列表
 │       │   ├── backup.rs         ← 数据导出/导入
 │       │   ├── dictionary.rs     ← 过滤词 CRUD
-│       │   └── model.rs          ← 模型管理（列表/下载/删除）
+│       │   ├── model.rs          ← 模型管理（列表/下载/删除）
+│       │   └── updater.rs        ← 应用版本查询（get_app_version）
 │       └── services/
 │           ├── mod.rs
+│           ├── app_context.rs    ← 应用上下文识别（历史记录 appContext 字段）
 │           ├── db.rs             ← SQLite（config/history/filter_words 三表）
 │           ├── preprocess.rs     ← 文本预处理（3 模式 + 过滤词 + 标点）
 │           ├── logging.rs        ← tracing 日志初始化（文件输出）
 │           ├── skills.rs         ← 语音技能预设（4 个：英文/清单/汇报/听写）
-│           ├── events.rs         ← 15 个事件常量 + emit 函数
+│           ├── events.rs         ← 事件发射层（全项目 17 个事件）+ emit 函数
 │           ├── llm.rs            ← LLM 客户端（SSE 流式 + 改写 + prompt 处理）
 │           ├── pipeline.rs       ← 核心管线（录音→ASR→LLM→预览 + 口译模式）
+│           ├── paths.rs          ← 数据目录/数据库路径解析
 │           └── model_manager.rs  ← 模型管理（HuggingFace URL + SHA256 校验）
 │
 └── docs/                         ← 项目文档
@@ -122,22 +127,24 @@ TerminalVoice/
 项目处于**从早期 MVP 骨架向三窗口浮球方案演进**的阶段。请阅读 [docs/CODE_MAP.md](docs/CODE_MAP.md) 获取每个模块的完整状态。以下是核心结论：
 
 ### ✅ 已实现且可用
-- Rust 状态机 `state.rs`（5 状态 + 8 事件 + 7 单元测试）
+- Rust 状态机 `state.rs`（5 状态 + 9 事件 + 8 单元测试）
 - 文本预处理 `preprocess.rs`（Normal/Developer/Raw + 过滤词 + 标点，5 测试）
 - SQLite 数据库 `db.rs`（三表 + WAL + 默认过滤词，3 测试）
 - 前端三窗口路由（`main` 设置页 / `ball` 悬浮球 / `panel` 面板）
 - BallWindow：7 状态视觉（idle/recording/thinking/disabled/error/rewrite/tts）+ `computeBallState()` + 毛玻璃效果
-- PanelWindow：顶部栏 + 首页快捷设置 + 深浅主题 + 5 个 Tab + Service 页 + StateView 状态卡片
+- PanelWindow：顶部栏 + 首页快捷设置 + 深浅主题 + 6 个 Tab + Service 页 + StateView 状态卡片
 - PreviewPopup：双模式预览弹窗（recognition=绿色 / rewrite=紫色），Ctrl+Enter 确认 / Esc 取消
-- ErrorModal / TranslatePopup：全局浮层组件，自动消失
+- ErrorModal / TranslatePopup / UpdateModal：全局浮层组件，自动消失
 - 设计系统完整：Tailwind v4 tokens（颜色/圆角/阴影/字体/动画）
+- 中英双语：`lib/i18n.ts`（`useT()` hook + `t()` 插值），全 UI 文案双语，切换即时生效
 - Zustand store：`loadAll()`（Promise.allSettled 初始化）+ 异步 action（乐观更新 + 回滚）+ hydrate/persist 配置
-- IPC 联通：29 个 invoke 命令 + 15 个 Tauri 事件（`useBackendSync()` 集中监听）
+- IPC 联通：32 个 invoke 命令 + 17 个 Tauri 事件（`useBackendSync()` 集中监听）
+- 识别后预览确认开关：`input.skipPreview`，关闭时识别完成直接上屏（`DirectInjectSucceeded`）
 - 结构化日志：`tracing` + `tracing-subscriber`，输出到 `app_data_dir/logs/terminalvoice.log`
 - 语音技能系统：4 个预设技能（英文输出/清单模式/汇报格式/听写模板），通过 `list_skills`/`set_skill`/`get_active_skill` IPC 管理
 - LLM 流式输出：SSE streaming，通过 `llm-streaming-delta` 事件实时推送增量文本
-- Tauri 插件：`tauri-plugin-autostart`（开机自启）+ `tauri-plugin-single-instance`（单实例）
-- 系统托盘：已注册，带菜单项
+- Tauri 插件：`tauri-plugin-autostart`（开机自启）+ `tauri-plugin-single-instance`（单实例）+ `tauri-plugin-updater`（自动更新）
+- 系统托盘：已注册，带菜单项（含跳转/检查更新）
 
 ### 🟡 部分实现
 - 离线 ASR 推理引擎（`asr_offline.rs` 骨架已搭建，`transcribe()` 未接入实际推理）

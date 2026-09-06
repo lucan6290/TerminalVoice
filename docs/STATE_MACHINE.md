@@ -10,7 +10,7 @@
 状态机确保了：
 1. **合法操作唯一入口**：所有状态转移通过 `transition()` 方法统一入口，非法转移返回明确错误
 2. **事件驱动**：Rust 后端通过 emit `runtime-state-changed` 事件通知前端，前端被动渲染，无需轮询
-3. **可测试**：纯 Rust 逻辑，7 个单元测试覆盖所有关键路径
+3. **可测试**：纯 Rust 逻辑，8 个单元测试覆盖所有关键路径
 4. **可扩展**：新增状态（如 Reading/Translating）只需在枚举添加变体并扩展 transition match
 
 ---
@@ -233,17 +233,18 @@ Default 实现：初始状态为 `Idle`，`paused_from = None`。
 
 ## 九、测试覆盖
 
-[state.rs](../src-tauri/src/state.rs) 包含 7 个 `#[cfg(test)]` 单元测试：
+[state.rs](../src-tauri/src/state.rs) 包含 8 个 `#[cfg(test)]` 单元测试：
 
 | 测试 | 验证场景 |
 | :--- | :--- |
-| `test_normal_flow` | 完整流程：Idle→Recording→Recognizing→Preview→Idle |
-| `test_short_recording` | 短录音丢弃：Idle→Recording→(TooShort)→Idle |
-| `test_pause_from_idle` | 从 Idle 暂停再恢复 |
-| `test_invalid_transition_rejected` | 非法转移（Idle+ConfirmedPreview）返回 Err |
-| `test_pause_resume_recording` | 从 Recording 暂停，恢复后继续录音再完成流程 |
-| `test_pause_resume_recognizing` | 从 Recognizing 暂停，恢复后识别成功 |
-| `test_pause_confirm_rejected` | Paused 状态下 ConfirmedPreview 被拒绝，恢复后可正常完成 |
+| `valid_recording_to_preview_to_idle_flow` | 完整流程：Idle→Recording→Recognizing→Preview→Idle |
+| `too_short_recording_returns_to_idle` | 短录音丢弃：Idle→Recording→(TooShort)→Idle |
+| `pause_toggle_disables_and_restores_idle` | 从 Idle 暂停再恢复 |
+| `invalid_confirm_from_idle_is_rejected` | 非法转移（Idle+ConfirmedPreview）返回 Err |
+| `pause_restores_previous_recording_state` | 从 Recording 暂停，恢复后继续录音再完成流程 |
+| `pause_restores_previous_recognizing_state` | 从 Recognizing 暂停，恢复后识别成功 |
+| `pause_clears_paused_from_on_confirmed` | Paused 状态下 ConfirmedPreview 被拒绝，恢复后可正常完成 |
+| `rewrite_mode_flag_works` | `rewrite_mode` 标志位读写 |
 
 运行测试：
 ```bash

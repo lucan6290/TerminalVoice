@@ -161,15 +161,15 @@ pnpm tauri build
 src/                    # 前端 React + TS
 ├── windows/            # 三窗口入口
 │   ├── ball/           # 悬浮小球
-│   └── panel/          # 面板（含 5 个 Tab）
+│   └── panel/          # 面板（含 6 个 Tab）
 ├── components/ui/      # 原子 UI 组件
 ├── stores/             # Zustand 状态管理
-└── lib/                # invoke 封装、类型、工具、i18n
+└── lib/                # invoke 封装、类型、事件、i18n 双语、工具
 
 src-tauri/              # 后端 Rust
 ├── src/
 │   ├── state.rs        # 5 状态机
-│   ├── commands/       # Tauri IPC 命令（29 个）
+│   ├── commands/       # Tauri IPC 命令（32 个）
 │   ├── services/       # 业务服务（DB/录音/ASR/LLM/管线/热键/注入/翻译/TTS/...）
 │   └── tray.rs         # 系统托盘
 └── tauri.conf.json     # 窗口/构建/权限配置
