@@ -56,11 +56,6 @@
         "url": "#/panel"
       }
     ],
-    "trayIcon": {
-      "iconPath": "icons/icon.ico",
-      "iconAsTemplate": false,
-      "tooltip": "TerminalVoice"
-    },
     "security": {
       "csp": null
     }

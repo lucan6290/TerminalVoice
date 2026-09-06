@@ -27,6 +27,8 @@ import {
   EVENT_REWRITE_STARTED,
   EVENT_REWRITE_RESULT,
   EVENT_LLM_STREAMING_DELTA,
+  EVENT_TRAY_NAVIGATE,
+  EVENT_TRAY_CHECK_UPDATE,
 } from "./lib/events";
 import { usePanelStore } from "./stores/appStore";
 import { showToast, type ToastLevel } from "./stores/toastStore";
@@ -56,7 +58,10 @@ function useBackendSync(): void {
   const setRecordingDuration = usePanelStore((state) => state.setRecordingDuration);
   const setErrorMessage = usePanelStore((state) => state.setErrorMessage);
   const setLlmStreamingText = usePanelStore((state) => state.setLlmStreamingText);
+  const setActiveTab = usePanelStore((state) => state.setActiveTab);
+  const setShowUpdateModal = usePanelStore((state) => state.setShowUpdateModal);
   const checkForUpdate = usePanelStore((state) => state.checkForUpdate);
+  const startDownloadUpdate = usePanelStore((state) => state.startDownloadUpdate);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -162,6 +167,30 @@ function useBackendSync(): void {
           },
         ));
 
+        // Tray: 面板内切换 Tab（如「查看历史记录」）
+        unlisteners.push(await listen<{ tab?: string; section?: string }>(
+          EVENT_TRAY_NAVIGATE,
+          (event) => {
+            if (disposed) return;
+            const { tab, section } = event.payload;
+            if (tab === "history") {
+              // 面板窗口：切换到历史 Tab
+              setActiveTab("history");
+            }
+            if (section === "about") {
+              // 主窗口：滚动到关于区块（通过 id 锚点）
+              setTimeout(() => {
+                document.getElementById("section-about")?.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            }
+          },
+        ));
+
+        // Tray: 触发检查更新
+        unlisteners.push(await listen(EVENT_TRAY_CHECK_UPDATE, () => {
+          if (!disposed) void checkForUpdate();
+        }));
+
         // Initial load
         await loadAll();
         const status = await getAppStatus();
@@ -183,7 +212,8 @@ function useBackendSync(): void {
     applyConfigEntry, clearPreviewDraft, hydrateFromConfig, loadAll,
     setPreviewDraft, setRuntimeStatus, setTtsSpeaking, setTranslateResult,
     setRewriteMode, setRewriteResult, setRecordingDuration, setErrorMessage,
-    setLlmStreamingText, checkForUpdate,
+    setLlmStreamingText, setActiveTab, setShowUpdateModal,
+    checkForUpdate, startDownloadUpdate,
   ]);
 }
 
@@ -288,7 +318,7 @@ function MainWindow() {
         </section>
 
         {/* 关于 */}
-        <section>
+        <section id="section-about">
           <h2 className={cn("text-[14px] font-medium mb-3", dark ? "text-neutral-300" : "text-neutral-700")}>关于</h2>
           <div className={cn(
             "rounded-xl px-4 py-3 space-y-1",

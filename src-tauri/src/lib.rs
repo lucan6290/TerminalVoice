@@ -6,6 +6,7 @@ pub mod tray;
 use services::db::Database;
 use services::logging;
 use services::paths;
+use services::secrets::decode_config_value;
 use state::AppRuntime;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -43,6 +44,7 @@ pub fn run() {
                     None => tracing::error!("找不到窗口 '{label}'，无法设置任务栏隐藏"),
                 }
             }
+
             // main 窗口初始隐藏
             match app.get_webview_window("main") {
                 Some(win) => {
@@ -73,9 +75,24 @@ pub fn run() {
             let db = Database::open(&db_path)
                 .map_err(|error| format!("failed to open database: {error}"))?;
 
+            // 根据持久化配置还原悬浮球显隐（默认显示）
+            if let Some(ball) = app.get_webview_window("ball") {
+                let visible = db
+                    .get_config("ui.ballVisible")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| decode_config_value("ui.ballVisible", &v).ok())
+                    .map(|v| v == "true" || v == "1")
+                    .unwrap_or(true);
+                if !visible {
+                    let _ = ball.hide();
+                }
+            }
+
             app.manage(Mutex::new(db));
             app.manage(Mutex::new(AppRuntime::default()));
-            services::pipeline::start_hotkey_pipeline(app.handle().clone())?;
+            let pipeline_handle = services::pipeline::start_hotkey_pipeline(app.handle().clone())?;
+            app.manage(pipeline_handle);
             tray::setup_tray(app.handle()).map_err(|e| format!("failed to setup tray: {e}"))?;
             Ok(())
         })

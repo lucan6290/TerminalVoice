@@ -27,6 +27,33 @@ use tauri::{AppHandle, Manager};
 use tracing::{debug, error, info, warn};
 use zeroize::Zeroizing;
 
+/// 外部控制管线的指令（从托盘等渠道发送）。
+#[derive(Debug)]
+pub enum PipelineControl {
+    /// 暂停监听：阻止所有热键触发，并取消正在进行的录音
+    Pause,
+    /// 恢复监听
+    Resume,
+}
+
+/// 管线句柄：提供给外部（如托盘菜单）发送控制指令，并查询当前暂停状态。
+pub struct PipelineHandle {
+    control_tx: mpsc::Sender<PipelineControl>,
+    paused: Arc<AtomicBool>,
+}
+
+impl PipelineHandle {
+    pub fn is_paused(&self) -> bool {
+        self.paused.load(Ordering::SeqCst)
+    }
+
+    pub fn send(&self, cmd: PipelineControl) -> Result<(), String> {
+        self.control_tx
+            .send(cmd)
+            .map_err(|e| format!("管线控制通道已关闭: {e}"))
+    }
+}
+
 const DEFAULT_ASR_ENDPOINT: &str = "https://api.openai.com/v1/audio/transcriptions";
 const DEFAULT_ASR_MODEL: &str = "whisper-1";
 const DEFAULT_LLM_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
@@ -72,61 +99,139 @@ impl Drop for RecordingTicker {
     }
 }
 
-pub fn start_hotkey_pipeline(app: AppHandle) -> Result<(), String> {
-    let (sender, receiver) = mpsc::channel();
-    spawn_listener(sender)?;
+/// 管线内部事件（热键事件 + 控制指令）。
+enum PipelineEvent {
+    Hotkey(HotkeyEvent),
+    Control(PipelineControl),
+}
+
+pub fn start_hotkey_pipeline(app: AppHandle) -> Result<PipelineHandle, String> {
+    let (hotkey_tx, hotkey_rx) = mpsc::channel();
+    let (control_tx, control_rx) = mpsc::channel::<PipelineControl>();
+    let paused = Arc::new(AtomicBool::new(false));
+
+    // 合并热键事件与控制指令到统一事件流
+    let event_rx: mpsc::Receiver<PipelineEvent> = {
+        let (tx, rx) = mpsc::channel();
+        spawn_forwarder(hotkey_rx, tx.clone(), PipelineEvent::Hotkey);
+        spawn_forwarder(control_rx, tx, PipelineEvent::Control);
+        rx
+    };
+
+    spawn_listener(hotkey_tx)?;
+    let pipeline_paused = paused.clone();
     thread::Builder::new()
         .name("terminalvoice-voice-pipeline".to_string())
         .spawn(move || {
             info!("语音管线线程已启动");
-            run_pipeline(app, receiver);
+            run_pipeline(app, event_rx, pipeline_paused);
             info!("语音管线线程已退出");
         })
         .map_err(|error| format!("failed to spawn voice pipeline: {error}"))?;
     info!("热键监听 + 语音管线已启动");
-    Ok(())
+    Ok(PipelineHandle { control_tx, paused })
 }
 
-fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<HotkeyEvent>) {
+/// 启动一个转发线程，把源 channel 的消息包装后送入目标 channel。
+fn spawn_forwarder<T: Send + 'static>(
+    src: mpsc::Receiver<T>,
+    dst: mpsc::Sender<PipelineEvent>,
+    wrap: impl Fn(T) -> PipelineEvent + Send + 'static,
+) {
+    thread::Builder::new()
+        .name("terminalvoice-pipe-forwarder".to_string())
+        .spawn(move || {
+            while let Ok(msg) = src.recv() {
+                if dst.send(wrap(msg)).is_err() {
+                    break;
+                }
+            }
+        })
+        .ok();
+}
+
+fn run_pipeline(app: AppHandle, receiver: mpsc::Receiver<PipelineEvent>, paused: Arc<AtomicBool>) {
     let mut recorder = Recorder::new();
     let mut ticker: Option<RecordingTicker> = None;
     let mut rewrite_selected_text: Option<String> = None;
     let mut interpreting = false;
     while let Ok(event) = receiver.recv() {
-        debug!(event = ?event, "收到热键事件");
         match event {
-            HotkeyEvent::Pressed => handle_pressed(&app, &mut recorder, &mut ticker),
-            HotkeyEvent::Released => handle_released(&app, &mut recorder, &mut ticker),
-            HotkeyEvent::Cancelled => {
-                if interpreting {
-                    // 取消口译模式录音
-                    if let Some(mut t) = ticker.take() {
-                        t.stop();
+            PipelineEvent::Control(ctrl) => match ctrl {
+                PipelineControl::Pause => {
+                    if paused.load(Ordering::SeqCst) {
+                        continue;
                     }
+                    info!("语音管线已暂停（托盘菜单）");
+                    paused.store(true, Ordering::SeqCst);
+                    // 暂停时若正在录音/口译，取消录音并复位状态
                     if recorder.is_recording() {
+                        if let Some(mut t) = ticker.take() {
+                            t.stop();
+                        }
                         recorder.cancel();
+                        interpreting = false;
+                        rewrite_selected_text = None;
+                        let _ = emit_recording_cancelled(&app);
                     }
-                    let _ = emit_recording_cancelled(&app);
-                    interpreting = false;
-                    info!("口译模式已取消");
-                } else {
-                    handle_cancelled(&app, &mut recorder, &mut ticker);
+                    let runtime = app.state::<Mutex<AppRuntime>>();
+                    let _ = transition_runtime(&app, runtime.inner(), RuntimeEvent::TogglePause);
+                    emit_toast(&app, "info", "语音监听已暂停");
                 }
-            }
-            HotkeyEvent::RewritePressed => {
-                handle_rewrite_pressed(&app, &mut recorder, &mut ticker, &mut rewrite_selected_text)
-            }
-            HotkeyEvent::RewriteReleased => handle_rewrite_released(
-                &app,
-                &mut recorder,
-                &mut ticker,
-                &mut rewrite_selected_text,
-            ),
-            HotkeyEvent::TtsToggle => handle_tts_toggle(&app),
-            HotkeyEvent::Translate => handle_translate(&app, &mut recorder, &mut ticker, &mut interpreting),
-            HotkeyEvent::ListenerFailed(message) => {
-                error!(message = %message, "热键监听器失败");
-                emit_toast(&app, "error", format!("热键不可用: {message}"));
+                PipelineControl::Resume => {
+                    if !paused.load(Ordering::SeqCst) {
+                        continue;
+                    }
+                    info!("语音管线已恢复（托盘菜单）");
+                    paused.store(false, Ordering::SeqCst);
+                    let runtime = app.state::<Mutex<AppRuntime>>();
+                    let _ = transition_runtime(&app, runtime.inner(), RuntimeEvent::TogglePause);
+                    emit_toast(&app, "info", "语音监听已恢复");
+                }
+            },
+            PipelineEvent::Hotkey(hotkey) => {
+                // 暂停期间忽略除 Cancelled 之外的所有热键（Cancelled 用于兜底清理）
+                if paused.load(Ordering::SeqCst) && !matches!(hotkey, HotkeyEvent::Cancelled) {
+                    debug!(event = ?hotkey, "管线已暂停，忽略热键");
+                    continue;
+                }
+                debug!(event = ?hotkey, "收到热键事件");
+                match hotkey {
+                    HotkeyEvent::Pressed => handle_pressed(&app, &mut recorder, &mut ticker),
+                    HotkeyEvent::Released => handle_released(&app, &mut recorder, &mut ticker),
+                    HotkeyEvent::Cancelled => {
+                        if interpreting {
+                            if let Some(mut t) = ticker.take() {
+                                t.stop();
+                            }
+                            if recorder.is_recording() {
+                                recorder.cancel();
+                            }
+                            let _ = emit_recording_cancelled(&app);
+                            interpreting = false;
+                            info!("口译模式已取消");
+                        } else {
+                            handle_cancelled(&app, &mut recorder, &mut ticker);
+                        }
+                    }
+                    HotkeyEvent::RewritePressed => {
+                        handle_rewrite_pressed(&app, &mut recorder, &mut ticker, &mut rewrite_selected_text)
+                    }
+                    HotkeyEvent::RewriteReleased => handle_rewrite_released(
+                        &app,
+                        &mut recorder,
+                        &mut ticker,
+                        &mut rewrite_selected_text,
+                    ),
+                    HotkeyEvent::TtsToggle => handle_tts_toggle(&app),
+                    HotkeyEvent::Translate => {
+                        handle_translate(&app, &mut recorder, &mut ticker, &mut interpreting)
+                    }
+                    HotkeyEvent::ListenerFailed(message) => {
+                        error!(message = %message, "热键监听器失败");
+                        emit_toast(&app, "error", format!("热键不可用: {message}"));
+                    }
+                }
             }
         }
     }
