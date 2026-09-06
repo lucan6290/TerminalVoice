@@ -4,6 +4,30 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-06
+
+### Added
+- 全 UI 中英双语（zh-CN / en），切换即时生效
+- 识别后预览确认开关（`input.skipPreview`，关闭时识别完成直接上屏）
+- Settings 设置 Tab（偏好设置 / 数据备份恢复 / 关于与更新）
+- 自定义热键配置（按住说话 / 朗读 / 翻译三键，运行时可重载）
+- 完整系统托盘菜单（暂停 / 技能切换 / 主题 / 悬浮球显隐 / 日志 / 关于 / 检查更新）
+- 悬浮球拖拽移动 + 默认定位屏幕右上区域
+- 云端 ASR 接入（OpenAI Whisper 兼容）+ DPAPI 密钥加密存储
+- ASR / LLM 服务配置界面 + 连接测试 + 模型列表获取
+- 应用上下文识别（历史记录标注录入时前台应用）
+- 项目专属图标
+
+### Changed
+- 统一数据目录到 `~/.terminalvoice/`
+- 移除面板底栏 GitHub 按钮（帮助页已有入口）
+
+### Fixed
+- 修复 skipPreview 模式下悬浮球永久旋转卡死
+- 修复麦克风下拉框字体大小不一致
+- 修复面板底栏裁剪、模型下拉框溢出等 UI 问题
+- 修复 model_manager 路径回退、托盘 / 图标错误日志等问题
+
 ## [0.1.0] - 2026-09-06
 
 ### Added
@@ -25,7 +49,8 @@
 - 结构化日志（tracing + tracing-subscriber，文件输出）
 - CI/CD：GitHub Actions PR 检查 + Release 自动构建签名发布
 
-[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/lucan6290/TerminalVoice/releases/tag/v0.1.0
 
 > 规则：`## [Unreleased]` 永远保留在顶部作为占位；新版本条目插在它下方。某分类无内容则省略该分类标题。每条 `- ` 开头、面向用户的中文描述、结尾不加标点、不含内部实现细节。compare 链接为可选，指向相邻版本 diff。
