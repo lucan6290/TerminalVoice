@@ -14,7 +14,7 @@ pub enum RuntimeEvent {
     HotkeyReleasedTooShort,
     RecognitionSucceeded,
     RecognitionFailed,
-    /// 识别完成后直接注入（跳过预览窗口），Recognizing → Idle
+    /// 识别完成后直接注入（跳过预览窗口），Recognizing/Preview → Idle
     DirectInjectSucceeded,
     ConfirmedPreview,
     Cancelled,
@@ -72,6 +72,7 @@ impl AppRuntime {
             }
             (RuntimeState::Recognizing, RuntimeEvent::RecognitionFailed) => RuntimeState::Idle,
             (RuntimeState::Recognizing, RuntimeEvent::DirectInjectSucceeded) => RuntimeState::Idle,
+            (RuntimeState::Preview, RuntimeEvent::DirectInjectSucceeded) => RuntimeState::Idle,
             (RuntimeState::Preview, RuntimeEvent::ConfirmedPreview) => RuntimeState::Idle,
             (RuntimeState::Preview, RuntimeEvent::Cancelled) => RuntimeState::Idle,
             (current, RuntimeEvent::TogglePause) if *current != RuntimeState::Paused => {
@@ -242,5 +243,27 @@ mod tests {
         assert!(runtime.is_rewrite_mode());
         runtime.set_rewrite_mode(false);
         assert!(!runtime.is_rewrite_mode());
+    }
+
+    #[test]
+    fn direct_inject_from_preview_returns_to_idle() {
+        let mut runtime = AppRuntime::default();
+
+        runtime
+            .transition(RuntimeEvent::HotkeyPressed)
+            .expect("starts recording");
+        runtime
+            .transition(RuntimeEvent::HotkeyReleasedWithValidAudio)
+            .expect("starts recognizing");
+        runtime
+            .transition(RuntimeEvent::RecognitionSucceeded)
+            .expect("preview ready");
+        assert_eq!(*runtime.state(), RuntimeState::Preview);
+
+        // skipPreview 路径：从 Preview 直接注入后回到 Idle
+        let state = runtime
+            .transition(RuntimeEvent::DirectInjectSucceeded)
+            .expect("direct inject from preview");
+        assert_eq!(state, RuntimeState::Idle);
     }
 }

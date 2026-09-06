@@ -82,6 +82,7 @@ impl AppRuntime {
 | `Recognizing` | `DirectInjectSucceeded` | `Idle` | 跳过预览直接上屏（`input.skipPreview=true`） |
 | `Recognizing` | `Cancelled` | `Idle` | 取消识别 |
 | `Recognizing` | `TogglePause` | `Paused` | 暂停，记住 `paused_from = Recognizing` |
+| `Preview` | `DirectInjectSucceeded` | `Idle` | skipPreview 模式下先转 Preview 再直注成功后回 Idle |
 | `Preview` | `ConfirmedPreview` | `Idle` | 确认上屏，回空闲 |
 | `Preview` | `Cancelled` | `Idle` | 放弃预览 |
 | `Paused` | `TogglePause` | `*paused_from` | 恢复到暂停前状态 |
