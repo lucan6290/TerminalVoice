@@ -31,13 +31,35 @@ pub fn run() {
 
             // 隐藏辅助窗口的任务栏图标（ball / panel 不应出现在任务栏）
             for label in &["ball", "panel"] {
-                if let Some(win) = app.get_webview_window(label) {
-                    let _ = win.set_skip_taskbar(true);
+                match app.get_webview_window(label) {
+                    Some(win) => {
+                        if let Err(e) = win.set_skip_taskbar(true) {
+                            tracing::warn!("隐藏 {label} 窗口任务栏图标失败: {e}");
+                        }
+                    }
+                    None => tracing::error!("找不到窗口 '{label}'，无法设置任务栏隐藏"),
                 }
             }
             // main 窗口初始隐藏
-            if let Some(win) = app.get_webview_window("main") {
-                let _ = win.hide();
+            match app.get_webview_window("main") {
+                Some(win) => {
+                    if let Err(e) = win.hide() {
+                        tracing::warn!("隐藏 main 窗口失败: {e}");
+                    }
+                }
+                None => tracing::error!("找不到 main 窗口"),
+            }
+
+            // 记录应用图标加载状态
+            match app.default_window_icon() {
+                Some(icon) => tracing::info!(
+                    "应用图标已加载 ({}x{} bytes)",
+                    icon.width(),
+                    icon.height()
+                ),
+                None => tracing::error!(
+                    "应用图标未加载！请检查 src-tauri/icons/icon.ico 是否存在"
+                ),
             }
 
             let data_dir = app
