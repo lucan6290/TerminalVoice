@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a34a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mic" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0fdf4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景圆形 -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg)" />
+
+  <!-- 麦克风主体 -->
+  <g transform="translate(256,256)">
+    <!-- 麦克风头部（胶囊形） -->
+    <rect x="-36" y="-120" width="72" height="140" rx="36" ry="36" fill="url(#mic)" />
+    <!-- 麦克风底部支架 -->
+    <path d="M-52 20 L-52 40 C-52 72 -24 96 0 96 C24 96 52 72 52 40 L52 20" fill="none" stroke="white" stroke-width="14" stroke-linecap="round" />
+    <!-- 支架竖线 -->
+    <line x1="0" y1="96" x2="0" y2="140" stroke="white" stroke-width="14" stroke-linecap="round" />
+    <!-- 底座横线 -->
+    <line x1="-70" y1="140" x2="70" y2="140" stroke="white" stroke-width="14" stroke-linecap="round" />
+
+    <!-- 左侧声波 -->
+    <path d="M-100 -40 C-118 -10 -118 10 -100 40" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.9" />
+    <path d="M-135 -60 C-165 -10 -165 10 -135 60" fill="none" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.6" />
+
+    <!-- 右侧声波 -->
+    <path d="M100 -40 C118 -10 118 10 100 40" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.9" />
+    <path d="M135 -60 C165 -10 165 10 135 60" fill="none" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.6" />
+  </g>
+</svg>
