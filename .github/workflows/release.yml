@@ -50,11 +50,9 @@ jobs:
           } else {
             $body = "> 本次发布未在 CHANGELOG.md 中找到对应条目，请查看提交记录。"
           }
-          $header = "请下载下方对应的安装包进行安装/更新：`n- Windows: ``.msi`` 安装包（推荐）`n- Windows: ``.nsis.zip`` 便携版（可选）`n`n---`n`n"
-          $full = $header + $body
           # 通过 GITHUB_OUTPUT 传递多行文本给后续步骤（使用 UTF8 no BOM）
           $delim = "CHANGELOG_BODY_EOF"
-          $out = "body<<$delim`n$full`n$delim`n"
+          $out = "body<<$delim`n$body`n$delim`n"
           [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, $out, (New-Object System.Text.UTF8Encoding $false))
           Write-Host "Extracted changelog body length: $($body.Length)"
 

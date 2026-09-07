@@ -4,6 +4,24 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-07
+
+### Added
+- 面板右上角新增锚定悬浮球位置打开功能
+
+### Fixed
+- 修复开发服务器端口与 Hyper-V 保留端口段冲突导致的 EACCES 启动失败（端口从 1234 调整为 4321）
+- 修复 CI Release 工作流中 releaseBodyPath 不被 tauri-action 支持导致 Release Body 为空的问题（改用 releaseBody + GITHUB_OUTPUT 传递 CHANGELOG）
+- 修复配置加载完成后 serviceReady 状态未重新计算，首次启动时服务可用状态显示不正确的问题
+- 移除 tray.rs 源文件头部误留的 BOM 字符
+
+### Changed
+- 浮球 idle 状态外圈改为透明，简化静止态视觉
+- 调细全局滚动条样式并禁用横向滚动条
+
+[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...v0.1.1
+
 ## [0.1.0] - 2026-09-06
 
 ### Added
@@ -36,7 +54,6 @@
 ### Changed
 - 统一数据目录到 `~/.terminalvoice/`
 
-[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/lucan6290/TerminalVoice/releases/tag/v0.1.0
 
 > 规则：`## [Unreleased]` 永远保留在顶部作为占位；新版本条目插在它下方。某分类无内容则省略该分类标题。每条 `- ` 开头、面向用户的中文描述、结尾不加标点、不含内部实现细节。compare 链接为可选，指向相邻版本 diff。
