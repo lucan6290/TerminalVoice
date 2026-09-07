@@ -5,6 +5,34 @@ export interface ConfigEntry {
   value: string;
 }
 
+export type FeedbackType = "bug" | "feature" | "experience" | "other";
+
+export interface FeedbackInput {
+  title: string;
+  description: string;
+  feedbackType: FeedbackType;
+  contact: string;
+}
+
+export interface FeedbackSubmitResult {
+  submitted: boolean;
+  queued: boolean;
+  queueId?: number | null;
+  message: string;
+}
+
+export interface FeedbackQueueItem {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  title: string;
+  description: string;
+  feedbackType: FeedbackType;
+  contact: string;
+  attempts: number;
+  lastError?: string | null;
+}
+
 export interface AudioInputDevice {
   name: string;
 }
@@ -77,6 +105,11 @@ export interface ServiceConfig {
   translateTargetLang: string;
   /** 识别后是否跳过预览窗口直接上屏（true=直接上屏，false=弹预览窗口手动确认） */
   skipPreview: boolean;
+  feedbackGithubEnabled: boolean;
+  feedbackGithubToken: string;
+  feedbackEmailEnabled: boolean;
+  feedbackEmailEndpoint: string;
+  feedbackEmailRecipient: string;
 }
 
 export interface ModelInfo {

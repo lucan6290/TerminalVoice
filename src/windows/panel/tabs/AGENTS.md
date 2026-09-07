@@ -9,8 +9,8 @@
 | [SkillTab.tsx](SkillTab.tsx) | `skill` | AI 整理模式选择 + 免提开关 | ✅ |
 | [DictTab.tsx](DictTab.tsx) | `dict` | 自定义词典（过滤词 CRUD，IPC 驱动） | ✅ |
 | [HistoryTab.tsx](HistoryTab.tsx) | `history` | 历史记录（搜索/删除/清空/重上屏，IPC 驱动） | ✅ |
-| [ServiceTab.tsx](ServiceTab.tsx) | `service` | 服务配置（ASR/LLM/模型，IPC 驱动） | ✅ |
-| [HelpTab.tsx](HelpTab.tsx) | `help` | 帮助与关于（快捷键/指南/链接） | ✅ 静态 |
+| [ServiceTab.tsx](ServiceTab.tsx) | `service` | 服务配置（ASR/LLM/模型/反馈通道，IPC 驱动） | ✅ |
+| [HelpTab.tsx](HelpTab.tsx) | `help` | 帮助与关于（快捷键/指南/链接/反馈表单） | ✅ |
 
 ## 通用模式（重要）
 
@@ -51,8 +51,8 @@ export function XxxTab() {
 所有 Tab 的增删改通过 store 的异步 action 调用 [lib/commands.ts](../../../lib/commands.ts) 对应 IPC 命令，采用乐观更新 + 失败回滚模式：
 - **HistoryTab**：`listHistory` / `searchHistory` / `deleteHistory` / `clearHistory` / `reinjectHistory`
 - **DictTab**：`listFilterWords` / `addFilterWord` / `deleteFilterWord` / `toggleFilterWord`
-- **ServiceTab**：`listAudioInputDevices` / `listModels` / `downloadModel` / `deleteModel` / `testAsrConnection` / `testLlmConnection` + `service.*` 配置持久化
-- **HelpTab**：静态内容（版本 v0.1.0，快捷键 Right Alt/Alt+1/Alt+2）
+- **ServiceTab**：`listAudioInputDevices` / `listModels` / `downloadModel` / `deleteModel` / `testAsrConnection` / `testLlmConnection` + `service.*` / `feedback.*` 配置持久化
+- **HelpTab**：帮助内容（版本 v0.1.0，快捷键 Right Alt/Alt+1/Alt+2）+ GitHub 项目页打开 + `submitFeedback` 反馈表单提交
 - 浏览器环境下所有命令 catch 静默降级
 
 ## 新增 Tab

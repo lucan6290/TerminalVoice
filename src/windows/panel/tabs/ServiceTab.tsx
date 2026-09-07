@@ -455,6 +455,57 @@ export function ServiceTab() {
           </div>
         </section>
 
+        {/* 反馈通道 */}
+        <section>
+          <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.feedback.section")}</p>
+          <div className="bg-neutral-800 rounded-xl p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-neutral-200">{t("tab.service.feedback.githubEnabled")}</span>
+              <ToggleSwitch
+                size="sm"
+                checked={service.feedbackGithubEnabled}
+                onChange={(checked) => setServiceConfig({ feedbackGithubEnabled: checked })}
+              />
+            </div>
+            <Field label={t("tab.service.feedback.githubToken")}>
+              <input
+                type="password"
+                value={service.feedbackGithubToken}
+                onChange={(e) => setServiceConfig({ feedbackGithubToken: e.target.value })}
+                placeholder="github_pat_..."
+                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
+              />
+            </Field>
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-neutral-200">{t("tab.service.feedback.emailEnabled")}</span>
+              <ToggleSwitch
+                size="sm"
+                checked={service.feedbackEmailEnabled}
+                onChange={(checked) => setServiceConfig({ feedbackEmailEnabled: checked })}
+              />
+            </div>
+            <Field label={t("tab.service.feedback.emailEndpoint")}>
+              <input
+                type="text"
+                value={service.feedbackEmailEndpoint}
+                onChange={(e) => setServiceConfig({ feedbackEmailEndpoint: e.target.value })}
+                placeholder="https://example.com/api/feedback-email"
+                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
+              />
+            </Field>
+            <Field label={t("tab.service.feedback.emailRecipient")}>
+              <input
+                type="email"
+                value={service.feedbackEmailRecipient}
+                onChange={(e) => setServiceConfig({ feedbackEmailRecipient: e.target.value })}
+                placeholder="feedback@example.com"
+                className="w-full bg-neutral-900 rounded-lg px-3 py-1.5 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none border border-white/5 focus:border-green-500/40"
+              />
+            </Field>
+            <p className="text-[11px] text-neutral-500 leading-snug px-0.5">{t("tab.service.feedback.hint")}</p>
+          </div>
+        </section>
+
         {/* 离线模型管理 */}
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.offline.section")}</p>

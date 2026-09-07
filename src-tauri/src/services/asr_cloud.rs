@@ -144,14 +144,14 @@ fn append_text_part(body: &mut Vec<u8>, boundary: &str, name: &str, value: &str)
     body.extend_from_slice(b"\r\n");
 }
 
-pub(crate) struct HttpResponse {
-    pub(crate) status: u16,
-    pub(crate) body: Vec<u8>,
+pub struct HttpResponse {
+    pub status: u16,
+    pub body: Vec<u8>,
 }
 
-pub(crate) struct RequestError {
-    pub(crate) message: String,
-    pub(crate) retryable: bool,
+pub struct RequestError {
+    pub message: String,
+    pub retryable: bool,
 }
 
 impl RequestError {
@@ -245,7 +245,7 @@ pub(crate) fn post_bytes(endpoint: &str, headers: &str, body: &[u8]) -> Result<H
 }
 
 #[cfg(windows)]
-pub(crate) fn post_bytes_with_label(
+pub fn post_bytes_with_label(
     endpoint: &str,
     headers: &str,
     body: &[u8],
@@ -765,7 +765,7 @@ pub(crate) fn post_bytes(
 }
 
 #[cfg(not(windows))]
-pub(crate) fn post_bytes_with_label(
+pub fn post_bytes_with_label(
     _endpoint: &str,
     _headers: &str,
     _body: &[u8],

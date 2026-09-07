@@ -51,6 +51,30 @@ pub struct FilterWordItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct FeedbackQueueItem {
+    pub id: i64,
+    pub created_at: String,
+    pub updated_at: String,
+    pub title: String,
+    pub description: String,
+    pub feedback_type: String,
+    pub contact: String,
+    pub attempts: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewFeedbackQueueItem {
+    pub title: String,
+    pub description: String,
+    pub feedback_type: String,
+    pub contact: String,
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConfigEntry {
     pub key: String,
     pub value: String,
@@ -105,6 +129,18 @@ impl Database {
                 word TEXT NOT NULL UNIQUE,
                 is_default INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS feedback_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                feedback_type TEXT NOT NULL,
+                contact TEXT NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT
             );
             "#,
         )?;
@@ -354,6 +390,79 @@ impl Database {
         let rows = stmt.query_map(params![pattern], history_row_mapper)?;
         rows.collect()
     }
+
+    pub fn enqueue_feedback(
+        &self,
+        item: NewFeedbackQueueItem,
+    ) -> Result<FeedbackQueueItem, rusqlite::Error> {
+        let now = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+        self.conn.execute(
+            r#"
+            INSERT INTO feedback_queue (created_at, updated_at, title, description,
+                                        feedback_type, contact, attempts, last_error)
+            VALUES (?1, ?1, ?2, ?3, ?4, ?5, 0, ?6)
+            "#,
+            params![
+                now,
+                item.title,
+                item.description,
+                item.feedback_type,
+                item.contact,
+                item.last_error,
+            ],
+        )?;
+        let id = self.conn.last_insert_rowid();
+        self.get_feedback_queue_item(id)
+    }
+
+    pub fn list_feedback_queue(&self) -> Result<Vec<FeedbackQueueItem>, rusqlite::Error> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT id, created_at, updated_at, title, description, feedback_type,
+                   contact, attempts, last_error
+            FROM feedback_queue
+            ORDER BY created_at ASC, id ASC
+            "#,
+        )?;
+        let rows = stmt.query_map([], feedback_queue_row_mapper)?;
+        rows.collect()
+    }
+
+    pub fn get_feedback_queue_item(&self, id: i64) -> Result<FeedbackQueueItem, rusqlite::Error> {
+        self.conn.query_row(
+            r#"
+            SELECT id, created_at, updated_at, title, description, feedback_type,
+                   contact, attempts, last_error
+            FROM feedback_queue
+            WHERE id = ?1
+            "#,
+            params![id],
+            feedback_queue_row_mapper,
+        )
+    }
+
+    pub fn mark_feedback_attempt(
+        &self,
+        id: i64,
+        last_error: &str,
+    ) -> Result<(), rusqlite::Error> {
+        let now = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+        self.conn.execute(
+            r#"
+            UPDATE feedback_queue
+            SET attempts = attempts + 1, updated_at = ?2, last_error = ?3
+            WHERE id = ?1
+            "#,
+            params![id, now, last_error],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_feedback_queue_item(&self, id: i64) -> Result<(), rusqlite::Error> {
+        self.conn
+            .execute("DELETE FROM feedback_queue WHERE id = ?1", params![id])?;
+        Ok(())
+    }
 }
 
 /// 将 rusqlite 行映射为 HistoryItem（供 list/get/search 三处复用）。
@@ -371,6 +480,20 @@ fn history_row_mapper(row: &rusqlite::Row<'_>) -> rusqlite::Result<HistoryItem> 
         llm_rewritten: llm_flag.map(|v| v != 0),
         skill_id: row.get(9)?,
         app_context: row.get(10)?,
+    })
+}
+
+fn feedback_queue_row_mapper(row: &rusqlite::Row<'_>) -> rusqlite::Result<FeedbackQueueItem> {
+    Ok(FeedbackQueueItem {
+        id: row.get(0)?,
+        created_at: row.get(1)?,
+        updated_at: row.get(2)?,
+        title: row.get(3)?,
+        description: row.get(4)?,
+        feedback_type: row.get(5)?,
+        contact: row.get(6)?,
+        attempts: row.get(7)?,
+        last_error: row.get(8)?,
     })
 }
 
@@ -472,5 +595,33 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn feedback_queue_can_store_attempts_and_delete() {
+        let db = Database::in_memory().expect("database opens");
+
+        let item = db
+            .enqueue_feedback(NewFeedbackQueueItem {
+                title: "标题".to_string(),
+                description: "详细描述".to_string(),
+                feedback_type: "bug".to_string(),
+                contact: "user@example.com".to_string(),
+                last_error: Some("网络不可用".to_string()),
+            })
+            .expect("enqueue succeeds");
+
+        assert_eq!(item.attempts, 0);
+        assert_eq!(db.list_feedback_queue().expect("list succeeds").len(), 1);
+
+        db.mark_feedback_attempt(item.id, "仍然失败")
+            .expect("mark succeeds");
+        let item = db.get_feedback_queue_item(item.id).expect("get succeeds");
+        assert_eq!(item.attempts, 1);
+        assert_eq!(item.last_error, Some("仍然失败".to_string()));
+
+        db.delete_feedback_queue_item(item.id)
+            .expect("delete succeeds");
+        assert!(db.list_feedback_queue().expect("list succeeds").is_empty());
     }
 }

@@ -7,8 +7,8 @@
 | 文件 | 职责 | 关键点 |
 | :--- | :--- | :--- |
 | [types.ts](types.ts) | 共享类型定义，与 Rust serde 对齐 | 见下方「类型契约」 |
-| [commands.ts](commands.ts) | Tauri `invoke` 命令封装 | 24 个命令，薄封装 |
-| [events.ts](events.ts) | Tauri 事件名称常量 | 14 个 `EVENT_*` 常量 + `TauriEventName` 联合类型，禁止硬编码事件字符串 |
+| [commands.ts](commands.ts) | Tauri `invoke` 命令封装 | 35 个命令，薄封装，含反馈提交/队列重试命令 |
+| [events.ts](events.ts) | Tauri 事件名称常量 | 17 个 `EVENT_*` 常量 + `TauriEventName` 联合类型，禁止硬编码事件字符串 |
 | [cn.ts](cn.ts) | className 合并工具 | 极简 `filter(Boolean).join(" ")`，无 clsx/tailwind-merge |
 | [i18n.ts](i18n.ts) | 中英双语字典 + 语言状态 | `zh`/`en` 两个字典、`t(key, params?)` 插值、`useT()` 订阅 hook；UI 文案一律走 `t()`，禁止硬编码中文 |
 
@@ -31,7 +31,7 @@
 
 ### 事件常量（events.ts）
 
-- 导出 14 个 `EVENT_*` 常量（如 `EVENT_RUNTIME_STATE_CHANGED`、`EVENT_CONFIG_UPDATED` 等）。
+- 导出 17 个 `EVENT_*` 常量（如 `EVENT_RUNTIME_STATE_CHANGED`、`EVENT_CONFIG_UPDATED` 等）。
 - 导出 `TauriEventName` 联合类型供 TypeScript 类型检查。
 - **前端监听事件时必须使用此处常量，禁止硬编码字符串**。
 

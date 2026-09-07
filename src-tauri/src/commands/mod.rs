@@ -2,6 +2,7 @@ pub mod audio;
 pub mod backup;
 pub mod config;
 pub mod dictionary;
+pub mod feedback;
 pub mod history;
 pub mod hotkey;
 pub mod model;

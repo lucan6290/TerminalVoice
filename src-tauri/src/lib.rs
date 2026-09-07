@@ -85,6 +85,12 @@ pub fn run() {
             let db = Database::open(&db_path)
                 .map_err(|error| format!("failed to open database: {error}"))?;
 
+            match commands::feedback::flush_feedback_queue_inner(&db) {
+                Ok(count) if count > 0 => tracing::info!("已自动提交 {count} 条离线反馈"),
+                Ok(_) => {}
+                Err(error) => tracing::warn!("离线反馈自动提交失败: {error}"),
+            }
+
             // 根据持久化配置还原悬浮球显隐（默认显示），并定位到屏幕右上角
             if let Some(ball) = app.get_webview_window("ball") {
                 let visible = db
@@ -121,6 +127,7 @@ pub fn run() {
 
             app.manage(Mutex::new(db));
             app.manage(Mutex::new(AppRuntime::default()));
+            commands::feedback::start_feedback_queue_worker();
             let pipeline_handle = services::pipeline::start_hotkey_pipeline(app.handle().clone())?;
             app.manage(pipeline_handle);
             tray::setup_tray(app.handle()).map_err(|e| format!("failed to setup tray: {e}"))?;
@@ -144,6 +151,9 @@ pub fn run() {
             commands::history::clear_history,
             commands::history::search_history,
             commands::history::reinject_history,
+            commands::feedback::submit_feedback,
+            commands::feedback::flush_feedback_queue,
+            commands::feedback::list_feedback_queue,
             commands::dictionary::list_filter_words,
             commands::dictionary::add_filter_word,
             commands::dictionary::delete_filter_word,

@@ -4,6 +4,9 @@ import type {
   AudioInputDevice,
   ConfigEntry,
   ConfirmPreviewInput,
+  FeedbackInput,
+  FeedbackQueueItem,
+  FeedbackSubmitResult,
   FilterWord,
   HistoryItem,
   HotkeyConfig,
@@ -28,6 +31,9 @@ const COMMANDS = {
   clearHistory: "clear_history",
   searchHistory: "search_history",
   reinjectHistory: "reinject_history",
+  submitFeedback: "submit_feedback",
+  flushFeedbackQueue: "flush_feedback_queue",
+  listFeedbackQueue: "list_feedback_queue",
   getConfig: "get_config",
   setConfig: "set_config",
   listConfig: "list_config",
@@ -107,6 +113,18 @@ export async function searchHistory(query: string): Promise<HistoryItem[]> {
 
 export async function reinjectHistory(id: number): Promise<void> {
   await invoke<void>(COMMANDS.reinjectHistory, { id });
+}
+
+export async function submitFeedback(input: FeedbackInput): Promise<FeedbackSubmitResult> {
+  return invoke<FeedbackSubmitResult>(COMMANDS.submitFeedback, { input });
+}
+
+export async function flushFeedbackQueue(): Promise<number> {
+  return invoke<number>(COMMANDS.flushFeedbackQueue);
+}
+
+export async function listFeedbackQueue(): Promise<FeedbackQueueItem[]> {
+  return invoke<FeedbackQueueItem[]>(COMMANDS.listFeedbackQueue);
 }
 
 export async function getConfig(key: string): Promise<string | null> {

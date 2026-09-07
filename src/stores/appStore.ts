@@ -65,6 +65,11 @@ const CONFIG_KEYS = {
   skipPreview: "input.skipPreview",
   translateTargetLang: "service.translateTargetLang",
   activeSkill: "service.activeSkill",
+  feedbackGithubEnabled: "feedback.githubEnabled",
+  feedbackGithubToken: "feedback.githubToken",
+  feedbackEmailEnabled: "feedback.emailEnabled",
+  feedbackEmailEndpoint: "feedback.emailEndpoint",
+  feedbackEmailRecipient: "feedback.emailRecipient",
 } as const;
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -96,6 +101,11 @@ const DEFAULT_SERVICE: ServiceConfig = {
   handsFree: false,
   skipPreview: false,
   translateTargetLang: "英文",
+  feedbackGithubEnabled: true,
+  feedbackGithubToken: "",
+  feedbackEmailEnabled: false,
+  feedbackEmailEndpoint: "",
+  feedbackEmailRecipient: "",
 };
 
 // ==================== Panel State ====================
@@ -328,6 +338,13 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       case CONFIG_KEYS.skipPreview:
         return { service: { ...state.service, skipPreview: parseBoolean(entry.value, state.service.skipPreview) } };
       case CONFIG_KEYS.translateTargetLang: return { service: { ...state.service, translateTargetLang: entry.value } };
+      case CONFIG_KEYS.feedbackGithubEnabled:
+        return { service: { ...state.service, feedbackGithubEnabled: parseBoolean(entry.value, state.service.feedbackGithubEnabled) } };
+      case CONFIG_KEYS.feedbackGithubToken: return { service: { ...state.service, feedbackGithubToken: entry.value } };
+      case CONFIG_KEYS.feedbackEmailEnabled:
+        return { service: { ...state.service, feedbackEmailEnabled: parseBoolean(entry.value, state.service.feedbackEmailEnabled) } };
+      case CONFIG_KEYS.feedbackEmailEndpoint: return { service: { ...state.service, feedbackEmailEndpoint: entry.value } };
+      case CONFIG_KEYS.feedbackEmailRecipient: return { service: { ...state.service, feedbackEmailRecipient: entry.value } };
       case CONFIG_KEYS.activeSkill: return { activeSkillId: entry.value || null };
       default: return state;
     }
@@ -373,6 +390,11 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       ["handsFree", CONFIG_KEYS.handsFree, String],
       ["skipPreview", CONFIG_KEYS.skipPreview, String],
       ["translateTargetLang", CONFIG_KEYS.translateTargetLang, String],
+      ["feedbackGithubEnabled", CONFIG_KEYS.feedbackGithubEnabled, String],
+      ["feedbackGithubToken", CONFIG_KEYS.feedbackGithubToken, String],
+      ["feedbackEmailEnabled", CONFIG_KEYS.feedbackEmailEnabled, String],
+      ["feedbackEmailEndpoint", CONFIG_KEYS.feedbackEmailEndpoint, String],
+      ["feedbackEmailRecipient", CONFIG_KEYS.feedbackEmailRecipient, String],
     ];
     for (const [field, key, serialize] of mappings) {
       const value = partial[field];

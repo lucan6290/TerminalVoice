@@ -72,7 +72,7 @@ TerminalVoice 是一款 Windows 桌面端的全局语音输入工具。以一个
 
 - ✅ 前端三窗口 UI 完整（悬浮球 + 面板 + 主设置窗口）+ 设计系统（Tailwind v4）
 - ✅ 后端核心功能已实现：全局热键（运行时可配、热重载）、麦克风录音（cpal 16kHz/16bit/mono + rubato 重采样）、云端 ASR（WinHTTP multipart / OpenAI Whisper 兼容）、LLM 流式改写/翻译/技能（SSE）、TTS 朗读（Windows SAPI）、文本注入（enigo + 剪贴板回退）、选中文本捕获、系统托盘、自动更新、DPAPI 密钥加密、SQLite 持久化、VAD 能量静音检测、模型管理（HuggingFace 下载 + SHA256 校验）、开机自启、单实例、数据备份/恢复、热键自定义
-- ✅ 32 个 IPC 命令 + 17 个事件已联通前后端
+- ✅ 35 个 IPC 命令 + 17 个事件已联通前后端，含应用内反馈表单、GitHub Issue 创建、邮件同步与离线队列重试
 - ✅ 语音技能系统：4 个预设技能（英文输出/清单模式/汇报格式/听写模板）
 - ✅ 中英双语 i18n（约 290 条 UI 文案）
 - 🟡 离线 ASR（Whisper）推理引擎骨架已搭，`transcribe()` 尚未接入实际模型
@@ -218,14 +218,14 @@ src/                    # 前端 React + TS
 │       └── tabs/       # Skill / Dict / History / Help / Service / Settings
 ├── components/ui/      # 原子 UI 组件（Toast/Toggle/SettingRow/ErrorModal/TranslatePopup/HotkeyRecorder/UpdateModal）
 ├── stores/             # Zustand 状态管理 + Toast store
-└── lib/                # invoke 封装（32 命令）、事件（17 个）、类型、i18n 双语、工具
+└── lib/                # invoke 封装（35 命令）、事件（17 个）、类型、i18n 双语、工具
 
 src-tauri/              # 后端 Rust
 ├── src/
 │   ├── state.rs        # 5 状态机（Idle/Recording/Recognizing/Preview/Paused）
 │   ├── tray.rs         # 系统托盘
-│   ├── commands/       # Tauri IPC 命令（10 模块：audio/backup/config/dictionary/history/hotkey/model/preview/skills/updater）
-│   └── services/       # 业务服务（24 模块：db/recorder/audio/asr/asr_cloud/asr_offline/hotkey/pipeline/llm/translate/tts/injector/clipboard/rewrite/vad/preprocess/secrets/skills/model_manager/events/app_context/paths/logging/backup）
+│   ├── commands/       # Tauri IPC 命令（11 模块：audio/backup/config/dictionary/feedback/history/hotkey/model/preview/skills/updater）
+│   └── services/       # 业务服务（25 模块：db/feedback/recorder/audio/asr/asr_cloud/asr_offline/hotkey/pipeline/llm/translate/tts/injector/clipboard/rewrite/vad/preprocess/secrets/skills/model_manager/events/app_context/paths/logging/backup）
 └── tauri.conf.json     # 窗口/构建/权限配置
 
 docs/                   # 项目文档（见下方）
@@ -241,7 +241,13 @@ docs/                   # 项目文档（见下方）
 | :--- | :--- |
 | [AGENTS.md](AGENTS.md) | Agent 入口导航（AI 助手必看） |
 | [docs/CODE_MAP.md](docs/CODE_MAP.md) | 代码地图 — 每个模块当前状态与缺口 |
-| [docs/IPC_API.md](docs/IPC_API.md) | IPC 接口契约（32 invoke 命令 + 17 事件） |
+| [docs/IPC_API.md](docs/IPC_API.md) | IPC 接口契约（35 invoke 命令 + 17 事件） |
+
+### 应用内反馈
+
+面板「帮助」页提供本地反馈表单，包含问题标题、详细描述、问题类型和联系方式。提交后会按「服务配置 → 反馈通道」中的设置创建 GitHub Issue，并可同步 POST 到邮件服务 endpoint；网络类失败会写入本地 `feedback_queue`，应用启动后和后台定时重试会自动补交。
+
+默认 GitHub 仓库为 `lucan6290/TerminalVoice`，需要在服务配置中填写具备创建 Issue 权限的 GitHub Token。邮件通道采用 HTTP JSON POST endpoint，需要用户自行配置可发送邮件的服务地址和收件邮箱。
 | [docs/STATE_MACHINE.md](docs/STATE_MACHINE.md) | 应用状态机详解 |
 | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | 设计 Tokens 与组件规范 |
 | [docs/ASR_CONFIG_GUIDE.md](docs/ASR_CONFIG_GUIDE.md) | ASR 服务配置指南 |
@@ -260,7 +266,7 @@ docs/                   # 项目文档（见下方）
 
 - 🌐 官网：https://lucan6290.github.io/TerminalVoice/
 - GitHub：https://github.com/lucan6290/TerminalVoice
-- 问题反馈：[Issues](https://github.com/lucan6290/TerminalVoice/issues)
+- 问题反馈：应用内「帮助 → 问题反馈」或 [Issues](https://github.com/lucan6290/TerminalVoice/issues)
 - 安全漏洞：[Security Advisories](https://github.com/lucan6290/TerminalVoice/security/advisories/new)
 
 ---

@@ -7,6 +7,7 @@ pub mod backup;
 pub mod clipboard;
 pub mod db;
 pub mod events;
+pub mod feedback;
 pub mod hotkey;
 pub mod injector;
 pub mod llm;

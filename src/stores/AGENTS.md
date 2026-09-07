@@ -15,14 +15,14 @@
 
 - **UI state**：`dark`、`activeTab`、`appStatus`
 - **快捷设置**：`pttKey`、`micDevice`、`soundOn`、`muteSys`、`autoStart`
-- **服务配置**：`service: ServiceConfig`（ASR/LLM 配置）
+- **服务配置**：`service: ServiceConfig`（ASR/LLM/翻译/反馈通道配置）
 - **数据**：`historyItems`、`filterWords`、`models`（ModelInfo[]）、`downloadingModels`（Record<string, number>）、`serviceReady`、`quotaDisplay`
 - **前端状态标志**（与 Rust 状态机共存）：`rewriteMode`、`ttsSpeaking`、`translateResult`、`rewriteResult`、`recordingDuration`、`errorMessage`
 - **Actions**：切换/设置类 + 历史 CRUD + 词典 CRUD + 模型下载/删除 + `loadAll()`
 
 ### 关键约定
 
-1. **配置持久化**：布尔/字符串配置通过内部 `persist(key, value)` 调用 `setConfig` 写入后端；`CONFIG_KEYS` 常量集中定义 15 个键名（6 个 UI/input 键 + 9 个 `service.*` 键）。**新增可持久化配置项时必须先在 `CONFIG_KEYS` 加键，并在 `applyConfigEntry` 中加对应 case**。
+1. **配置持久化**：布尔/字符串配置通过内部 `persist(key, value)` 调用 `setConfig` 写入后端；`CONFIG_KEYS` 常量集中定义 UI/input/service/feedback 配置键。**新增可持久化配置项时必须先在 `CONFIG_KEYS` 加键，并在 `applyConfigEntry` 中加对应 case**。
 2. **配置类型转换**：所有配置值存字符串，读取用 `parseBoolean(value, fallback)` 转布尔。
 3. **hydrateFromConfig()**：从后端 `listConfig()` 拉取全部配置并逐条 `applyConfigEntry`；浏览器环境下 catch 静默降级。API Key 变更时后端广播 `"__terminalvoice_secret_updated__"` 占位值，触发此方法重新拉取。
 4. **loadAll()**：应用初始化时调用，使用 `Promise.allSettled` 并行拉取全部数据（历史/过滤词/模型/配置/状态），任一失败不影响其他。

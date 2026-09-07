@@ -19,7 +19,7 @@
 
 ## 二、Invoke Commands（前端 → Rust）
 
-当前已注册 32 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
+当前已注册 35 个命令，均在 [lib.rs](../src-tauri/src/lib.rs) 的 `tauri::generate_handler![]` 中注册。
 
 ### 2.1 `get_app_status`
 
@@ -761,6 +761,79 @@ pub fn get_app_version() -> String
 
 ---
 
+### 2.33 `submit_feedback`
+
+提交用户反馈。后端会校验并清洗输入，按配置同步提交到 GitHub Issue 和邮件通道；网络类失败会写入本地离线队列，等待后续重试。
+
+**TS 封装**：`submitFeedback(input: FeedbackInput): Promise<FeedbackSubmitResult>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn submit_feedback(
+    input: FeedbackInput,
+    db: State<'_, Mutex<Database>>,
+) -> Result<FeedbackSubmitResult, String>
+```
+
+**请求参数**：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `input.title` | `string` | 反馈标题，3-120 字符 |
+| `input.description` | `string` | 详细描述，10-5000 字符 |
+| `input.feedbackType` | `FeedbackType` | 问题类型 |
+| `input.contact` | `string` | 联系方式，可选，最长 200 字符 |
+
+**返回**：
+```ts
+interface FeedbackSubmitResult {
+  submitted: boolean;
+  queued: boolean;
+  queueId?: number | null;
+  message: string;
+}
+```
+
+---
+
+### 2.34 `flush_feedback_queue`
+
+立即重试本地离线反馈队列。应用启动时也会自动调用同一逻辑进行一次重试。
+
+**TS 封装**：`flushFeedbackQueue(): Promise<number>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn flush_feedback_queue(db: State<'_, Mutex<Database>>) -> Result<usize, String>
+```
+
+**请求参数**：无
+
+**返回**：本次成功提交并从队列删除的反馈数量。
+
+---
+
+### 2.35 `list_feedback_queue`
+
+查询当前本地离线反馈队列，用于排查网络失败和重试状态。
+
+**TS 封装**：`listFeedbackQueue(): Promise<FeedbackQueueItem[]>`
+
+**Rust 签名**：
+```rust
+#[tauri::command]
+pub fn list_feedback_queue(
+    db: State<'_, Mutex<Database>>,
+) -> Result<Vec<FeedbackQueueItem>, String>
+```
+
+**请求参数**：无
+
+**返回**：`FeedbackQueueItem[]`
+
+---
+
 ## 三、Events（Rust → 前端）
 
 ### 3.1 `runtime-state-changed`
@@ -1171,10 +1244,49 @@ interface ServiceConfig {
   handsFree: boolean;
   translateTargetLang: string;
   skipPreview: boolean;        // 识别后跳过预览窗口直接上屏
+  feedbackGithubEnabled: boolean;
+  feedbackGithubToken: string; // GitHub Issue 创建 token，DPAPI 加密存储
+  feedbackEmailEnabled: boolean;
+  feedbackEmailEndpoint: string; // 邮件同步 HTTP JSON POST endpoint
+  feedbackEmailRecipient: string;
 }
 ```
 
-### 4.13 事件 Payload 类型
+### 4.13 FeedbackInput / FeedbackSubmitResult / FeedbackQueueItem
+
+```ts
+type FeedbackType = "bug" | "feature" | "experience" | "other";
+
+interface FeedbackInput {
+  title: string;
+  description: string;
+  feedbackType: FeedbackType;
+  contact: string;
+}
+
+interface FeedbackSubmitResult {
+  submitted: boolean;
+  queued: boolean;
+  queueId?: number | null;
+  message: string;
+}
+
+interface FeedbackQueueItem {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  title: string;
+  description: string;
+  feedbackType: FeedbackType;
+  contact: string;
+  attempts: number;
+  lastError?: string | null;
+}
+```
+
+Rust 端定义在 `services/feedback.rs` 与 `services/db.rs`，字段通过 `#[serde(rename_all = "camelCase")]` 与 TS 对齐。
+
+### 4.14 事件 Payload 类型
 
 ```ts
 /** 翻译结果事件 payload */
@@ -1207,7 +1319,7 @@ interface LlmStreamingDeltaPayload {
 }
 ```
 
-### 4.14 VoiceSkill
+### 4.15 VoiceSkill
 
 ```ts
 interface VoiceSkill {
@@ -1220,7 +1332,7 @@ interface VoiceSkill {
 
 Rust 端定义为 `services/skills.rs` 中的 `VoiceSkill` 结构体（`#[serde(rename_all = "camelCase")]`），预设 4 个技能，通过 `find_skill(id)` 按 ID 查找。
 
-### 4.15 HotkeyConfig / HotkeyConfigPayload
+### 4.16 HotkeyConfig / HotkeyConfigPayload
 
 ```ts
 interface HotkeyConfig {
@@ -1262,6 +1374,15 @@ Rust 端对应 `services/hotkey.rs::HotkeyConfig`（字段为 `rdev::Key` 枚举
 | `service.handsFree` | `"true"/"false"` | `"false"` | 免手动模式 |
 | `service.activeSkill` | string | `""` | 当前激活技能 ID（空=无技能） |
 | `service.translateTargetLang` | string | `"en"` | 翻译目标语言 |
+| `feedback.githubEnabled` | `"true"/"false"` | `"true"` | 是否提交 GitHub Issue |
+| `feedback.githubApiBase` | string | `"https://api.github.com"` | GitHub API 根地址 |
+| `feedback.githubOwner` | string | `"lucan6290"` | GitHub 仓库 owner |
+| `feedback.githubRepo` | string | `"TerminalVoice"` | GitHub 仓库名 |
+| `feedback.githubToken` | string | `""` | GitHub Token（DPAPI 加密存储） |
+| `feedback.githubLabels` | string | `"user-feedback"` | 创建 Issue 时附加的逗号分隔 labels |
+| `feedback.emailEnabled` | `"true"/"false"` | `"false"` | 是否同步发送邮件 |
+| `feedback.emailEndpoint` | string | `""` | 邮件同步 HTTP JSON POST endpoint |
+| `feedback.emailRecipient` | string | `""` | 反馈收件邮箱 |
 
 > **注意**：所有配置值统一存为字符串，前端解析为 boolean/其他类型。API Key 变更时后端发送 `config-updated` 事件，payload value 为 `"__terminalvoice_secret_updated__"`，前端收到后重新 `hydrateFromConfig()` 加载完整配置。
 

@@ -2,7 +2,11 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use zeroize::Zeroizing;
 
 const DPAPI_PREFIX: &str = "dpapi:";
-const SECRET_CONFIG_KEYS: &[&str] = &["service.asrApiKey", "service.llmApiKey"];
+const SECRET_CONFIG_KEYS: &[&str] = &[
+    "service.asrApiKey",
+    "service.llmApiKey",
+    "feedback.githubToken",
+];
 
 pub fn is_secret_config_key(key: &str) -> bool {
     SECRET_CONFIG_KEYS.contains(&key)
@@ -155,6 +159,7 @@ mod tests {
     fn identifies_only_api_key_config_entries_as_secrets() {
         assert!(is_secret_config_key("service.asrApiKey"));
         assert!(is_secret_config_key("service.llmApiKey"));
+        assert!(is_secret_config_key("feedback.githubToken"));
         assert!(!is_secret_config_key("service.asrEndpoint"));
     }
 
