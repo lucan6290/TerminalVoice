@@ -266,7 +266,7 @@ function MainWindow() {
 
   return (
     <div className={cn(
-      "w-full h-full overflow-y-auto",
+      "w-full h-full overflow-y-auto overflow-x-hidden",
       dark ? "bg-neutral-900 text-neutral-100" : "bg-neutral-100 text-neutral-900"
     )}>
       <header className={cn(
@@ -348,7 +348,7 @@ function DevPreview() {
   const t = useT();
   return (
     <div
-      className="w-full h-full overflow-auto flex flex-col items-center"
+      className="w-full h-full overflow-y-auto overflow-x-hidden flex flex-col items-center"
       style={{ background: "#d1d1d6", padding: "48px 24px 64px" }}
     >
       {/* 页头 */}

@@ -51,14 +51,14 @@ export function TranslatePopup() {
       <div className="space-y-2">
         <div>
           <p className="text-[10px] text-neutral-500 mb-0.5">{t("translate.original")}</p>
-          <p className="text-[12px] leading-relaxed text-neutral-400 whitespace-pre-wrap break-words max-h-[60px] overflow-y-auto">
+          <p className="text-[12px] leading-relaxed text-neutral-400 whitespace-pre-wrap break-words max-h-[60px] overflow-y-auto overflow-x-hidden">
             {translateResult.originalText}
           </p>
         </div>
         <div className="h-px bg-neutral-700/50" />
         <div>
           <p className="text-[10px] text-teal-400/70 mb-0.5">{t("translate.translated")}</p>
-          <p className="text-[13px] leading-relaxed text-neutral-100 whitespace-pre-wrap break-words max-h-[80px] overflow-y-auto">
+          <p className="text-[13px] leading-relaxed text-neutral-100 whitespace-pre-wrap break-words max-h-[80px] overflow-y-auto overflow-x-hidden">
             {translateResult.translatedText}
           </p>
         </div>

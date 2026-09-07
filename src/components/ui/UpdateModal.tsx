@@ -86,7 +86,7 @@ export function UpdateModal() {
         </div>
 
         {/* 更新内容 */}
-        <div className="px-5 pb-4 max-h-[300px] overflow-y-auto allow-select">
+        <div className="px-5 pb-4 max-h-[300px] overflow-y-auto overflow-x-hidden allow-select">
           <ReleaseNotes content={updateInfo.releaseNotes} />
         </div>
 

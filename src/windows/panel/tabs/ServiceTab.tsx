@@ -156,7 +156,7 @@ function ModelField({ label = "Model", value, placeholder, onChange, onFetch }: 
                 className="w-full bg-neutral-900 rounded px-2 py-1 text-[11px] text-neutral-200 placeholder:text-neutral-600 outline-none"
               />
             </div>
-            <div className="max-h-56 overflow-y-auto py-1 text-[11px]">
+            <div className="max-h-56 overflow-y-auto overflow-x-hidden py-1 text-[11px]">
               {filtered.length === 0 ? (
                 <div className="px-3 py-2 text-neutral-500">{t("tab.service.modelList.noMatch")}</div>
               ) : (
@@ -247,7 +247,7 @@ export function ServiceTab() {
         <h2 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.service.title")}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-4 pb-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -mx-1 px-1 space-y-4 pb-2">
         {/* ASR 服务商 */}
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1">{t("tab.service.asr.section")}</p>

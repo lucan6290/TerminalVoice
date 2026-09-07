@@ -133,7 +133,7 @@ export function SettingsTab() {
         </h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-4 pb-2 allow-select">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -mx-1 px-1 space-y-4 pb-2 allow-select">
         {/* 偏好设置 */}
         <section>
           <p className="text-[12px] text-neutral-500 mb-2 px-1 flex items-center gap-1.5">

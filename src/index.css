@@ -122,9 +122,13 @@
 .animate-float     { animation: ball-bounce 3.5s ease-in-out infinite; }
 
 /* ============ 滚动条 ============ */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: var(--color-ring); border-radius: 3px; }
+::-webkit-scrollbar { width: 1px; height: 0; }
+::-webkit-scrollbar-thumb { background: var(--color-ring); border-radius: 2px; }
 ::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* 全局禁止横向滚动（html/body 层裁剪，防止页面整体出现水平滚动条） */
+html, body { overflow-x: hidden; }
 
 /* ============ 文本选择允许 ============ */
 .allow-select, .allow-select * { user-select: text; }

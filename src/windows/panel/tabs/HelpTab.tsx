@@ -24,7 +24,7 @@ export function HelpTab() {
         <h2 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.help.title")}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-4 pb-2 allow-select">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -mx-1 px-1 space-y-4 pb-2 allow-select">
         {/* 版本信息 */}
         <div className="bg-neutral-800 rounded-xl p-4 text-center">
           <div className="text-[18px] font-semibold text-neutral-100 tracking-tight mb-1">

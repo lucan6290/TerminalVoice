@@ -210,7 +210,7 @@ export function PanelWindow() {
         <div className="h-px mx-5 bg-neutral-800 shrink-0" />
 
         {/* ========== 内容区 ========== */}
-        <main className="flex-1 overflow-y-auto px-5 pt-[14px] pb-2 min-h-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-5 pt-[14px] pb-2 min-h-0">
           {isHome && <StateView />}
           {isHome ? (
             <HomeView

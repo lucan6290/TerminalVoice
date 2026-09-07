@@ -102,7 +102,7 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
         </button>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-5 py-4 space-y-3">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[11px] font-medium text-neutral-400">
@@ -112,7 +112,7 @@ export function PreviewPopup({ draft, onConfirm, onCancel }: PreviewPopupProps) 
               <span className="text-[10px] text-neutral-600">{currentDraft.asrProvider}</span>
             )}
           </div>
-          <div className="allow-select max-h-[120px] overflow-y-auto rounded-xl bg-neutral-800 px-3 py-2.5 text-[13px] leading-relaxed text-neutral-400 whitespace-pre-wrap">
+          <div className="allow-select max-h-[120px] overflow-y-auto overflow-x-hidden rounded-xl bg-neutral-800 px-3 py-2.5 text-[13px] leading-relaxed text-neutral-400 whitespace-pre-wrap break-words">
             {currentDraft.sourceText}
           </div>
         </div>

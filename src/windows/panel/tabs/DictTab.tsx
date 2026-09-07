@@ -86,7 +86,7 @@ export function DictTab() {
       </div>
 
       {/* 列表 */}
-      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1.5">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -mx-1 px-1 space-y-1.5">
         {words.length === 0 ? (
           <div className="text-center text-neutral-500 text-[13px] py-12">
             {t("tab.dict.empty")}
