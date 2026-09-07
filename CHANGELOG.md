@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-08
+
+### Added
+- 帮助页新增官网入口按钮，并完善外部链接打开失败提示
+
+### Changed
+- 问题反馈弹窗由表单简化为两条路径：GitHub 提交 Issue、发送邮件反馈
+
 ## [0.1.2] - 2026-09-07
 
 ### Fixed
@@ -25,7 +33,8 @@
 - 浮球 idle 状态外圈改为透明，简化静止态视觉
 - 调细全局滚动条样式并禁用横向滚动条
 
-[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...v0.1.1
 
