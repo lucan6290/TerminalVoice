@@ -1,4 +1,4 @@
-﻿use crate::services::db::Database;
+use crate::services::db::Database;
 use crate::services::events;
 use crate::services::paths;
 use crate::services::pipeline::{PipelineControl, PipelineHandle};

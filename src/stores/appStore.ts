@@ -212,6 +212,18 @@ export interface PanelState {
   setUpdateInfo: (info: UpdateInfo | null) => void;
 }
 
+function computeServiceReady(service: ServiceConfig, models: ModelInfo[]): boolean {
+  const cloudReady = Boolean(
+    service.asrEndpoint.trim() && service.asrModel.trim() && service.asrApiKey.trim(),
+  );
+  const offlineReady = models.some((m) => m.installed);
+  return service.asrProvider === "offline"
+    ? offlineReady
+    : service.asrProvider === "auto"
+    ? cloudReady || offlineReady
+    : cloudReady;
+}
+
 export const usePanelStore = create<PanelState>((set, get) => ({
   dark: true,
   uiLang: getLang(),
@@ -270,6 +282,9 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     try {
       const entries = await listConfig();
       entries.forEach((entry) => usePanelStore.getState().applyConfigEntry(entry));
+      // 配置加载完成后重算 serviceReady
+      const s = usePanelStore.getState();
+      usePanelStore.setState({ serviceReady: computeServiceReady(s.service, s.models) });
     } catch {
       // browser preview: Tauri not available, use defaults
     }
@@ -365,10 +380,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     }
     set((state) => {
       const service = { ...state.service, ...partial };
-      const cloudReady = Boolean(service.asrEndpoint.trim() && service.asrModel.trim() && service.asrApiKey.trim());
-      const offlineReady = state.models.some((m) => m.installed);
-      const ready = service.asrProvider === "offline" ? offlineReady : service.asrProvider === "auto" ? cloudReady || offlineReady : cloudReady;
-      return { service, serviceReady: ready };
+      return { service, serviceReady: computeServiceReady(service, state.models) };
     });
   },
 
@@ -405,7 +417,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     if (!isTauri()) return;
     try {
       const models = await listModels();
-      set({ models });
+      set((state) => ({ models, serviceReady: computeServiceReady(state.service, models) }));
     } catch (error) {
       console.warn("[TerminalVoice] 加载模型列表失败:", error);
     }
