@@ -55,7 +55,7 @@ export function BallWindow() {
   const STATE_META: Record<BallState, BallStateMeta> = {
     idle: {
       core: "bg-[var(--color-accent)]",
-      ring: "bg-[var(--color-accent-soft)]",
+      ring: "bg-transparent",
       label: t("ball.state.idle"),
     },
     recording: {
