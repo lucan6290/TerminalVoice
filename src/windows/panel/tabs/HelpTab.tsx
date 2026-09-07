@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github, X } from "lucide-react";
+import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github, Globe, X } from "lucide-react";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
 import { formatKeyLabel } from "../../../components/ui/HotkeyRecorder";
 import { useT } from "../../../lib/i18n";
 import { submitFeedback } from "../../../lib/commands";
 import type { FeedbackInput, FeedbackType } from "../../../lib/types";
+import { isTauriRuntime } from "../../../lib/utils";
 import { open } from "@tauri-apps/plugin-shell";
 
 const FEEDBACK_TYPES: FeedbackType[] = ["bug", "feature", "experience", "other"];
@@ -20,9 +21,21 @@ export function HelpTab() {
   const appVersion = usePanelStore((s) => s.appVersion);
 
   const openGithub = () => {
-    void open("https://github.com/lucan6290/TerminalVoice").catch(() => {
-      showToast(t("tab.help.openingGithub"), "info");
-    });
+    const url = "https://github.com/lucan6290/TerminalVoice";
+    if (isTauriRuntime()) {
+      void open(url).catch(() => showToast(t("tab.help.openFailGithub"), "error"));
+    } else {
+      window.open(url, "_blank", "noopener");
+    }
+  };
+
+  const openWebsite = () => {
+    const url = "https://lucan6290.github.io/TerminalVoice/";
+    if (isTauriRuntime()) {
+      void open(url).catch(() => showToast(t("tab.help.openFailWebsite"), "error"));
+    } else {
+      window.open(url, "_blank", "noopener");
+    }
   };
 
   return (
@@ -104,6 +117,7 @@ export function HelpTab() {
         <div className="flex gap-2">
           <LinkBtn icon={Settings} label={t("tab.help.link.service")} onClick={() => setActiveTab("service")} />
           <LinkBtn icon={Github} label={t("tab.help.link.github")} onClick={openGithub} />
+          <LinkBtn icon={Globe} label={t("tab.help.link.website")} onClick={openWebsite} />
           <LinkBtn icon={Info} label={t("tab.help.link.feedback")} onClick={() => setFeedbackOpen(true)} />
         </div>
       </div>

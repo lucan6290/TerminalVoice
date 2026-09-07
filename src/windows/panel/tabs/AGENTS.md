@@ -52,7 +52,7 @@ export function XxxTab() {
 - **HistoryTab**：`listHistory` / `searchHistory` / `deleteHistory` / `clearHistory` / `reinjectHistory`
 - **DictTab**：`listFilterWords` / `addFilterWord` / `deleteFilterWord` / `toggleFilterWord`
 - **ServiceTab**：`listAudioInputDevices` / `listModels` / `downloadModel` / `deleteModel` / `testAsrConnection` / `testLlmConnection` + `service.*` / `feedback.*` 配置持久化
-- **HelpTab**：帮助内容（版本动态读取自后端 `get_app_version`，快捷键 Right Alt/Alt+1/Alt+2）+ GitHub 项目页打开 + `submitFeedback` 反馈表单提交
+- **HelpTab**：帮助内容（版本动态读取自后端 `get_app_version`，快捷键 Right Alt/Alt+1/Alt+2）+ GitHub 项目页 / 官网打开 + `submitFeedback` 反馈表单提交
 - 浏览器环境下所有命令 catch 静默降级
 
 ## 新增 Tab
