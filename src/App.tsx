@@ -263,6 +263,7 @@ function MainWindow() {
   const autoStart = usePanelStore((s) => s.autoStart);
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
   const service = usePanelStore((s) => s.service);
+  const appVersion = usePanelStore((s) => s.appVersion);
 
   return (
     <div className={cn(
@@ -331,7 +332,7 @@ function MainWindow() {
           )}>
             <div className="text-[12px] flex items-center justify-between">
               <span className={dark ? "text-neutral-400" : "text-neutral-500"}>{t("app.main.about.version")}</span>
-              <span className="font-medium">0.1.0</span>
+              <span className="font-medium">{appVersion}</span>
             </div>
             <div className="text-[12px] flex items-center justify-between">
               <span className={dark ? "text-neutral-400" : "text-neutral-500"}>{t("app.main.about.hotkeys")}</span>

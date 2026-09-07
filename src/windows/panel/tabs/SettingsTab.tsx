@@ -29,6 +29,7 @@ export function SettingsTab() {
   const muteSys = usePanelStore((s) => s.muteSys);
   const autoStart = usePanelStore((s) => s.autoStart);
   const updateInfo = usePanelStore((s) => s.updateInfo);
+  const appVersion = usePanelStore((s) => s.appVersion);
   const setSoundOn = usePanelStore((s) => s.setSoundOn);
   const setMuteSys = usePanelStore((s) => s.setMuteSys);
   const setAutoStart = usePanelStore((s) => s.setAutoStart);
@@ -198,7 +199,7 @@ export function SettingsTab() {
                 <div className="min-w-0">
                   <div className="text-[13px] text-neutral-100 leading-tight">TerminalVoice</div>
                   <div className="text-[11px] text-neutral-500 mt-0.5">
-                    {updateInfo?.currentVersion || "v0.1.0"}
+                    {updateInfo?.currentVersion || appVersion}
                     {updateInfo?.hasUpdate && (
                       <span className="ml-2 text-green-400">
                         → v{updateInfo.version}

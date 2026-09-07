@@ -17,6 +17,7 @@ export function HelpTab() {
   const ttsKey = usePanelStore((s) => s.ttsKey);
   const translateKey = usePanelStore((s) => s.translateKey);
   const setActiveTab = usePanelStore((s) => s.setActiveTab);
+  const appVersion = usePanelStore((s) => s.appVersion);
 
   const openGithub = () => {
     void open("https://github.com/lucan6290/TerminalVoice").catch(() => {
@@ -43,7 +44,7 @@ export function HelpTab() {
           <div className="text-[18px] font-semibold text-neutral-100 tracking-tight mb-1">
             TerminalVoice
           </div>
-          <div className="text-[11px] text-neutral-500">{t("tab.help.subtitle")}</div>
+          <div className="text-[11px] text-neutral-500">{t("tab.help.subtitle", { version: appVersion })}</div>
         </div>
 
         {/* 快捷键 */}

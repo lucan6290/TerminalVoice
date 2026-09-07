@@ -171,7 +171,7 @@ const zh: Record<string, string> = {
 
   // ---- Tabs: Help ----
   "tab.help.title": "帮助与关于",
-  "tab.help.subtitle": "v0.1.0 · 语音输入 AI 助手",
+  "tab.help.subtitle": "v{version} · 语音输入 AI 助手",
   "tab.help.section.shortcuts": "快捷键",
   "tab.help.shortcut.ptt": "按住说话，松开上屏",
   "tab.help.shortcut.handsFree": "切换免提模式（按一次开始，再按一次结束）",
@@ -488,7 +488,7 @@ const en: Record<string, string> = {
 
   // ---- Tabs: Help ----
   "tab.help.title": "Help & About",
-  "tab.help.subtitle": "v0.1.0 · Voice input AI assistant",
+  "tab.help.subtitle": "v{version} · Voice input AI assistant",
   "tab.help.section.shortcuts": "Shortcuts",
   "tab.help.shortcut.ptt": "Hold to talk, release to send",
   "tab.help.shortcut.handsFree": "Toggle hands-free (press to start/stop)",

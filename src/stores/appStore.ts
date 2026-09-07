@@ -157,6 +157,7 @@ export interface PanelState {
   updateProgress: number;
   updateDownloaded: boolean;
   showUpdateModal: boolean;
+  appVersion: string;
 
   // Actions
   toggleDark: () => void;
@@ -181,6 +182,7 @@ export interface PanelState {
 
   // Data loading
   loadAll: () => Promise<void>;
+  loadAppVersion: () => Promise<void>;
   loadHistory: () => Promise<void>;
   loadFilterWords: () => Promise<void>;
   loadModels: () => Promise<void>;
@@ -272,6 +274,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   updateProgress: 0,
   updateDownloaded: false,
   showUpdateModal: false,
+  appVersion: "0.1.1",
 
   // ---- UI actions ----
   toggleDark: () => set((state) => {
@@ -415,7 +418,17 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       store.loadModels(),
       store.hydrateFromConfig(),
       store.loadSkills(),
+      store.loadAppVersion(),
     ]);
+  },
+  loadAppVersion: async () => {
+    if (!isTauri()) return;
+    try {
+      const version = await ipcGetAppVersion();
+      set({ appVersion: version });
+    } catch (error) {
+      console.warn("[TerminalVoice] 获取应用版本失败:", error);
+    }
   },
   loadHistory: async () => {
     if (!isTauri()) return;
@@ -590,7 +603,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       // Browser dev mock
       set({
         updateInfo: {
-          currentVersion: "0.1.0",
+          currentVersion: get().appVersion,
           version: "0.1.1",
           releaseNotes: "## 演示数据\n- 浏览器预览模式下显示的模拟更新信息",
           downloadUrl: "",
