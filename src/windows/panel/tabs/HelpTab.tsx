@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github, Globe, X } from "lucide-react";
+import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github, Globe, X, Mail } from "lucide-react";
 import { usePanelStore } from "../../../stores/appStore";
 import { showToast } from "../../../stores/toastStore";
 import { formatKeyLabel } from "../../../components/ui/HotkeyRecorder";
 import { useT } from "../../../lib/i18n";
-import { submitFeedback } from "../../../lib/commands";
-import type { FeedbackInput, FeedbackType } from "../../../lib/types";
 import { isTauriRuntime } from "../../../lib/utils";
 import { open } from "@tauri-apps/plugin-shell";
 
-const FEEDBACK_TYPES: FeedbackType[] = ["bug", "feature", "experience", "other"];
+const GITHUB_ISSUES_URL = "https://github.com/lucan6290/TerminalVoice/issues/new";
+const FEEDBACK_EMAIL = "lucan6290@gmail.com";
 
 export function HelpTab() {
   const t = useT();
@@ -128,137 +127,53 @@ export function HelpTab() {
 
 function FeedbackDialog({ onClose }: { onClose: () => void }) {
   const t = useT();
-  const [form, setForm] = useState<FeedbackInput>({
-    title: "",
-    description: "",
-    feedbackType: "bug",
-    contact: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const updateField = <K extends keyof FeedbackInput>(key: K, value: FeedbackInput[K]) => {
-    setForm((current) => ({ ...current, [key]: value }));
-    setError(null);
-  };
-
-  const validate = (): string | null => {
-    const title = form.title.trim();
-    const description = form.description.trim();
-    if (title.length < 3 || title.length > 120) return t("tab.help.feedback.validationTitle");
-    if (description.length < 10 || description.length > 5000) return t("tab.help.feedback.validationDescription");
-    const unsafe = /<script|javascript:|data:text\/html/i;
-    if (unsafe.test(title) || unsafe.test(description) || unsafe.test(form.contact)) {
-      return t("tab.help.feedback.validationUnsafe");
-    }
-    return null;
-  };
-
-  const handleSubmit = async () => {
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      showToast(validationError, "warn");
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
-    try {
-      const result = await submitFeedback({
-        ...form,
-        title: form.title.trim(),
-        description: form.description.trim(),
-        contact: form.contact.trim(),
-      });
-      showToast(result.queued ? t("tab.help.feedback.queued") : t("tab.help.feedback.success"), result.queued ? "warn" : "success");
-      onClose();
-    } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : String(submitError);
-      setError(message);
-      showToast(`${t("tab.help.feedback.failed")}: ${message}`, "error");
-    } finally {
-      setSubmitting(false);
+  const openExternal = (url: string, failKey: string) => {
+    if (isTauriRuntime()) {
+      void open(url).catch(() => showToast(t(failKey), "error"));
+    } else {
+      window.open(url, "_blank", "noopener");
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3">
-      <div className="w-full max-w-[360px] bg-neutral-900 border border-white/10 rounded-2xl shadow-floating p-4 allow-select">
+      <div className="w-full max-w-[320px] bg-neutral-900 border border-white/10 rounded-2xl shadow-floating p-4 allow-select">
         <div className="flex items-center gap-2 mb-3">
           <h3 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.help.feedback.title")}</h3>
           <button
             type="button"
             onClick={onClose}
-            disabled={submitting}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-200 hover:bg-white/5 disabled:opacity-50"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-200 hover:bg-white/5"
             aria-label={t("tab.help.feedback.close")}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-3">
-          <label className="block">
-            <span className="text-[11px] text-neutral-400">{t("tab.help.feedback.type")}</span>
-            <select
-              value={form.feedbackType}
-              onChange={(event) => updateField("feedbackType", event.target.value as FeedbackType)}
-              disabled={submitting}
-              className="mt-1 w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-[12px] text-neutral-100 outline-none focus:border-green-500/60 disabled:opacity-60"
-            >
-              {FEEDBACK_TYPES.map((type) => (
-                <option key={type} value={type}>{t(`tab.help.feedback.type.${type}`)}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="text-[11px] text-neutral-400">{t("tab.help.feedback.issueTitle")}</span>
-            <input
-              value={form.title}
-              onChange={(event) => updateField("title", event.target.value)}
-              maxLength={120}
-              disabled={submitting}
-              placeholder={t("tab.help.feedback.issueTitlePlaceholder")}
-              className="mt-1 w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none focus:border-green-500/60 disabled:opacity-60"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-[11px] text-neutral-400">{t("tab.help.feedback.description")}</span>
-            <textarea
-              value={form.description}
-              onChange={(event) => updateField("description", event.target.value)}
-              maxLength={5000}
-              rows={6}
-              disabled={submitting}
-              placeholder={t("tab.help.feedback.descriptionPlaceholder")}
-              className="mt-1 w-full resize-none bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none focus:border-green-500/60 disabled:opacity-60"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-[11px] text-neutral-400">{t("tab.help.feedback.contact")}</span>
-            <input
-              value={form.contact}
-              onChange={(event) => updateField("contact", event.target.value)}
-              maxLength={200}
-              disabled={submitting}
-              placeholder={t("tab.help.feedback.contactPlaceholder")}
-              className="mt-1 w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 outline-none focus:border-green-500/60 disabled:opacity-60"
-            />
-          </label>
-
-          {error && <p className="text-[11px] text-red-400 leading-relaxed">{error}</p>}
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => openExternal(GITHUB_ISSUES_URL, "tab.help.openFailGithub")}
+            className="w-full flex items-center gap-3 bg-neutral-800 hover:bg-neutral-800/80 rounded-xl px-3 py-3 text-left transition-colors"
+          >
+            <Github className="w-4 h-4 text-neutral-400 shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-[12px] text-neutral-100">{t("tab.help.feedback.githubPath")}</span>
+              <span className="block text-[11px] text-neutral-500 truncate">{GITHUB_ISSUES_URL}</span>
+            </span>
+          </button>
 
           <button
             type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full h-9 rounded-lg bg-green-500 text-neutral-950 text-[12px] font-medium hover:bg-green-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={() => openExternal(`mailto:${FEEDBACK_EMAIL}`, "tab.help.openFailEmail")}
+            className="w-full flex items-center gap-3 bg-neutral-800 hover:bg-neutral-800/80 rounded-xl px-3 py-3 text-left transition-colors"
           >
-            {submitting ? t("tab.help.feedback.submitting") : t("tab.help.feedback.submit")}
+            <Mail className="w-4 h-4 text-neutral-400 shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-[12px] text-neutral-100">{t("tab.help.feedback.emailPath")}</span>
+              <span className="block text-[11px] text-neutral-500 truncate">{FEEDBACK_EMAIL}</span>
+            </span>
           </button>
         </div>
       </div>
