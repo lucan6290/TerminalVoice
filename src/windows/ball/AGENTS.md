@@ -1,6 +1,6 @@
 # AGENTS.md — src/windows/ball/ 悬浮球窗口
 
-> 48×48 毛玻璃悬浮球，Tauri `ball` 窗口（`#/ball`）。常驻置顶，视觉由后端 `AppRuntime` 状态驱动。
+> 48×48 实心悬浮球（不使用 backdrop-filter，避免 WebView2 透明窗口下矩形合成层问题），Tauri `ball` 窗口 80×80（为阴影留足空间）。常驻置顶，视觉由后端 `AppRuntime` 状态驱动。
 
 ## 文件
 
@@ -32,7 +32,7 @@
 ## 约定
 
 - 状态只读，来自 `usePanelStore`（`appStatus` + 前端标志 `rewriteMode`/`ttsSpeaking`/`errorMessage`），**悬浮球自身不改变状态**（状态由后端 push，经 App.tsx 同步到 store）。
-- 毛玻璃效果用 `backdrop-filter: blur(14px) saturate(180%)`（含 `-webkit-` 前缀）。
+- 核心圆盘使用实色背景 `var(--color-bg-primary)`，**不使用 backdrop-filter**（毛玻璃效果在透明 WebView2 窗口会产生矩形合成层，破坏圆形外观）。
 - 颜色用 `var(--color-*)` 或 Tailwind（`bg-sky-400`、`bg-amber-400`），遵循设计系统。
 - 图标 `lucide-react`：`Mic`/`AlertCircle`/`Loader2`/`Wand2`/`Volume2`，按 `STATE_META` 配置选用。
 - 若后端状态机新增状态（见 docs/STATE_MACHINE.md），需同步更新 `computeBallState()` 和 `STATE_META`。

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, AlertCircle, Loader2, Wand2, Volume2 } from "lucide-react";
-import { Window } from "@tauri-apps/api/window";
+import { Window, currentMonitor } from "@tauri-apps/api/window";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { cn } from "../../lib/cn";
 import { usePanelStore } from "../../stores/appStore";
@@ -10,7 +10,7 @@ import type { AppStatus } from "../../lib/types";
 
 /**
  * 悬浮小球
- * - 48×48 毛玻璃圆盘，64×64 透明窗口居中
+ * - 48×48 实心圆盘（无边框滤镜以避免 WebView2 透明窗口矩形渲染问题），80×80 透明窗口居中（为阴影留足空间）
  * - 状态：idle / recording / thinking / disabled / error / rewrite / tts
  * - 状态由后端 AppRuntime 同步，点击切换面板显隐
  * - 使用原生 title 实现 OS 级 tooltip（自动浮于窗口顶层，不受裁剪）
@@ -136,26 +136,43 @@ export function BallWindow() {
       if (visible) {
         await panel.hide();
       } else {
-        // 将面板定位到悬浮球左侧，垂直居中对齐
+        // 面板右上角对齐悬浮球位置（面板向左下方展开，球位于面板右上角锚点）
         const ballWin = Window.getCurrent();
         const ballPos = await ballWin.outerPosition();
         const ballScale = await ballWin.scaleFactor();
         const ballLogicalX = ballPos.x / ballScale;
         const ballLogicalY = ballPos.y / ballScale;
-        const ballSize = 64;
+        const ballSize = 80;
         const panelWidth = 388;
         const panelHeight = 620;
-        const gap = 8;
-        // 默认放在球的左侧
-        let panelX = ballLogicalX - panelWidth - gap;
-        const panelY = ballLogicalY + ballSize / 2 - panelHeight / 2;
-        // 如果左侧空间不足（球靠近屏幕左边缘），则放在右侧
-        if (panelX < 0) {
-          panelX = ballLogicalX + ballSize + gap;
+        // ===== 间距参数（可自行调整）=====
+        // gapX：水平方向，正值=面板向左偏移（与球之间留出水平空隙），负值=面板向右覆盖
+        // gapY：垂直方向，正值=面板向下偏移（球在面板上方），0=面板顶部紧贴球顶部
+        const gapX = 30;
+        const gapY = 28;
+        // 面板右上角对齐球窗口右上角，按 gap 偏移
+        let panelX = ballLogicalX + ballSize - panelWidth - gapX;
+        let panelY = ballLogicalY + gapY;
+        // 边界保护：左/上/下不超出屏幕
+        const monitor = await currentMonitor();
+        if (monitor) {
+          const mLogical = monitor.size.toLogical(monitor.scaleFactor);
+          if (panelX < 0) panelX = 0;
+          if (panelY < 0) panelY = 0;
+          if (panelY + panelHeight > mLogical.height) {
+            panelY = mLogical.height - panelHeight;
+          }
         }
         await panel.setPosition(new LogicalPosition(panelX, panelY));
         await panel.show();
         await panel.setFocus();
+        // 面板 show+focus 后会覆盖球窗口，需要将球重新置顶
+        try {
+          await ballWin.setAlwaysOnTop(false);
+          await ballWin.setAlwaysOnTop(true);
+        } catch {
+          // 忽略置顶重设失败
+        }
       }
     } catch (error) {
       console.warn("[TerminalVoice] 切换面板失败", error);
@@ -234,12 +251,11 @@ export function BallWindow() {
           )}
         />
 
+        {/* 核心圆盘：不使用 backdrop-filter 以避免 WebView2 透明窗口下出现矩形渲染层 */}
         <span
           className="absolute inset-[5px] rounded-full flex items-center justify-center transition-all"
           style={{
-            background: "color-mix(in srgb, var(--color-bg-primary) 92%, transparent)",
-            backdropFilter: "blur(14px) saturate(180%)",
-            WebkitBackdropFilter: "blur(14px) saturate(180%)",
+            background: "var(--color-bg-primary)",
             boxShadow: hovered
               ? "0 0 0 1.5px var(--color-accent), var(--shadow-ball)"
               : "var(--shadow-ball)",
