@@ -1,6 +1,6 @@
 [package]
 name = "terminalvoice"
-version = "0.1.1"
+version = "0.1.2"
 description = "TerminalVoice desktop voice input tool"
 authors = ["TerminalVoice Contributors"]
 edition = "2021"

@@ -274,7 +274,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   updateProgress: 0,
   updateDownloaded: false,
   showUpdateModal: false,
-  appVersion: "0.1.1",
+  appVersion: "0.1.2",
 
   // ---- UI actions ----
   toggleDark: () => set((state) => {
@@ -604,7 +604,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       set({
         updateInfo: {
           currentVersion: get().appVersion,
-          version: "0.1.1",
+          version: "0.1.2",
           releaseNotes: "## 演示数据\n- 浏览器预览模式下显示的模拟更新信息",
           downloadUrl: "",
           hasUpdate: false,

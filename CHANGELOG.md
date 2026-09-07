@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-07
+
+### Fixed
+- 修复应用内版本号硬编码显示为 0.1.0 的问题，改为动态读取后端版本
+- 开启更新产物生成，修复自动更新 latest.json 缺失导致检查更新无法检测到新版本
+
 ## [0.1.1] - 2026-09-07
 
 ### Added
@@ -19,7 +25,8 @@
 - 浮球 idle 状态外圈改为透明，简化静止态视觉
 - 调细全局滚动条样式并禁用横向滚动条
 
-[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/lucan6290/TerminalVoice/compare/v0.1.0...v0.1.1
 
 ## [0.1.0] - 2026-09-06
