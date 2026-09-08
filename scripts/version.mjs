@@ -17,7 +17,9 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, "..");
 const PACKAGE_JSON = path.resolve(ROOT, "package.json");
 const CARGO_TOML = path.resolve(ROOT, "src-tauri", "Cargo.toml");
+const CARGO_LOCK = path.resolve(ROOT, "src-tauri", "Cargo.lock");
 const TAURI_CONF = path.resolve(ROOT, "src-tauri", "tauri.conf.json");
+const APP_STORE = path.resolve(ROOT, "src", "stores", "appStore.ts");
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8");
@@ -75,10 +77,59 @@ function setTauriConfVersion(newVersion) {
   return { from: m[2], to: newVersion, changed: true };
 }
 
+// Cargo.lock 中 [[package]] name = "terminalvoice" 段落下的 version 行（兼容 LF/CRLF）
+const CARGO_LOCK_PKG_RE =
+  /(\[\[package\]\]\s*[\r\n]+name\s*=\s*"terminalvoice"\s*[\r\n]+version\s*=\s*")([^"]*)(")/;
+
+function getCargoLockVersion() {
+  const content = read(CARGO_LOCK);
+  const m = content.match(CARGO_LOCK_PKG_RE);
+  if (!m) throw new Error(`Cannot find terminalvoice version in ${CARGO_LOCK}`);
+  return m[2];
+}
+
+function setCargoLockVersion(newVersion) {
+  if (!fs.existsSync(CARGO_LOCK)) return { from: null, to: newVersion, changed: false };
+  const original = read(CARGO_LOCK);
+  const m = original.match(CARGO_LOCK_PKG_RE);
+  if (!m) throw new Error(`Cannot find terminalvoice version in ${CARGO_LOCK}`);
+  if (m[2] === newVersion) return { from: m[2], to: newVersion, changed: false };
+  write(CARGO_LOCK, original.replace(CARGO_LOCK_PKG_RE, `$1${newVersion}$3`));
+  return { from: m[2], to: newVersion, changed: true };
+}
+
+// appStore.ts 中 appVersion 初始值与浏览器 mock 的 updateInfo.version（两处）
+const APP_STORE_VERSION_RE = /(appVersion|version)\s*:\s*"([^"]*)"/g;
+
+function getAppStoreVersions() {
+  const content = read(APP_STORE);
+  return [...content.matchAll(APP_STORE_VERSION_RE)].map((m) => m[2]);
+}
+
+function setAppStoreVersion(newVersion) {
+  if (!fs.existsSync(APP_STORE)) return { from: null, to: newVersion, changed: false };
+  const original = read(APP_STORE);
+  const versions = getAppStoreVersions();
+  if (versions.length === 0) {
+    throw new Error(`Cannot find version strings in ${APP_STORE}`);
+  }
+  const from = [...new Set(versions)].join(", ") || "(none)";
+  if (versions.every((v) => v === newVersion)) {
+    return { from, to: newVersion, changed: false };
+  }
+  write(APP_STORE, original.replace(APP_STORE_VERSION_RE, `$1: "${newVersion}"`));
+  return { from, to: newVersion, changed: true };
+}
+
 function usage() {
   console.log("Usage:");
-  console.log("  node scripts/version.mjs set <x.y.z>   set version for frontend & Rust backend");
+  console.log("  node scripts/version.mjs set <x.y.z>   set version for frontend & Rust backend (5 files)");
   console.log("  node scripts/version.mjs check         verify versions are in sync");
+}
+
+function reportSetResult(label, result) {
+  if (result.changed) console.log(`${label}: ${result.from} -> ${result.to}`);
+  else console.log(`${label}: already ${result.to}`);
 }
 
 async function main() {
@@ -97,15 +148,11 @@ async function main() {
       console.error(`Invalid version: "${arg}" (expected x.y.z)`);
       process.exit(1);
     }
-    const fe = setPackageJsonVersion(arg);
-    const rust = setCargoVersion(arg);
-    const tauri = setTauriConfVersion(arg);
-    if (fe.changed) console.log(`package.json: ${fe.from} -> ${fe.to}`);
-    else console.log(`package.json: already ${fe.to}`);
-    if (rust.changed) console.log(`src-tauri/Cargo.toml: ${rust.from} -> ${rust.to}`);
-    else console.log(`src-tauri/Cargo.toml: already ${rust.to}`);
-    if (tauri.changed) console.log(`src-tauri/tauri.conf.json: ${tauri.from} -> ${tauri.to}`);
-    else console.log(`src-tauri/tauri.conf.json: already ${tauri.to}`);
+    reportSetResult("package.json", setPackageJsonVersion(arg));
+    reportSetResult("src-tauri/Cargo.toml", setCargoVersion(arg));
+    reportSetResult("src-tauri/Cargo.lock", setCargoLockVersion(arg));
+    reportSetResult("src-tauri/tauri.conf.json", setTauriConfVersion(arg));
+    reportSetResult("src/stores/appStore.ts", setAppStoreVersion(arg));
     console.log(`\nVersion set to ${arg}. Don't forget to update CHANGELOG.md, commit & tag v${arg}.`);
     return;
   }
@@ -114,22 +161,39 @@ async function main() {
     const feVersion = getPackageJsonVersion();
     const rustVersion = getCargoVersion();
     let ok = true;
-    if (feVersion !== rustVersion) {
-      console.error(`Version mismatch! package.json=${feVersion}, Cargo.toml=${rustVersion}`);
+
+    const mismatch = (label, actual) => {
+      console.error(`Version mismatch! package.json=${feVersion}, ${label}=${actual}`);
       ok = false;
+    };
+
+    if (feVersion !== rustVersion) mismatch("Cargo.toml", rustVersion);
+
+    if (fs.existsSync(CARGO_LOCK)) {
+      const lockVersion = getCargoLockVersion();
+      if (lockVersion !== feVersion) mismatch("Cargo.lock", lockVersion);
     }
+
     if (fs.existsSync(TAURI_CONF)) {
       const conf = JSON.parse(read(TAURI_CONF));
-      if (conf.version && conf.version !== feVersion) {
-        console.error(`Version mismatch! package.json=${feVersion}, tauri.conf.json=${conf.version}`);
+      if (conf.version && conf.version !== feVersion) mismatch("tauri.conf.json", conf.version);
+    }
+
+    if (fs.existsSync(APP_STORE)) {
+      const storeVersions = getAppStoreVersions();
+      if (storeVersions.length === 0) {
+        console.error("appStore.ts: no version strings found");
         ok = false;
+      } else if (storeVersions.some((v) => v !== feVersion)) {
+        mismatch("appStore.ts", [...new Set(storeVersions)].join(", "));
       }
     }
+
     if (!ok) {
       console.error(`Run: node scripts/version.mjs set <version>`);
       process.exit(1);
     }
-    console.log(`Version OK (${feVersion}) — package.json, Cargo.toml & tauri.conf.json in sync`);
+    console.log(`Version OK (${feVersion}) — package.json, Cargo.toml, Cargo.lock, tauri.conf.json & appStore.ts in sync`);
     return;
   }
 
