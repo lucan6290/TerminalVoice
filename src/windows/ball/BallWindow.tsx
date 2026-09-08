@@ -143,8 +143,8 @@ export function BallWindow() {
         const ballLogicalX = ballPos.x / ballScale;
         const ballLogicalY = ballPos.y / ballScale;
         const ballSize = 80;
-        const panelWidth = 388;
-        const panelHeight = 620;
+        const panelWidth = 380;
+        const panelHeight = 612;
         // ===== 间距参数（可自行调整）=====
         // gapX：水平方向，正值=面板向左偏移（与球之间留出水平空隙），负值=面板向右覆盖
         // gapY：垂直方向，正值=面板向下偏移（球在面板上方），0=面板顶部紧贴球顶部
@@ -257,8 +257,8 @@ export function BallWindow() {
           style={{
             background: "var(--color-bg-primary)",
             boxShadow: hovered
-              ? "0 0 0 1.5px var(--color-accent), var(--shadow-ball)"
-              : "var(--shadow-ball)",
+              ? "0 0 0 1.5px var(--color-accent)"
+              : "0 0 0 0.5px rgba(255, 255, 255, 0.12)",
             border: "0.5px solid var(--color-border-soft)",
           }}
         />

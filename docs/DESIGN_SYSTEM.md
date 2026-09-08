@@ -152,8 +152,8 @@ Tailwind v4 注册后可直接在 utility class 中使用：
 
 ### 7.2 面板尺寸
 
-- 宽度：`388px`（tauri.conf.json 配置）
-- 高度：最小 `480px`，标准 `620px`
+- 宽度：`380px`（tauri.conf.json 配置）
+- 高度：标准 `612px`
 - 悬浮球：`48x48px`（视觉尺寸），窗口 64x64
 
 ### 7.3 顶部栏高度
@@ -346,13 +346,14 @@ Ball 和 Panel 窗口在 Tauri 中配置为 `transparent: true` + `decorations: 
 在 [App.tsx](../src/App.tsx) 中，路由到 ball/panel 时给 body 添加 `window-transparent` 类：
 
 ```css
-body.window-transparent {
+html:has(body.window-transparent),
+body.window-transparent,
+body.window-transparent #root {
   background: transparent !important;
-  overflow: hidden;
 }
 ```
 
-浏览器开发预览时，额外添加 `browser-preview-dark` 类显示灰色桌面背景（`#D1D1D6` 浅色模式 / `#0A0A0A` 深色模式）。
+透明窗口的可见卡片外不要留 padding 或外扩 box-shadow，否则 WebView2 透明合成区域容易露出灰色矩形底。浏览器开发预览时，额外添加 `browser-preview-dark` 类显示深色桌面背景（`#0A0A0A`）。
 
 ---
 

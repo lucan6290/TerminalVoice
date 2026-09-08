@@ -42,8 +42,8 @@
       {
         "label": "panel",
         "title": "TerminalVoice Panel",
-        "width": 388,
-        "height": 620,
+        "width": 380,
+        "height": 612,
         "x": 180,
         "y": 80,
         "visible": false,

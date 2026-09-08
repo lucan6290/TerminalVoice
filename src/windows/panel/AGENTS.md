@@ -1,6 +1,6 @@
 # AGENTS.md — src/windows/panel/ 极简面板窗口
 
-> 380×620 圆角面板，Tauri `panel` 窗口（`#/panel`）。顶部栏 + 内容区（主页 / Tab 页）+ 底部 Tab 栏。
+> 380×612 圆角面板，Tauri `panel` 窗口（`#/panel`）。顶部栏 + 内容区（主页 / Tab 页）+ 底部 Tab 栏。
 
 ## 目录
 
@@ -19,7 +19,7 @@ panel/
 
 ## PanelWindow.tsx 结构
 
-- **根部**：`dark` / `theme-light` class 切换（深浅主题），外层 `background: transparent`，内层 `w-[380px] rounded-[22px]` 卡片。
+- **根部**：`dark` / `theme-light` class 切换（深浅主题），外层 `background: transparent` 且不留 padding，内层 `w-full h-full rounded-[22px]` 卡片；透明窗口避免在卡片外绘制阴影/背景，防止 WebView2 透明区出现灰色矩形底。
 - **顶部栏**：状态点（recording 时脉冲）+ 标题 + 4 个 IconBtn（录音/更多/最小化/关闭）+ 主题切换按钮。带 `data-tauri-drag-region`。
 - **内容区**：`activeTab === null` 显示 `HomeView`（服务配置行 + 触发键 + 麦克风 + 3 个开关 + 底部提示）；否则 `TabContent` 分发到对应 Tab。
 - **底部栏**：4 个 `TabBtn`（skill/dict/history/help）。**注意：`service` 不在底部栏**，通过主页「服务配置」行进入。

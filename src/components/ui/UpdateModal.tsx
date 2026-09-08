@@ -60,14 +60,26 @@ export function UpdateModal() {
     setShowUpdateModal(false);
   };
 
+  const isTransparentWin =
+    typeof document !== "undefined" && document.body.classList.contains("window-transparent");
+  const overlayBg = dark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.3)";
+
   return (
     <div
       className={cn("fixed inset-0 z-[60] flex items-center justify-center", dark ? "dark" : "theme-light")}
-      style={{ background: dark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.3)" }}
       onClick={handleCancel}
     >
+      {/* 遮罩背景层：透明窗口下匹配面板 22px 圆角，主窗口铺满 */}
+      {isTransparentWin ? (
+        <div
+          className="absolute inset-0 rounded-[22px]"
+          style={{ background: overlayBg }}
+        />
+      ) : (
+        <div className="absolute inset-0" style={{ background: overlayBg }} />
+      )}
       <div
-        className="relative w-[440px] rounded-[22px] shadow-2xl overflow-hidden animate-fade-in"
+        className="relative w-[440px] rounded-[22px] overflow-hidden animate-fade-in"
         style={{
           background: "var(--color-bg-primary)",
           border: "0.5px solid var(--color-border-soft)",

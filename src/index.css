@@ -86,7 +86,11 @@
   }
 
   body { background: #d1d1d6; }
-  body.window-transparent { background: transparent !important; }
+  html:has(body.window-transparent),
+  body.window-transparent,
+  body.window-transparent #root {
+    background: transparent !important;
+  }
   /* 浏览器预览 panel/ball 窗口时，Tauri 是透明窗口，浏览器里用深色模拟桌面 */
   body.browser-preview-dark { background: #0a0a0a !important; }
 

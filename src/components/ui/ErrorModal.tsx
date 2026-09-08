@@ -20,12 +20,20 @@ export function ErrorModal() {
 
   if (!errorMessage) return null;
 
+  const isTransparentWin =
+    typeof document !== "undefined" && document.body.classList.contains("window-transparent");
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={() => setErrorMessage(null)}
     >
+      {/* 遮罩背景层：透明窗口下匹配面板 22px 圆角，主窗口铺满 */}
+      {isTransparentWin ? (
+        <div className="absolute inset-0 rounded-[22px]" style={{ background: "rgba(0,0,0,0.4)" }} />
+      ) : (
+        <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.4)" }} />
+      )}
       <div
         className="relative w-[300px] rounded-2xl bg-neutral-900 ring-1 ring-red-500/30 shadow-2xl p-5"
         onClick={(e) => e.stopPropagation()}

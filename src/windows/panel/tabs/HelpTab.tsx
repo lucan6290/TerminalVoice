@@ -137,8 +137,10 @@ function FeedbackDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3">
-      <div className="w-full max-w-[320px] bg-neutral-900 border border-white/10 rounded-2xl shadow-floating p-4 allow-select">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
+      {/* 遮罩背景层：匹配面板 22px 圆角 */}
+      <div className="absolute inset-0 rounded-[22px] bg-black/50" />
+      <div className="relative w-full max-w-[320px] bg-neutral-900 border border-white/10 rounded-2xl shadow-floating p-4 allow-select">
         <div className="flex items-center gap-2 mb-3">
           <h3 className="text-[15px] font-medium text-neutral-100 flex-1">{t("tab.help.feedback.title")}</h3>
           <button

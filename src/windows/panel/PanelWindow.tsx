@@ -139,10 +139,10 @@ export function PanelWindow() {
 
   return (
     <div
-      className={cn("w-full h-full flex items-stretch justify-stretch p-1", dark ? "dark" : "theme-light")}
+      className={cn("w-full h-full flex items-stretch justify-stretch", dark ? "dark" : "theme-light")}
       style={{ background: "transparent" }}
     >
-      <div className="relative w-full h-full flex flex-col rounded-[22px] bg-neutral-900 text-neutral-100 shadow-2xl ring-1 ring-white/10 overflow-hidden">
+      <div className="relative w-full h-full flex flex-col rounded-[22px] bg-neutral-900 text-neutral-100 ring-1 ring-white/10 overflow-hidden">
         {/* ========== 顶部栏 ========== */}
         <header
           className="flex items-center justify-between px-5 pt-[18px] pb-[12px] shrink-0"
@@ -585,4 +585,3 @@ function FooterBtn({
     </button>
   );
 }
-
