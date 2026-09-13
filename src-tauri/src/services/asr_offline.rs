@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 /// Offline ASR engine stub.
 ///
 /// This module provides the structure for offline (on-device) speech

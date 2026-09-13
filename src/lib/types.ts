@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 export type AppStatus = "Idle" | "Recording" | "Recognizing" | "Preview" | "Paused";
 
 export interface ConfigEntry {

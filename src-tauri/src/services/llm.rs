@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::services::asr_cloud::{
     parse_endpoint, post_bytes_with_label, post_bytes_with_label_and_callback, HttpResponse,
 };

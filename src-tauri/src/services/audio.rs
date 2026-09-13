@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use rubato::{FftFixedIn, Resampler};
 
 pub const TARGET_SAMPLE_RATE: u32 = 16_000;

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Windows SAPI 语音合成（TTS）模块
 //!
 //! 使用 Windows SAPI (System.Speech) COM 接口实现文本朗读功能。

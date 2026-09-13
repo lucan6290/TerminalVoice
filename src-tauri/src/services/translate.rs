@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! 文本翻译模块
 //!
 //! 使用 LLM 进行文本翻译，支持指定目标语言。

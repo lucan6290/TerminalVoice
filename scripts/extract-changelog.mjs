@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * 从 CHANGELOG.md 提取指定版本的变更内容。
  *

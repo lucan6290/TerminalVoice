@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useState } from "react";
 import { ArrowLeft, Keyboard, Mic, Wand2, Settings, Info, Github, Globe, X, Mail } from "lucide-react";
 import { usePanelStore } from "../../../stores/appStore";

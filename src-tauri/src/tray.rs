@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::services::db::Database;
 use crate::services::events;
 use crate::services::paths;

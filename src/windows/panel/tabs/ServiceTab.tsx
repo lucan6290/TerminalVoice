@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,

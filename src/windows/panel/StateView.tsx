@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { Mic, LoaderCircle, Volume2, Sparkles, Languages, Square } from "lucide-react";
 import { usePanelStore } from "../../stores/appStore";
 import { useT } from "../../lib/i18n";

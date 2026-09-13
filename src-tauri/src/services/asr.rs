@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::services::asr_cloud::{CloudAsrConfig, CloudAsrProvider};
 use crate::services::asr_offline::OfflineAsrEngine;
 use crate::services::model_manager::ModelManager;

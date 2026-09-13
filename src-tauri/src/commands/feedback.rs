@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::services::db::{Database, FeedbackQueueItem, NewFeedbackQueueItem};
 use crate::services::feedback::{
     default_config_value, queue_item_to_input, send_feedback, validate_feedback, FeedbackConfig,

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getAppStatus } from "./lib/commands";

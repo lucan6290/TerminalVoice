@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, LoaderCircle, X } from "lucide-react";
 import type { ConfirmPreviewInput, PreviewDraft, PreviewMode } from "../../lib/types";

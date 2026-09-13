@@ -1,0 +1,59 @@
+name: Bug 报告 / Bug report
+description: 报告可复现的问题 / Report a reproducible problem
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        支持中文或英文 / Chinese or English welcome.
+        请先阅读 [文档 / README](https://github.com/lucan6290/TerminalVoice/blob/main/README.md)。
+        **漏洞和凭据泄露不要公开报告 / Do not report vulnerabilities or exposed credentials publicly.**
+        请使用 [安全策略 / Security policy](https://github.com/lucan6290/TerminalVoice/security/policy) 中的私密渠道。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认 / Before submitting
+      options:
+        - label: 已搜索已有 Issues / I searched existing issues
+          required: true
+        - label: 本报告不含未公开漏洞、凭据或个人数据 / No undisclosed vulnerabilities, credentials, or personal data
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本或提交 / Version or commit
+      placeholder: v0.1.0 / commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境 / Environment
+      description: 系统版本、架构、安装方式；开发版补充运行时版本 / OS version, architecture, installation method; development builds also need runtime versions
+      placeholder: Windows 11, x64, installer
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      description: 使用临时目录和脱敏示例说明最少步骤 / Use temporary directories and redacted examples
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为 / Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 错误信息、截图与已尝试方案 / Errors, screenshots, and workarounds
+      description: 仅附必要片段。移除密钥、Token、个人路径、私有仓库等敏感信息 / Redact secrets, tokens, personal paths, and private repositories

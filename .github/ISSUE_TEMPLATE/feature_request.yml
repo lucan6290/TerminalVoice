@@ -1,0 +1,40 @@
+name: 功能请求 / Feature request
+description: 提议有明确使用场景的改进 / Propose an improvement with a concrete use case
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        支持中文或英文。大改动请先讨论再实现 / Chinese or English welcome. Discuss large changes before implementation.
+        不要提交敏感信息；漏洞请按 [安全策略 / Security policy](https://github.com/lucan6290/TerminalVoice/security/policy) 私密报告。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认 / Before submitting
+      options:
+        - label: 已搜索已有 Issues，确认不是重复请求 / I searched existing issues for duplicates
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与使用场景 / Problem and use case
+      description: 当前哪里不便，影响谁，为什么现有功能不够 / Who is affected and why current behavior is insufficient
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望行为 / Proposed behavior
+      description: 描述结果或验收标准，而不仅是实现技术 / Explain the outcome or acceptance criteria, not only the implementation
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案 / Alternatives
+      description: 已尝试的方法及其不足 / Workarounds tried and their limitations
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响与补充信息 / Impact and context
+      description: 操作系统、目标平台、兼容性或数据影响；可附脱敏草图 / OS, platform, compatibility/data impact, and redacted mockups

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! 日志系统模块
 //!
 //! 使用 `tracing` + `tracing-subscriber` 实现结构化日志，输出到两个文件：

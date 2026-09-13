@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { CheckCircle, AlertCircle, Info, XCircle, X } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { dismissToast, useToasts, type ToastLevel } from "../../stores/toastStore";

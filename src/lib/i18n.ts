@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 // TerminalVoice i18n — 中文(zh-CN) / 英文(en) 双语
 // 通过 useT() hook 获取翻译函数；直接 import { t } 也可使用当前语言。
 

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { create } from "zustand";
 import { showToast } from "./toastStore";
 import { getLang, setLang as i18nSetLang, syncLangFromBackend } from "../lib/i18n";

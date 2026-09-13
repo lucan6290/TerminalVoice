@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 /// Energy-based Voice Activity Detection.
 ///
 /// This is a lightweight VAD that uses RMS energy to determine whether

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useEffect } from "react";
 import { AlertCircle, X } from "lucide-react";
 import { usePanelStore } from "../../stores/appStore";

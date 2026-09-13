@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! 统一数据目录管理
 //!
 //! 所有应用数据（数据库、日志、模型等）统一存放在用户主目录下的 `.terminalvoice/` 目录。

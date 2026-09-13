@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * TerminalVoice 版本号管理脚本（Tauri 项目）。
  *

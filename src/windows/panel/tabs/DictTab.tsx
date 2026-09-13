@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useState } from "react";
 import { ArrowLeft, Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { cn } from "../../../lib/cn";

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! 技能相关 IPC 命令
 
 use crate::services::db::Database;

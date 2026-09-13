@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::commands::preview::{emit_preview_ready, inject_text_and_save_history, InjectRecord, PreviewDraft, PreviewMode, TextMode as PreviewTextMode};
 use crate::services::asr::{transcribe, AsrMode};
 use crate::services::asr_cloud::CloudAsrConfig;

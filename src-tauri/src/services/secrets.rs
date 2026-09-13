@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use zeroize::Zeroizing;
 

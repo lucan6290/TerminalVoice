@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! 语音技能模块
 //!
 //! 预设多种语音输入模板，每种模板通过 system prompt 修改 LLM 的行为，

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 使用与故障排查 / Usage and troubleshooting
+    url: https://github.com/lucan6290/TerminalVoice/blob/main/README.md
+    about: 先查文档；使用问题可提交空白 Issue / Read the docs; usage questions may use a blank issue
+  - name: 私密安全报告 / Private security reports
+    url: https://github.com/lucan6290/TerminalVoice/security/policy
+    about: 查看私密报告与邮件渠道，不要公开漏洞 / Use private reporting or email; do not disclose vulnerabilities publicly
+  - name: 行为准则 / Code of Conduct
+    url: https://github.com/lucan6290/TerminalVoice/blob/main/CODE_OF_CONDUCT.md
+    about: 社区行为问题的私密联系渠道 / Private contact for community conduct concerns

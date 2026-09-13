@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 /// Model manager for offline ASR models.
 ///
 /// Manages model files stored in `<home>/.terminalvoice/models/`. Supports listing

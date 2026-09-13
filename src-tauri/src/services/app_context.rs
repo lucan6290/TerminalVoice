@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! 获取当前前台窗口的标题与进程名（仅 Windows）。
 //! 非 Windows 平台所有函数返回 None，不影响主流程。
 

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useMemo, useState } from "react";
 import { ArrowLeft, Search, Trash2, Copy } from "lucide-react";
 import { useT } from "../../../lib/i18n";

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::services::asr::{AsrProvider, AsrResult};
 use crate::services::audio::encode_wav;
 use crate::services::recorder::AudioBuffer;

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { useState, useEffect, useRef } from "react";
 import { Mic, AlertCircle, Loader2, Wand2, Volume2 } from "lucide-react";
 import { Window, currentMonitor } from "@tauri-apps/api/window";

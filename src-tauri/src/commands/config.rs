@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::services::db::{ConfigEntry, Database};
 use crate::services::secrets::{
     decode_config_value, encode_config_value, is_encrypted_secret, is_secret_config_key,

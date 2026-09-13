@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * 判断当前是否运行在 Tauri 运行时中
  *

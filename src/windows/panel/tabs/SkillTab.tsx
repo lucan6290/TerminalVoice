@@ -1,3 +1,5 @@
+// Copyright (C) 2026 lucan6290
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { ArrowLeft, Wand2, FileText, Sparkles, List, Type, Languages, ListChecks, Presentation } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { useT } from "../../../lib/i18n";
