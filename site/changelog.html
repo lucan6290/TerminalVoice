@@ -142,11 +142,11 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:56px
       TerminalVoice
     </a>
     <div class="nav-links">
-      <a href="index.html">首页</a>
-      <a href="docs.html">文档</a>
-      <a href="guide.html">攻略</a>
-      <a href="changelog.html" class="active">更新日志</a>
-      <a href="download.html">免费下载</a>
+      <a href="index.html" data-i18n="nav.home">首页</a>
+      <a href="docs.html" data-i18n="nav.docs">文档</a>
+      <a href="guide.html" data-i18n="nav.guide">攻略</a>
+      <a href="changelog.html" class="active" data-i18n="nav.changelog">更新日志</a>
+      <a href="download.html" data-i18n="nav.freeDownload">免费下载</a>
     </div>
     <div class="nav-tools">
       <div class="theme-picker" id="themePicker">
@@ -171,16 +171,19 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:56px
       <a class="icon-btn" href="https://github.com/lucan6290/TerminalVoice" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02.8-.22 1.65-.33 2.5-.33.85 0 1.7.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10z"/></svg>
       </a>
-      <a class="nav-cta" href="download.html">↓ 免费下载</a>
+      <button class="icon-btn" id="langToggle" title="Switch to English" aria-label="切换语言" style="font-size:11px;font-weight:700;letter-spacing:.02em">
+        <span id="langLabel">EN</span>
+      </button>
+      <a class="nav-cta" href="download.html" data-i18n="nav.download">↓ 免费下载</a>
     </div>
   </div>
 </nav>
 
 <section class="hero bg-dots">
   <div class="container hero-inner">
-    <div class="hero-eyebrow"><span class="dot"></span>版本记录 · v0.1.3 最新</div>
-    <h1>更新<em>日志</em></h1>
-    <p>追踪每个版本的功能新增、优化与修复，了解产品的每一次进化。</p>
+    <div class="hero-eyebrow"><span class="dot"></span><span data-i18n="hero.eyebrow">版本记录 · v0.1.3 最新</span></div>
+    <h1 data-i18n-html="hero.title">更新<em>日志</em></h1>
+    <p data-i18n="hero.desc">追踪每个版本的功能新增、优化与修复，了解产品的每一次进化。</p>
   </div>
 </section>
 
@@ -314,9 +317,9 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:56px
 <!-- CTA -->
 <section class="container" style="margin-top:20px">
   <div class="cta">
-    <h2>体验最新版本</h2>
-    <p>免费、开源、Windows 原生。下载 v0.1.3 立即开始。</p>
-    <a class="btn-white" href="download.html">↓ 立即下载</a>
+    <h2 data-i18n="cta.title">体验最新版本</h2>
+    <p data-i18n="cta.desc">免费、开源、Windows 原生。下载 v0.1.3 立即开始。</p>
+    <a class="btn-white" href="download.html" data-i18n="cta.btn">↓ 立即下载</a>
   </div>
 </section>
 
@@ -325,24 +328,24 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:56px
     <div class="footer-inner">
       <div>
         <div class="footer-brand"><span class="fl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>TerminalVoice</div>
-        <p class="footer-desc">Windows 平台常驻全局语音输入桌面工具。悬浮小球 + 极简面板，按住就说，松开即上屏。</p>
+        <p class="footer-desc" data-i18n="footer.desc">Windows 平台常驻全局语音输入桌面工具。悬浮小球 + 极简面板，按住就说，松开即上屏。</p>
       </div>
       <div class="footer-col">
-        <h4>产品</h4>
-        <a href="index.html#features">功能介绍</a>
-        <a href="index.html#ui">界面预览</a>
-        <a href="guide.html">使用攻略</a>
-        <a href="changelog.html">更新日志</a>
+        <h4 data-i18n="footer.product">产品</h4>
+        <a href="index.html#features" data-i18n="footer.features">功能介绍</a>
+        <a href="index.html#ui" data-i18n="footer.ui">界面预览</a>
+        <a href="guide.html" data-i18n="footer.guide">使用攻略</a>
+        <a href="changelog.html" data-i18n="footer.changelog">更新日志</a>
       </div>
       <div class="footer-col">
-        <h4>资源</h4>
-        <a href="https://github.com/lucan6290/TerminalVoice" target="_blank" rel="noopener">GitHub 仓库</a>
-        <a href="docs.html">使用文档</a>
-        <a href="https://github.com/lucan6290/TerminalVoice/issues" target="_blank" rel="noopener">问题反馈</a>
-        <a href="https://github.com/lucan6290/TerminalVoice/blob/main/LICENSE" target="_blank" rel="noopener">许可证 (GPL-3.0)</a>
+        <h4 data-i18n="footer.resources">资源</h4>
+        <a href="https://github.com/lucan6290/TerminalVoice" target="_blank" rel="noopener" data-i18n="footer.github">GitHub 仓库</a>
+        <a href="docs.html" data-i18n="footer.docs">使用文档</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/issues" target="_blank" rel="noopener" data-i18n="footer.feedback">问题反馈</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer.license">许可证 (GPL-3.0)</a>
       </div>
     </div>
-    <div class="footer-bottom">© 2026 TerminalVoice · Built with Tauri v2 + React 19 + Rust · GPL-3.0 License</div>
+    <div class="footer-bottom" data-i18n="footer.copyright">© 2026 TerminalVoice · Built with Tauri v2 + React 19 + Rust · GPL-3.0 License</div>
   </div>
 </footer>
 
@@ -408,6 +411,39 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:56px
     });
   });
   document.addEventListener("click", function(){ picker.classList.remove("open"); });
+
+  // 中英文国际化
+  var i18nDict = { en: {
+    "nav.home":"Home","nav.docs":"Docs","nav.guide":"Guide","nav.changelog":"Changelog","nav.freeDownload":"Free Download","nav.download":"↓ Download",
+    "hero.eyebrow":"Version History · v0.1.3 Latest","hero.title":"Change<em>log</em>","hero.desc":"Track features, improvements, and fixes across every release.",
+    "cta.title":"Try the latest version","cta.desc":"Free, open-source, Windows-native. Download v0.1.3 to get started.","cta.btn":"↓ Download Now",
+    "footer.desc":"An always-on global voice input tool for Windows. Floating ball + minimal panel — hold to speak, release to insert.","footer.product":"Product","footer.features":"Features","footer.ui":"UI Preview","footer.guide":"Guide","footer.changelog":"Changelog","footer.resources":"Resources","footer.github":"GitHub Repo","footer.docs":"Documentation","footer.feedback":"Feedback","footer.license":"License (GPL-3.0)","footer.copyright":"© 2026 TerminalVoice · Built with Tauri v2 + React 19 + Rust · GPL-3.0 License"
+  }};
+  var currentLang = "zh";
+  function applyI18n() {
+    if (currentLang === "en") {
+      document.querySelectorAll("[data-i18n]").forEach(function (el) {
+        var key = el.getAttribute("data-i18n");
+        if (i18nDict.en[key]) el.textContent = i18nDict.en[key];
+      });
+      document.querySelectorAll("[data-i18n-html]").forEach(function (el) {
+        var key = el.getAttribute("data-i18n-html");
+        if (i18nDict.en[key]) el.innerHTML = i18nDict.en[key];
+      });
+      var langLabel = document.getElementById("langLabel");
+      if (langLabel) langLabel.textContent = "中";
+      document.documentElement.lang = "en";
+    } else {
+      location.reload();
+    }
+  }
+  var langToggle = document.getElementById("langToggle");
+  langToggle.addEventListener("click", function () {
+    currentLang = currentLang === "en" ? "zh" : "en";
+    try { localStorage.setItem("site-lang", currentLang); } catch (e) {}
+    if (currentLang === "en") applyI18n(); else location.reload();
+  });
+  try { if (localStorage.getItem("site-lang") === "en") { currentLang = "en"; applyI18n(); } } catch (e) {}
 })();
 </script>
 
