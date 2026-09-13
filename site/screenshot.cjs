@@ -11,7 +11,7 @@ const OUT_DIR = path.join(ROOT, 'docs', 'picture');             // -> docs/pictu
 const PORT = 7891;
 const BASE = `http://localhost:${PORT}/index.html`;
 const DPR = 2;
-const CREAM_BG = 'f3ece1';
+const BG = 'ffffff';                                            // 官网浅色主题背景
 
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -26,7 +26,7 @@ function shot(filename, shotParam, width, height) {
       `--screenshot=${outPath}`,
       `--window-size=${width},${height}`,
       `--force-device-scale-factor=${DPR}`,
-      `--default-background-color=${CREAM_BG}ff`,
+      `--default-background-color=${BG}ff`,
       '--virtual-time-budget=2500',
       url
     ], { stdio: 'pipe', timeout: 30000 });
@@ -37,30 +37,22 @@ function shot(filename, shotParam, width, height) {
   }
 }
 
-console.log('=== TerminalVoice Marketing Screenshots (ccswitch-style) ===\n');
+console.log('=== TerminalVoice Marketing Screenshots (green theme) ===\n');
 
-// Hero (big title + panel mockup)
+// Hero（标题 + 可交互面板原型）
 shot('hero.png',        'hero',      1280, 720);
-// Desktop scene (ball + panel on mini desktop)
-shot('scene.png',       'scene',     1200, 600);
-// Ball 7 states
-shot('ball-states.png', 'ball',      1200, 320);
-// Preview popup
-shot('preview.png',     'preview',   1200, 520);
-// Skills tab
-shot('skills.png',      'skills',    1200, 520);
-// Translate popup
-shot('translate.png',   'translate', 1200, 440);
-// Main settings window
-shot('main-window.png', 'main',      1200, 620);
-// Tech chips
+// 悬浮球 7 态
+shot('ball-states.png', 'ball',      1200, 420);
+// 预览确认弹窗
+shot('preview.png',     'preview',   1200, 420);
+// 主设置窗口
+shot('main-window.png', 'main',      1200, 460);
+// 技术栈
 shot('tech.png',        'tech',      1200, 360);
-// CTA banner
+// CTA
 shot('cta.png',         'cta',       1200, 380);
-// Full page (overview for README)
+// 全页概览（用于 README）
 shot('overview.png',    'full',      1280, 3600);
-// Panels composite (used in README)
-shot('panels.png',      'full',      1280, 2400);
 
 console.log('\n=== Done. Files in docs/picture/: ===');
 fs.readdirSync(OUT_DIR).forEach(f => console.log('  -', f));

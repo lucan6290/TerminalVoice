@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>更新日志 — TerminalVoice</title>
+<meta name="description" content="TerminalVoice 更新日志：追踪每个版本的功能新增、优化与修复。">
+<style>
+:root{
+  --bg:#ffffff; --bg-2:#f5f5f7; --surface:#ffffff; --surface-2:#f2f2f7;
+  --ink:#1c1c1e; --ink-2:#5b5b60; --ink-3:#8e8e93; --ink-4:#aeaeb2;
+  --accent:#34c759; --accent-2:#30d158; --accent-text:#1f9d3f;
+  --accent-soft:rgba(52,199,89,.10); --accent-glow:rgba(52,199,89,.35);
+  --border:rgba(0,0,0,.08); --border-strong:rgba(0,0,0,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 20px 50px -20px rgba(0,0,0,.18);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.05),0 40px 80px -24px rgba(0,0,0,.28);
+  --radius:20px;
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+body.dark{
+  --bg:#0a0a0a; --bg-2:#141414; --surface:#1c1c1e; --surface-2:#2c2c2e;
+  --ink:#f2f2f7; --ink-2:#aeaeb2; --ink-3:#8e8e93; --ink-4:#636366;
+  --accent:#30d158; --accent-2:#34c759; --accent-text:#30d158;
+  --accent-soft:rgba(48,209,88,.12); --accent-glow:rgba(48,209,88,.4);
+  --border:rgba(255,255,255,.1); --border-strong:rgba(255,255,255,.16);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 20px 50px -20px rgba(0,0,0,.5);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.4),0 40px 80px -24px rgba(0,0,0,.6);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;scroll-padding-top:76px;}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.6;transition:background .3s,color .3s;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+::selection{background:var(--accent-soft);}
+.container{max-width:1120px;margin:0 auto;padding:0 32px;}
+.bg-dots{background-image:radial-gradient(var(--border-strong) 1px,transparent 1px);background-size:22px 22px;}
+
+.nav{position:sticky;top:0;z-index:200;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--border);}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px;}
+.nav-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap;}
+.nav-logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--accent-glow);flex-shrink:0;}
+.nav-logo svg{width:18px;height:18px;color:#fff;}
+.nav-links{display:flex;gap:2px;align-items:center;}
+.nav-links a{font-size:14px;color:var(--ink-2);padding:8px 13px;border-radius:10px;transition:all .15s;white-space:nowrap;}
+.nav-links a:hover{background:var(--accent-soft);color:var(--accent-text);}
+.nav-links a.active{color:var(--accent-text);background:var(--accent-soft);font-weight:600;}
+.nav-tools{display:flex;align-items:center;gap:8px;}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.icon-btn:hover{color:var(--accent-text);border-color:var(--accent);}
+.icon-btn svg{width:18px;height:18px;}
+.nav-cta{font-size:14px;padding:9px 20px;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;transition:all .15s;white-space:nowrap;box-shadow:0 4px 14px -4px var(--accent-glow);}
+.nav-cta:hover{background:var(--accent-2);transform:translateY(-1px);color:#fff;}
+
+/* 配色主题选择器 */
+.theme-picker{position:relative;}
+.theme-picker-btn{display:flex;align-items:center;gap:6px;height:36px;padding:0 10px 0 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);cursor:pointer;font-size:12px;transition:all .15s;}
+.theme-picker-btn:hover{border-color:var(--accent);color:var(--accent-text);}
+.theme-picker-btn .swatch{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;}
+.theme-picker-btn .caret{transition:transform .2s;}
+.theme-picker.open .caret{transform:rotate(180deg);}
+.theme-picker-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;width:max-content;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);padding:6px;z-index:300;opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .2s,transform .2s,visibility .2s;}
+.theme-picker.open .theme-picker-menu{opacity:1;visibility:visible;transform:translateY(0);}
+.theme-picker-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:12px;color:var(--ink-2);cursor:pointer;transition:background .12s,color .12s;white-space:nowrap;}
+.theme-picker-item:hover{background:var(--accent-soft);color:var(--ink);}
+.theme-picker-item.active{color:var(--accent-text);font-weight:600;}
+.theme-picker-item .swatch{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;}
+.theme-picker-item.active .swatch{border-color:var(--ink);}
+.theme-picker-item .check{margin-left:auto;opacity:0;color:var(--accent-text);}
+.theme-picker-item.active .check{opacity:1;}
+
+.hero{padding:64px 0 56px;position:relative;overflow:hidden;}
+.hero-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--accent-text);background:var(--accent-soft);padding:6px 14px;border-radius:999px;margin-bottom:20px;}
+.hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.hero h1{font-size:54px;font-weight:800;line-height:1.08;letter-spacing:-.03em;margin-bottom:16px;}
+.hero h1 em{font-style:normal;color:var(--accent-text);}
+.hero p{font-size:18px;color:var(--ink-2);line-height:1.7;max-width:600px;}
+
+/* 时间线 */
+.timeline{position:relative;max-width:820px;margin:0 auto;}
+.timeline::before{content:"";position:absolute;left:15px;top:12px;bottom:12px;width:2px;background:linear-gradient(to bottom,var(--accent),var(--border));}
+.timeline-item{position:relative;padding-left:56px;margin-bottom:32px;}
+.timeline-item:last-child{margin-bottom:0;}
+.timeline-dot{position:absolute;left:0;top:24px;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));z-index:1;box-shadow:0 0 0 4px var(--bg),0 4px 12px var(--accent-glow);}
+.version-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s;}
+.version-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-lg);}
+.version-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.version-number{font-size:20px;font-weight:800;font-family:var(--mono);letter-spacing:-.02em;}
+.version-badge{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600;background:var(--accent-soft);color:var(--accent-text);}
+.version-date{font-size:13px;color:var(--ink-3);margin-left:auto;font-family:var(--mono);}
+.change-group{margin-bottom:14px;}
+.change-group:last-child{margin-bottom:0;}
+.change-group-title{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.change-group-title.feature{color:var(--accent-text);}
+.change-group-title.improve{color:#0a84ff;}
+.change-group-title.fixed{color:#ff9500;}
+.change-list{list-style:none;}
+.change-list li{font-size:13px;color:var(--ink-2);padding:4px 0 4px 16px;position:relative;line-height:1.6;}
+.change-list.feature li::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:var(--accent);}
+.change-list.improve li::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:#0a84ff;}
+.change-list.fixed li::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:#ff9500;}
+
+.cta{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);border-radius:28px;padding:56px 48px;text-align:center;position:relative;overflow:hidden;box-shadow:0 30px 60px -20px var(--accent-glow);}
+.cta::before{content:"";position:absolute;top:-50%;right:-20%;width:500px;height:500px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);border-radius:50%;}
+.cta h2{font-size:38px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:12px;position:relative;z-index:1;}
+.cta p{font-size:16px;color:rgba(255,255,255,.9);margin-bottom:28px;position:relative;z-index:1;}
+.cta .btn-white{display:inline-block;font-size:15px;padding:14px 32px;border-radius:14px;background:#fff;color:var(--accent-text);font-weight:700;box-shadow:0 8px 20px -6px rgba(0,0,0,.2);position:relative;z-index:1;transition:all .15s;}
+.cta .btn-white:hover{transform:translateY(-2px);}
+
+footer{background:var(--surface);border-top:1px solid var(--border);padding:56px 0 36px;margin-top:80px;}
+.footer-inner{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;}
+.footer-brand{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.footer-brand .fl{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;}
+.footer-brand .fl svg{width:16px;height:16px;color:#fff;}
+.footer-desc{font-size:13px;line-height:1.7;max-width:300px;color:var(--ink-2);}
+.footer-col h4{font-size:13px;color:var(--ink);font-weight:600;margin-bottom:14px;}
+.footer-col a{display:block;font-size:13px;color:var(--ink-2);padding:4px 0;transition:color .15s;}
+.footer-col a:hover{color:var(--accent-text);}
+.footer-bottom{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--ink-3);}
+
+@media (max-width:820px){
+  .nav-links{display:none;}
+  .footer-inner{grid-template-columns:1fr 1fr;}
+  .hero h1{font-size:40px;}
+}
+@media (max-width:640px){
+  .container{padding:0 20px;}
+  .timeline-item{padding-left:44px;}
+  .timeline-dot{width:28px;height:28px;top:20px;}
+  .timeline::before{left:13px;}
+  .footer-inner{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="index.html" class="nav-brand">
+      <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>
+      TerminalVoice
+    </a>
+    <div class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="docs.html">文档</a>
+      <a href="guide.html">攻略</a>
+      <a href="changelog.html" class="active">更新日志</a>
+      <a href="download.html">免费下载</a>
+    </div>
+    <div class="nav-tools">
+      <div class="theme-picker" id="themePicker">
+        <button class="theme-picker-btn" id="themePickerBtn" aria-label="选择配色" aria-haspopup="true" aria-expanded="false">
+          <span class="swatch" id="currentSwatch" style="background:#34c759"></span>
+          <span id="currentLabel">品牌绿</span>
+          <svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="theme-picker-menu" id="themePickerMenu" role="menu">
+          <div class="theme-picker-item active" data-color="green" role="menuitem" tabindex="0"><span class="swatch" style="background:#34c759"></span><span>品牌绿</span><svg class="check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="theme-picker-item" data-color="indigo" role="menuitem" tabindex="0"><span class="swatch" style="background:#4f46e5"></span><span>靛蓝</span><svg class="check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="theme-picker-item" data-color="amber" role="menuitem" tabindex="0"><span class="swatch" style="background:#d97706"></span><span>琥珀</span><svg class="check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="theme-picker-item" data-color="rose" role="menuitem" tabindex="0"><span class="swatch" style="background:#e11d48"></span><span>玫红</span><svg class="check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="theme-picker-item" data-color="cyan" role="menuitem" tabindex="0"><span class="swatch" style="background:#0891b2"></span><span>青色</span><svg class="check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="theme-picker-item" data-color="violet" role="menuitem" tabindex="0"><span class="swatch" style="background:#7c3aed"></span><span>紫罗兰</span><svg class="check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+        </div>
+      </div>
+      <button class="icon-btn" id="siteThemeBtn" title="切换深色/浅色主题" aria-label="切换深色/浅色主题">
+        <svg id="siteThemeMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg id="siteThemeSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/lucan6290/TerminalVoice" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02.8-.22 1.65-.33 2.5-.33.85 0 1.7.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10z"/></svg>
+      </a>
+      <a class="nav-cta" href="download.html">↓ 免费下载</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero bg-dots">
+  <div class="container hero-inner">
+    <div class="hero-eyebrow"><span class="dot"></span>版本记录 · v0.1.3 最新</div>
+    <h1>更新<em>日志</em></h1>
+    <p>追踪每个版本的功能新增、优化与修复，了解产品的每一次进化。</p>
+  </div>
+</section>
+
+<!-- 时间线 -->
+<section class="section" id="changelog" style="padding-top:0">
+  <div class="container">
+    <div class="timeline">
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="version-card">
+          <div class="version-header">
+            <span class="version-number">v0.1.3</span>
+            <span class="version-badge">最新版</span>
+            <span class="version-date">2026-09-08</span>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title feature">✨ 新增</div>
+            <ul class="change-list feature">
+              <li>帮助页新增官网入口按钮，并完善外部链接打开失败提示</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title improve">⚡ 优化</div>
+            <ul class="change-list improve">
+              <li>问题反馈弹窗由表单简化为两条路径：GitHub 提交 Issue、发送邮件反馈</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="version-card">
+          <div class="version-header">
+            <span class="version-number">v0.1.2</span>
+            <span class="version-date">2026-09-07</span>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title fixed">🐛 修复</div>
+            <ul class="change-list fixed">
+              <li>修复应用内版本号硬编码显示为 0.1.0 的问题，改为动态读取后端版本</li>
+              <li>开启更新产物生成，修复自动更新 latest.json 缺失导致检查更新无法检测到新版本</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="version-card">
+          <div class="version-header">
+            <span class="version-number">v0.1.1</span>
+            <span class="version-date">2026-09-07</span>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title feature">✨ 新增</div>
+            <ul class="change-list feature">
+              <li>面板右上角新增锚定悬浮球位置打开功能</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title fixed">🐛 修复</div>
+            <ul class="change-list fixed">
+              <li>修复开发服务器端口与 Hyper-V 保留端口段冲突导致的 EACCES 启动失败（端口从 1234 调整为 4321）</li>
+              <li>修复 CI Release 工作流中 releaseBodyPath 不被 tauri-action 支持导致 Release Body 为空的问题</li>
+              <li>修复配置加载完成后 serviceReady 状态未重新计算，首次启动时服务可用状态显示不正确的问题</li>
+              <li>移除 tray.rs 源文件头部误留的 BOM 字符</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title improve">⚡ 优化</div>
+            <ul class="change-list improve">
+              <li>浮球 idle 状态外圈改为透明，简化静止态视觉</li>
+              <li>调细全局滚动条样式并禁用横向滚动条</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="version-card">
+          <div class="version-header">
+            <span class="version-number">v0.1.0</span>
+            <span class="version-date">2026-09-06</span>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title feature">✨ 新增</div>
+            <ul class="change-list feature">
+              <li>三窗口架构（悬浮球 + 面板 + 主窗口）Tauri v2 桌面应用骨架</li>
+              <li>Rust 状态机（Idle/Recording/Recognizing/Preview/Paused 五状态 + 9 事件 + 8 单元测试）</li>
+              <li>前端 Zustand store（loadAll 初始化 + 乐观更新 + 回滚）</li>
+              <li>BallWindow：7 状态视觉 + 毛玻璃效果</li>
+              <li>PanelWindow：顶部栏 + 首页快捷设置 + 深浅主题 + 6 个 Tab</li>
+              <li>PreviewPopup：双模式预览弹窗，Ctrl+Enter 确认 / Esc 取消</li>
+              <li>文本预处理（Normal/Developer/Raw 三模式 + 过滤词 + 标点）</li>
+              <li>SQLite 数据库（config/history/filter_words 三表，WAL 模式）</li>
+              <li>语音技能预设系统（英文输出/清单模式/汇报格式/听写模板）</li>
+              <li>LLM 流式输出（SSE streaming，实时推送增量文本）</li>
+              <li>自动更新功能（tauri-plugin-updater，签名校验 + 一键下载安装）</li>
+              <li>全 UI 中英双语（zh-CN / en），切换即时生效</li>
+              <li>识别后预览确认开关（input.skipPreview，关闭时识别完成直接上屏）</li>
+              <li>自定义热键配置（按住说话 / 朗读 / 翻译三键，运行时可重载）</li>
+              <li>完整系统托盘菜单（暂停 / 技能切换 / 主题 / 悬浮球显隐 / 日志 / 关于 / 检查更新）</li>
+              <li>悬浮球拖拽移动 + 默认定位屏幕右上区域</li>
+              <li>云端 ASR 接入（OpenAI Whisper 兼容）+ DPAPI 密钥加密存储</li>
+              <li>ASR / LLM 服务配置界面 + 连接测试 + 模型列表获取</li>
+              <li>应用上下文识别（历史记录标注录入时前台应用）</li>
+              <li>设计系统：Tailwind v4 tokens（颜色/圆角/阴影/字体/动画）</li>
+              <li>全局 Toast / ErrorModal / TranslatePopup / UpdateModal 浮层组件</li>
+              <li>系统托盘 + 开机自启 + 单实例插件</li>
+              <li>结构化日志（tracing + tracing-subscriber，文件输出）</li>
+              <li>项目专属图标</li>
+              <li>CI/CD：GitHub Actions PR 检查 + Release 自动构建签名发布</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-group-title improve">⚡ 优化</div>
+            <ul class="change-list improve">
+              <li>统一数据目录到 ~/.terminalvoice/</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="container" style="margin-top:20px">
+  <div class="cta">
+    <h2>体验最新版本</h2>
+    <p>免费、开源、Windows 原生。下载 v0.1.3 立即开始。</p>
+    <a class="btn-white" href="download.html">↓ 立即下载</a>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand"><span class="fl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>TerminalVoice</div>
+        <p class="footer-desc">Windows 平台常驻全局语音输入桌面工具。悬浮小球 + 极简面板，按住就说，松开即上屏。</p>
+      </div>
+      <div class="footer-col">
+        <h4>产品</h4>
+        <a href="index.html#features">功能介绍</a>
+        <a href="index.html#ui">界面预览</a>
+        <a href="guide.html">使用攻略</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div class="footer-col">
+        <h4>资源</h4>
+        <a href="https://github.com/lucan6290/TerminalVoice" target="_blank" rel="noopener">GitHub 仓库</a>
+        <a href="docs.html">使用文档</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/issues" target="_blank" rel="noopener">问题反馈</a>
+        <a href="https://github.com/lucan6290/TerminalVoice/blob/main/LICENSE" target="_blank" rel="noopener">许可证 (GPL-3.0)</a>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 TerminalVoice · Built with Tauri v2 + React 19 + Rust · GPL-3.0 License</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var themes = {
+    green:{light:{a:"#34c759",b:"#30d158",t:"#1f9d3f",s:"rgba(52,199,89,.10)",g:"rgba(52,199,89,.35)"},dark:{a:"#30d158",b:"#34c759",t:"#30d158",s:"rgba(48,209,88,.12)",g:"rgba(48,209,88,.4)"}},
+    indigo:{light:{a:"#4f46e5",b:"#6366f1",t:"#4338ca",s:"rgba(79,70,229,.10)",g:"rgba(79,70,229,.35)"},dark:{a:"#818cf8",b:"#6366f1",t:"#818cf8",s:"rgba(129,140,248,.12)",g:"rgba(129,140,248,.4)"}},
+    amber:{light:{a:"#d97706",b:"#f59e0b",t:"#b45309",s:"rgba(217,119,6,.10)",g:"rgba(217,119,6,.35)"},dark:{a:"#fbbf24",b:"#f59e0b",t:"#fbbf24",s:"rgba(251,191,36,.12)",g:"rgba(251,191,36,.4)"}},
+    rose:{light:{a:"#e11d48",b:"#f43f5e",t:"#be123c",s:"rgba(225,29,72,.10)",g:"rgba(225,29,72,.35)"},dark:{a:"#fb7185",b:"#f43f5e",t:"#fb7185",s:"rgba(251,113,133,.12)",g:"rgba(251,113,133,.4)"}},
+    cyan:{light:{a:"#0891b2",b:"#06b6d4",t:"#0e7490",s:"rgba(8,145,178,.10)",g:"rgba(8,145,178,.35)"},dark:{a:"#22d3ee",b:"#06b6d4",t:"#22d3ee",s:"rgba(34,211,238,.12)",g:"rgba(34,211,238,.4)"}},
+    violet:{light:{a:"#7c3aed",b:"#8b5cf6",t:"#6d28d9",s:"rgba(124,58,237,.10)",g:"rgba(124,58,237,.35)"},dark:{a:"#a78bfa",b:"#8b5cf6",t:"#a78bfa",s:"rgba(167,139,250,.12)",g:"rgba(167,139,250,.4)"}}
+  };
+  var themeMeta = {green:"品牌绿",indigo:"靛蓝",amber:"琥珀",rose:"玫红",cyan:"青色",violet:"紫罗兰"};
+  var currentTheme = "green";
+  var btn = document.getElementById("siteThemeBtn");
+  var moon = document.getElementById("siteThemeMoon");
+  var sun = document.getElementById("siteThemeSun");
+  function applyTheme(color){
+    var dark = document.body.classList.contains("dark");
+    var v = themes[color][dark?"dark":"light"];
+    var r = document.documentElement;
+    r.style.setProperty("--accent", v.a);
+    r.style.setProperty("--accent-2", v.b);
+    r.style.setProperty("--accent-text", v.t);
+    r.style.setProperty("--accent-soft", v.s);
+    r.style.setProperty("--accent-glow", v.g);
+    currentTheme = color;
+    try { localStorage.setItem("tv-site-color", color); } catch(e) {}
+  }
+  function updatePickerDisplay(color){
+    document.getElementById("currentSwatch").style.background = themes[color].light.a;
+    document.getElementById("currentLabel").textContent = themeMeta[color];
+    document.querySelectorAll(".theme-picker-item").forEach(function(item){
+      item.classList.toggle("active", item.getAttribute("data-color") === color);
+    });
+  }
+  function applyDark(dark){
+    document.body.classList.toggle("dark", dark);
+    moon.style.display = dark ? "none" : "block";
+    sun.style.display = dark ? "block" : "none";
+    applyTheme(currentTheme);
+    try { localStorage.setItem("tv-site-theme", dark ? "dark" : "light"); } catch(e) {}
+  }
+  var savedColor = null, savedDark = null;
+  try { savedColor = localStorage.getItem("tv-site-color"); savedDark = localStorage.getItem("tv-site-theme"); } catch(e) {}
+  if (savedColor && themes[savedColor]) currentTheme = savedColor;
+  applyDark(savedDark === "dark");
+  updatePickerDisplay(currentTheme);
+  btn.addEventListener("click", function(){ applyDark(!document.body.classList.contains("dark")); });
+  var picker = document.getElementById("themePicker");
+  var pickerBtn = document.getElementById("themePickerBtn");
+  pickerBtn.addEventListener("click", function(e){
+    e.stopPropagation();
+    var open = picker.classList.toggle("open");
+    pickerBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  document.querySelectorAll(".theme-picker-item").forEach(function(item){
+    item.addEventListener("click", function(){
+      applyTheme(item.getAttribute("data-color"));
+      updatePickerDisplay(item.getAttribute("data-color"));
+      picker.classList.remove("open");
+    });
+  });
+  document.addEventListener("click", function(){ picker.classList.remove("open"); });
+})();
+</script>
+
+</body>
+</html>
