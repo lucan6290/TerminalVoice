@@ -1,3 +1,6 @@
+/* Copyright (C) 2026 lucan6290
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -126,8 +129,12 @@
 .animate-float     { animation: ball-bounce 3.5s ease-in-out infinite; }
 
 /* ============ 滚动条 ============ */
-::-webkit-scrollbar { width: 1px; height: 0; }
-::-webkit-scrollbar-thumb { background: var(--color-ring); border-radius: 2px; }
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+::-webkit-scrollbar { width: 0; height: 0; display: none; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-corner { background: transparent; }
 

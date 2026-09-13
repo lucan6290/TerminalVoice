@@ -30,7 +30,7 @@
 
 | 文件 | 状态 | 说明 |
 | :--- | :---: | :--- |
-| [index.css](../src/index.css) | ✅ | Tailwind v4 完整设计系统：@theme 定义浅/深色两套 color tokens、字体栈、圆角体系（window 22px/card 14px/control 10px/pill 8px）、阴影（shadow-window/shadow-ball）、4 个动画（pulse-dot/breathing-glow/fade-in/ball-bounce）、CSS-only tooltip（`[data-tip]`）、kbd 样式、`.theme-light` neutral 覆盖、滚动条美化 |
+| [index.css](../src/index.css) | ✅ | Tailwind v4 完整设计系统：@theme 定义浅/深色两套 color tokens、字体栈、圆角体系（window 22px/card 14px/control 10px/pill 8px）、阴影（shadow-window/shadow-ball）、4 个动画（pulse-dot/breathing-glow/fade-in/ball-bounce）、CSS-only tooltip（`[data-tip]`）、kbd 样式、`.theme-light` neutral 覆盖、全局隐藏滚动条但保留滚动能力 |
 
 ### lib/ — 工具层
 
